@@ -75,7 +75,7 @@ function download() { if (src.value && !broken.value) saveImageFile(src.value, f
 .workflow-example{display:flex;align-items:center;gap:22px;padding:20px 0 12px}
 .example-thumb{display:flex;align-items:center;justify-content:center;width:110px;height:140px;flex:none;overflow:hidden;padding:0;border:1px solid var(--bbi-line);border-radius:var(--bbi-radius);background:var(--bbi-surface-2);cursor:zoom-in}
 .example-thumb:disabled{cursor:default}.example-thumb:focus-visible{outline:2px solid var(--bbi-accent);outline-offset:3px}
-.example-thumb img{width:100%;height:100%;object-fit:contain}.example-empty{display:flex;align-items:center;flex-direction:column;gap:10px;font-size:12px;color:var(--bbi-ink-muted)}
+.example-thumb img{width:100%;height:100%;object-fit:cover;object-position:center}.example-empty{display:flex;align-items:center;flex-direction:column;gap:10px;font-size:12px;color:var(--bbi-ink-muted)}
 .example-info{min-width:0}.example-info h3{margin:0 0 8px}.example-info .bbi-field-hint{margin:0 0 14px}.example-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .example-status{font-size:12px;color:var(--bbi-accent);min-height:18px;margin:10px 0 0}
 @media(max-width:520px){.workflow-example{gap:14px}.example-thumb{width:96px;height:124px}.example-actions{gap:8px}}
