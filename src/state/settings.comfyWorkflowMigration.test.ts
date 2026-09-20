@@ -29,6 +29,15 @@ async function hydrateWithComfy(comfyui: Record<string, unknown> | undefined) {
 }
 
 describe('ComfyUI 工作流库迁移', () => {
+  it('persists separate workflow examples through reload and drops unowned paths', async () => {
+    const path='/user/images/长夜的绘图器_工作流示例/wfimg_a.png';
+    const settings=await hydrateWithComfy({workflows:[{id:'a',exampleImage:path},{id:'b',exampleImage:'https://example.com/a.png'},{id:'c'}]});
+    expect(settings.comfyui.workflows.map(w=>w.exampleImage)).toEqual([path,undefined,undefined]);
+    const serialized=JSON.parse(JSON.stringify(settings.comfyui));
+    vi.resetModules();
+    const reloaded=await hydrateWithComfy(serialized);
+    expect(reloaded.comfyui.workflows.map(w=>w.exampleImage)).toEqual([path,undefined,undefined]);
+  });
   it('migrates both old size orientations into a shared library without mixing workflow defaults', async () => {
     const settings=await hydrateWithComfy({workflows:[{id:'a',portraitSize:'1080×1920',landscapeSize:'1920×1080'},{id:'b',portraitSize:'1024×1024',landscapeSize:'1920×1080'}],activeWorkflowId:'b'});
     expect(settings.comfyui.workflows.map(w=>w.defaultSize)).toEqual(['1080×1920','1024×1024']);

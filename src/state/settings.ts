@@ -18,6 +18,7 @@ import {
   vibeMetaFromData,
 } from '@/backends/vibeStore';
 import { getContext } from '@/st/context';
+import { normalizeWorkflowExample } from '@/st/workflowExamples';
 import { reactive, watch } from 'vue';
 
 /**
@@ -63,6 +64,8 @@ export interface BackendConn {
  * url 反过来仍是渠道级(一台 ComfyUI 服务器跑所有工作流)。
  */
 export interface ComfyWorkflowPreset extends SizePair {
+  /** 本工作流示例图的酒馆本地路径；图片不写入工作流 JSON 或生成请求。 */
+  exampleImage?: string;
   /** v1.1.1: 用户默认尺寸；旧横竖尺寸保留用于旧配置兼容。 */
   defaultSize?: string;
   id: string;
@@ -1208,6 +1211,7 @@ function normalizeWorkflowPreset(raw: unknown, seq: number): ComfyWorkflowPreset
     simple.negative = '';
   }
   return {
+    exampleImage: normalizeWorkflowExample(o.exampleImage),
     id: typeof o.id === 'string' && o.id ? o.id : `wf_${Date.now()}_${seq}`,
     name: typeof o.name === 'string' && o.name ? o.name : DEFAULT_WORKFLOW_NAME,
     // 简易编辑器已移除；旧参数一次性迁为动态 API 模板，原 JSON 留作恢复。

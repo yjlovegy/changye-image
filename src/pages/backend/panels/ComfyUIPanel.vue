@@ -9,6 +9,8 @@ import ComfyLoraControls from './ComfyLoraControls.vue';
 import ComfyModelControls from './ComfyModelControls.vue';
 import ComfyWorkflowJson from './ComfyWorkflowJson.vue';
 import WorkflowResolution from './WorkflowResolution.vue';
+import WorkflowExample from './WorkflowExample.vue';
+import { cleanUnusedWorkflowExample } from '@/st/workflowExamples';
 import BbiSelect from '@/components/BbiSelect.vue';
 import BbiTextarea from '@/components/BbiTextarea.vue';
 import Collapsible from '@/components/Collapsible.vue';
@@ -102,15 +104,18 @@ function duplicateWorkflow() {
   switchTo(preset);
 }
 
-function confirmRemoveWorkflow() {
+async function confirmRemoveWorkflow() {
   confirmDeleteOpen.value = false;
   const list = settings.comfyui.workflows;
   if (list.length <= 1) return;
   const index = list.findIndex(w => w.id === active.value.id);
   if (index < 0) return;
-  list.splice(index, 1);
+  const [removed] = list.splice(index, 1);
   // 删掉的是当前项:接位到原位置那一条(已是最后一条则退一格)
   settings.comfyui.activeWorkflowId = list[Math.min(index, list.length - 1)].id;
+  if (!await cleanUnusedWorkflowExample(removed.exampleImage, () => settings.comfyui.workflows)) {
+    toastr.warning('工作流已删除，示例图文件清理失败，可在示例图目录手动清理');
+  }
 }
 
 const fixedNegativeIssue = computed(() => {
@@ -289,6 +294,8 @@ function applyAssist() {
 
         <!-- 分界:线以下的开关、尺寸与 JSON 均跟随当前选中的这一套 -->
         <hr class="wf-divider" />
+
+        <WorkflowExample :key="active.id" :preset="active" />
 
         <ComfyModelControls :key="active.id" v-model:workflow="active.workflow" :url="settings.comfyui.url" />
         <WorkflowResolution :key="active.id" :preset="active" />

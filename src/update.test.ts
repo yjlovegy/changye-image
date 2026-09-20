@@ -3,7 +3,8 @@ import { isNewer, checkForUpdate, updateState } from './update';
 
 describe('isNewer', () => {
   it('checks this distribution repository rather than the upstream release', async () => {
-    const fetchMock=vi.fn().mockResolvedValue({ok:true,json:async()=>({version:'1.1.2'})});
+    const nextVersion = `${Number(updateState.current.split('.')[0]) + 1}.0.0`;
+    const fetchMock=vi.fn().mockResolvedValue({ok:true,json:async()=>({version:nextVersion})});
     vi.stubGlobal('fetch',fetchMock);
     try {
       await checkForUpdate(true);
