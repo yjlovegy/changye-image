@@ -39,6 +39,22 @@ beforeEach(() => {
 afterEach(() => Object.assign(settings, previous));
 
 describe('reviseImagePrompt', () => {
+  it('keeps a Krea2 image in natural-language mode even after switching workflows, preserving its resolution', async () => {
+    activeComfyPreset().promptMode = 'anima';
+    const content: ImageTagContent = { ...source(), tag: '', promptMode: 'krea2', resolution: { width: 1024, height: 1536 } };
+    request.mockImplementation(async (_channel, _messages, options) => {
+      activeComfyPreset().promptMode = 'anima';
+      const raw = response({ tag: '', nl: 'The adult artist sits in a studio, wearing a green shirt.', negative: 'extra people' });
+      options?.validate?.(raw); return raw;
+    });
+    const result = await reviseImagePrompt(content, '衬衫改为绿色');
+    expect(result).toMatchObject({ tag: '', promptMode: 'krea2', resolution: { width: 1024, height: 1536 } });
+    expect(result.nl).toContain('green shirt');
+    const system = request.mock.calls[0][1][0].content;
+    expect(system).toContain('【Krea2 自然语言绘图规范】');
+    expect(system).not.toContain('tag 与 nl 必须同时非空');
+    expect(system).not.toContain('tag 排序');
+  });
   it('uses one auxiliary request and returns a detached draft without mutating content or settings', async () => {
     const content = source();
     const before = JSON.stringify(content);

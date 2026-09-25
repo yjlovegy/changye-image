@@ -14,6 +14,7 @@ import {
   type ImageTagContent,
 } from '@/st/imageTagRegex';
 import { applyMessageText, type ApplyMessageResult } from '@/st/messageEdit';
+import { normalizePromptMode, assertNaturalPrompt } from '@/promptMode';
 import { assertMixedPrompt } from '@/promptContent';
 import { naiSupportsCharacterPrompts } from '@/backends/nai';
 import { activeComfyPreset, settings } from '@/state/settings';
@@ -109,7 +110,8 @@ async function writeBack(
   const characterPrompts = settings.defaultBackend === 'nai' && naiSupportsCharacterPrompts(settings.nai.model);
   if (regenerate && (settings.defaultBackend === 'comfyui' || characterPrompts)) {
     try {
-      assertMixedPrompt({ ...content, characters: characterPrompts ? content.characters : [] });
+      if ((content.promptMode ?? normalizePromptMode(activeComfyPreset().promptMode)) === 'krea2') assertNaturalPrompt(content);
+      else assertMixedPrompt({ ...content, characters: characterPrompts ? content.characters : [] });
       if (revision && supportsSceneNegative(settings.defaultBackend, activeComfyPreset())) {
         assertSceneNegative(content.negative);
       }

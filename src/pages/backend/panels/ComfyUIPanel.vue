@@ -297,7 +297,7 @@ function applyAssist() {
 
         <WorkflowExample :key="active.id" :preset="active" />
 
-        <ComfyModelControls :key="active.id" v-model:workflow="active.workflow" :url="settings.comfyui.url" />
+        <ComfyModelControls :key="active.id" v-model:workflow="active.workflow" v-model:prompt-mode="active.promptMode" :url="settings.comfyui.url" />
         <WorkflowResolution :key="active.id" :preset="active" />
 
         <section class="wf-group" aria-label="固定生图提示词">

@@ -18,7 +18,7 @@ export interface PageDef {
  * 并在 Icon.vue 的 PATHS 里加一条同 id 的图标。顺序即导航顺序,设置放最末。
  */
 export const PAGES: PageDef[] = [
-  { id: 'backend', label: '渠道', component: Backend },
+  { id: 'backend', label: '工作流', component: Backend },
   { id: 'characters', label: '角色管理', component: Characters },
   { id: 'gallery', label: '图库', component: Gallery },
   { id: 'history', label: '请求历史', component: History },

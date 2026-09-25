@@ -1,3 +1,4 @@
+import { type PromptMode, assertNaturalPrompt } from '@/promptMode';
 import { normalizeOrientation, type Orientation } from '@/backends/size';
 import type { TargetSegment } from '@/autoTag/clean';
 import { FORBIDDEN_SUBTAG, serializeImageTag } from '@/st/imageTagRegex';
@@ -14,6 +15,7 @@ export interface ImageCharacterPrompt {
 }
 
 export interface ImageInsertion {
+  promptMode?: PromptMode;
   /** 模型选择的目标正文位置 ID。 */
   position: string;
   /** 位置 ID 对应的原始物理行(0-based，仅插件内部使用)。 */
@@ -171,6 +173,7 @@ export function parseImagePlan(
   segments: TargetSegment[],
   minImages: number,
   maxImages: number,
+  promptMode?: PromptMode,
 ): ImagePlan {
   const parsed = parseFinalJsonObject(raw);
   if (!Array.isArray(parsed.images)) throw new Error('AI 返回的 JSON 缺少 images 数组');
@@ -195,13 +198,14 @@ export function parseImagePlan(
     }
     // 兼容模型按旧协议/习惯返回 prompt 键的情况
     const tag = sanitizeContent(entry.tag ?? entry.prompt, 'tag', index);
-    if (!tag) throw new Error(`images[${index}].tag 不能为空`);
     const nl = sanitizeContent(entry.nl, 'nl', index);
+    if (promptMode === 'krea2') assertNaturalPrompt({ nl }, `图片 ${index + 1} `);
+    else if (!tag) throw new Error(`images[${index}].tag 不能为空`);
     const negative = sanitizeContent(entry.negative ?? entry.negative_prompt, 'negative', index);
     const characters = sanitizeCharacters(entry.characters, index);
     // 兼容模型按习惯返回 orientation / aspect 键
     const size = normalizeOrientation(entry.size ?? entry.orientation ?? entry.aspect);
-    images.push({ position, sourceLine, tag, nl, negative, characters, size });
+    images.push({ position, sourceLine, tag: promptMode === 'krea2' ? '' : tag, nl, negative, characters, size, ...(promptMode ? { promptMode } : {}) });
   }
 
   const limitedImages = images.slice(0, normalizedMax);

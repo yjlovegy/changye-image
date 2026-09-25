@@ -1,3 +1,4 @@
+import type { PromptMode } from '@/promptMode';
 import { validatePose, type ComfyPose } from '@/backends/comfyPose';
 import type { ImageCharacterPrompt } from '@/autoTag/protocol';
 import { normalizeOrientation, type Orientation, type ImageSize } from '@/backends/size';
@@ -179,7 +180,7 @@ export function stripImageTags(mes: string): string {
  * 内容里混进一个 `</bbi_image>` 就会让 tag 提前截断、后半截漏进 DOM 与提示词，
  * 正好破掉「tag 永不进 DOM、永不进提示词」这条不变式。
  */
-export const FORBIDDEN_SUBTAG = /<\/?(?:bbi_image|tag|nl|negative|characters|size|pose|resolution)\b/i;
+export const FORBIDDEN_SUBTAG = /<\/?(?:bbi_image|tag|nl|negative|characters|size|pose|resolution|prompt_mode)\b/i;
 
 /** 文本里是否含 bbi_image 子标签字面量（手输校验用；口径同 AI 侧）。 */
 export function containsTagMarkup(text: string): boolean {
@@ -187,6 +188,7 @@ export function containsTagMarkup(text: string): boolean {
 }
 
 export interface ImageTagContent {
+  promptMode?: PromptMode;
   /** danbooru 短 tag 部分：显式 <tag> 子标签内容，或剔除子标签后的裸文本（存量格式）。 */
   tag: string;
   /** 自然语言部分：<nl> 子标签内容，无则空串。 */
@@ -215,6 +217,8 @@ export function parseImageTagContent(raw: string): ImageTagContent {
   // 内容统一折叠成单行:手写 tag 可能跨行,而提示词里换行没有意义
   const oneLine = (text: string) => text.trim().replace(/[\r\n]+/g, ' ');
   const inner = raw.replace(/^<bbi_image[^>]*>/i, '').replace(/<\/bbi_image>$/i, '');
+  const modeMatch = inner.match(/<prompt_mode>(anima|krea2)<\/prompt_mode>/i);
+  const promptMode = modeMatch?.[1].toLowerCase() as PromptMode | undefined;
   const nlMatch = inner.match(/<nl>([\s\S]*?)<\/nl>/i);
   const nl = nlMatch ? oneLine(nlMatch[1]) : '';
   const negativeMatch = inner.match(/<negative>([\s\S]*?)<\/negative>/i);
@@ -251,6 +255,7 @@ export function parseImageTagContent(raw: string): ImageTagContent {
     catch { poseInvalid = true; }
   }
   const withoutSubTags = inner
+    .replace(/<prompt_mode>[\s\S]*?<\/prompt_mode>/gi, '')
     .replace(/<resolution>[\s\S]*?<\/resolution>/gi, '')
     .replace(/<pose>[\s\S]*?<\/pose>/gi, '')
     .replace(/<nl>[\s\S]*?<\/nl>/gi, '')
@@ -262,7 +267,7 @@ export function parseImageTagContent(raw: string): ImageTagContent {
     .filter(Boolean);
   const bare = oneLine(withoutSubTags.replace(/<tag>[\s\S]*?<\/tag>/gi, ''));
   const tag = [...(bare ? [bare] : []), ...explicit].join(', ');
-  return { tag, nl, negative, characters, size, ...(resolution ? { resolution } : {}), ...(resolutionInvalid ? { resolutionInvalid: true } : {}), ...(pose ? { pose } : {}), ...(poseInvalid ? { poseInvalid: true } : {}) };
+  return { tag, nl, negative, characters, size, ...(promptMode ? { promptMode } : {}), ...(resolution ? { resolution } : {}), ...(resolutionInvalid ? { resolutionInvalid: true } : {}), ...(pose ? { pose } : {}), ...(poseInvalid ? { poseInvalid: true } : {}) };
 }
 
 /**
@@ -276,6 +281,7 @@ export function parseImageTagContent(raw: string): ImageTagContent {
  * size **恒写出**：生成是延后的(点卡片才出图)，方向必须随 tag 持久化在正文里。
  */
 export function serializeImageTag(content: ImageTagContent): string {
+  const mode = content.promptMode ? `<prompt_mode>${content.promptMode === 'krea2' ? 'krea2' : 'anima'}</prompt_mode>` : '';
   const nl = content.nl ? `<nl>${content.nl}</nl>` : '';
   const negative = content.negative ? `<negative>${content.negative}</negative>` : '';
   const characters = content.characters.length
@@ -283,7 +289,7 @@ export function serializeImageTag(content: ImageTagContent): string {
     : '';
   const pose = content.pose ? `<pose>${JSON.stringify(validatePose(content.pose)).replace(/</g, '\\u003c')}</pose>` : '';
   const resolution = content.resolution ? `<resolution>${resolutionText(content.resolution)}</resolution>` : '';
-  return `<bbi_image>${content.tag}${nl}${negative}${characters}${pose}${resolution}<size>${content.size}</size></bbi_image>`;
+  return `<bbi_image>${content.tag}${nl}${negative}${characters}${pose}${resolution}${mode}<size>${content.size}</size></bbi_image>`;
 }
 
 /**

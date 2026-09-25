@@ -253,6 +253,7 @@ async function generate(): Promise<void> {
     seq: props.seq,
     tag: props.tag,
     prompt: props.prompt,
+    promptMode: parsePoseContent(props.tag).promptMode,
     pose: parsePoseContent(props.tag).pose,
     poseInvalid: parsePoseContent(props.tag).poseInvalid,
     resolution: parsePoseContent(props.tag).resolution,
@@ -361,6 +362,7 @@ function openEditor(revisionMode = false): void {
       tagLayout: [...props.tagLayout],
     },
     content: {
+      ...parsePoseContent(props.tag),
       tag: props.prompt,
       nl: props.nl,
       negative: props.negative,

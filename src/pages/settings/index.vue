@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { DEFAULT_KREA2_SPEC, DEFAULT_KREA2_THINKING, type PromptMode } from '@/promptMode';
 import BbiSelect from '@/components/BbiSelect.vue';
 import BbiCombo from '@/components/BbiCombo.vue';
 import BbiTextarea from '@/components/BbiTextarea.vue';
@@ -8,19 +9,15 @@ import Icon from '@/components/Icon.vue';
 import ModalMask from '@/components/ModalMask.vue';
 import { fetchModels, testChannel } from '@/api/client';
 import {
-  BACKENDS,
   DEFAULT_COMFY_SPEC,
   DEFAULT_COMFY_THINKING,
   DEFAULT_JAILBREAK_PROMPT,
-  DEFAULT_NAI_V5_SPEC,
-  DEFAULT_NAI_V5_THINKING,
   DEFAULT_PREFILL_PROMPT,
   newChannel,
   sanitizeTagName,
   settings,
   type ApiChannel,
   type AutoTagPrompts,
-  type BackendId,
 } from '@/state/settings';
 import { getContext } from '@/st/context';
 import {
@@ -41,7 +38,7 @@ const NAV_OPTIONS: { value: NavPosition; label: string }[] = [
 ];
 
 // 出图后端可选项:与渠道页页签同口径,藏掉未开放的 webui
-const BACKEND_OPTIONS = BACKENDS.filter(b => b.value !== 'webui');
+
 
 /**
  * 思考强度候选:各家取值的并集,**不是**某一家的官方列表。
@@ -74,10 +71,7 @@ const orbShapeSel = computed<string>({
   get: () => ui.orbShape,
   set: v => (ui.orbShape = v as OrbShape),
 });
-const backendSel = computed<string>({
-  get: () => settings.defaultBackend,
-  set: v => (settings.defaultBackend = v as BackendId),
-});
+
 
 /* —— 渠道:列表只读展示,编辑/新建都在弹窗里进行,避免一长列表平铺误触。
    渠道列表与柏宝书共享(见 state/settings.ts 的共享存储),任一端改动自动同步。 —— */
@@ -132,23 +126,9 @@ const TAG_PROMPT_METAS: TagPromptMeta[] = [
     macros: [],
   },
   {
-    key: 'naiV5Spec',
-    label: 'NAI \u89c4\u8303',
-    hint: '\u9ed8\u8ba4\u540e\u7aef\u4e3a NAI \u65f6\u62fc\u8fdb\u81ea\u52a8 tag \u8bf7\u6c42\uff0c\u5b9a\u4e49 Base Prompt\u3001\u539f\u751f Character Prompts \u4e0e\u82f1\u6587\u81ea\u7136\u8bed\u8a00\uff08nl \u4e00\u5f8b\u5199\u82f1\u6587\uff09\u30024.5 \u4e0e V5 \u5171\u7528\u8fd9\u4e00\u4efd\uff1achar_captions \u672c\u5c31\u662f v4 \u65f6\u4ee3\u7684\u534f\u8bae\uff0c\u4e24\u4ee3\u5199\u6cd5\u53e3\u5f84\u76f8\u540c\u3002\u7559\u7a7a\u7528\u5185\u7f6e\u9ed8\u8ba4\u3002',
-    builtin: DEFAULT_NAI_V5_SPEC,
-    macros: [],
-  },
-  {
-    key: 'naiV5Thinking',
-    label: 'NAI 思维链',
-    hint: '默认后端为 NAI 时使用的输出前思考清单，作为 system 压在任务消息之后（解析时会自动剥掉思考块）。槽位块是「Base 块 + 每角色一块」，对应 characters[] 协议，与 ComfyUI 那份的单串形态不通用。与「NAI 规范」配套。留空用内置默认。',
-    builtin: DEFAULT_NAI_V5_THINKING,
-    macros: [],
-  },
-  {
     key: 'comfySpec',
-    label: 'ComfyUI 规范',
-    hint: '默认后端为 ComfyUI 时拼进自动 tag 请求，约束 tag / nl 的书写规范。留空用内置默认。',
+    label: 'Anima 提示词规范',
+    hint: '工作流选择 Anima 模式时使用。保留原 ComfyUI 规范的自定义内容，留空用内置默认。',
     builtin: DEFAULT_COMFY_SPEC,
     macros: [
       {
@@ -159,19 +139,25 @@ const TAG_PROMPT_METAS: TagPromptMeta[] = [
   },
   {
     key: 'comfyThinking',
-    label: 'ComfyUI 思维链',
+    label: 'Anima 输出前检查',
     hint: 'ComfyUI 输出前的内部视觉检查清单，核对人物、动作归属、服装连续性、背景和标签一致性。最终只输出 JSON，不展示思考过程。留空用内置默认。',
     builtin: DEFAULT_COMFY_THINKING,
     macros: [],
   },
+  { key: 'krea2Spec', label: 'Krea2 提示词规范', hint: '工作流选择 Krea2 模式时使用，生成连贯英文画面描述。留空用内置默认。', builtin: DEFAULT_KREA2_SPEC, macros: [] },
+  { key: 'krea2Thinking', label: 'Krea2 输出前检查', hint: 'Krea2 的内部视觉检查清单；最终只输出任务 JSON，不展示检查过程。留空用内置默认。', builtin: DEFAULT_KREA2_THINKING, macros: [] },
   {
     key: 'prefill',
     label: '预填充',
-    hint: 'assistant 预填充，随渠道「发送预填充」开关生效。ComfyUI 留空时不预填，直接输出 JSON；NAI 留空时沿用内置默认。',
+    hint: 'assistant 预填充，随副 API「发送预填充」开关生效。留空时不预填，直接输出 JSON。',
     builtin: DEFAULT_PREFILL_PROMPT,
     macros: [],
   },
 ];
+
+const ruleMode = ref<PromptMode>('anima');
+const commonPromptMetas = TAG_PROMPT_METAS.filter(meta => ['jailbreak', 'prefill'].includes(meta.key));
+const modePromptMetas = computed(() => TAG_PROMPT_METAS.filter(meta => (ruleMode.value === 'krea2' ? ['krea2Spec', 'krea2Thinking'] : ['comfySpec', 'comfyThinking']).includes(meta.key)));
 
 // 正在编辑的提示词;draft 是草稿,点「完成」才写回 settings(取消则丢弃)。
 const editingTagPrompt = ref<TagPromptMeta | null>(null);
@@ -180,13 +166,13 @@ const tagPromptArea = ref<InstanceType<typeof BbiTextarea> | null>(null);
 
 // 该条是否已自定义(非空即视为已覆盖内置)
 function isTagPromptCustom(key: keyof AutoTagPrompts): boolean {
-  return settings.autoTag.prompts[key].trim().length > 0;
+  return (settings.autoTag.prompts[key] ?? '').trim().length > 0;
 }
 
 function openTagPrompt(meta: TagPromptMeta) {
   editingTagPrompt.value = meta;
   // 已自定义→载入用户内容;未自定义→预填内置模板,方便直接在其上改
-  tagPromptDraft.value = settings.autoTag.prompts[meta.key].trim() || meta.builtin;
+  tagPromptDraft.value = (settings.autoTag.prompts[meta.key] ?? '').trim() || meta.builtin;
 }
 function closeTagPrompt() {
   editingTagPrompt.value = null;
@@ -475,7 +461,7 @@ async function confirmUpdate() {
           :title="updateState.checking ? '正在检查更新' : '点击检查更新'"
           @click="checkForUpdate(true)"
         >
-          v{{ updateState.current || '—' }}
+          {{ updateState.current === '1.2.0' ? 'V1.2' : 'v' + (updateState.current || '—') }}
         </button>
         <button
           v-if="updateState.available"
@@ -494,7 +480,7 @@ async function confirmUpdate() {
     <!-- 总开关:整个插件的主控。全页唯一的大号滑动开关,与下方各项的小复选框拉开层级。 -->
     <div class="bbi-master" :class="{ 'is-off': !settings.enabled }">
       <span class="bbi-master-spine" aria-hidden="true"></span>
-      <span class="bbi-master-title">柏宝绘 · 文生图</span>
+      <span class="bbi-master-title">长夜的绘图器</span>
       <button
         type="button"
         role="switch"
@@ -521,10 +507,6 @@ async function confirmUpdate() {
           <BbiSelect v-model="navSel" :options="NAV_OPTIONS" aria-label="导航位置" />
         </div>
 
-        <div class="bbi-select-row">
-          <span class="bbi-field-label">出图后端</span>
-          <BbiSelect v-model="backendSel" :options="BACKEND_OPTIONS" aria-label="出图后端" />
-        </div>
 
         <label class="bbi-switch-row">
           <span class="bbi-field-label">新图保存为 JPG</span>
@@ -768,12 +750,25 @@ async function confirmUpdate() {
       <!-- 自定义提示词(与柏宝书同款入口,独立成区) -->
       <Collapsible title="自定义提示词" :open="false">
         <ul class="bbi-prompt-list">
-          <li v-for="m in TAG_PROMPT_METAS" :key="m.key" class="bbi-prompt-item">
+          <li v-for="m in commonPromptMetas" :key="m.key" class="bbi-prompt-item">
             <button class="bbi-prompt-open" type="button" @click="openTagPrompt(m)">
               <span class="bbi-prompt-name">{{ m.label }}</span>
               <span class="bbi-prompt-state" :class="{ 'is-custom': isTagPromptCustom(m.key) }">
                 {{ isTagPromptCustom(m.key) ? '已自定义' : '默认' }}
               </span>
+              <Icon name="edit" class="bbi-prompt-edit" />
+            </button>
+          </li>
+        </ul>
+        <div class="bbi-segmented bbi-rule-mode" role="tablist" aria-label="提示词规则模式">
+          <button v-for="mode in (['anima', 'krea2'] as const)" :key="mode" type="button" role="tab" class="bbi-seg" :class="{ 'is-on': ruleMode === mode }" :aria-selected="ruleMode === mode" @click="ruleMode = mode">{{ mode === 'anima' ? 'Anima' : 'Krea2' }}</button>
+        </div>
+        <p class="bbi-field-hint">两套规则分别保存；工作流的提示词模式决定使用哪一套。</p>
+        <ul class="bbi-prompt-list">
+          <li v-for="m in modePromptMetas" :key="m.key" class="bbi-prompt-item">
+            <button class="bbi-prompt-open" type="button" @click="openTagPrompt(m)">
+              <span class="bbi-prompt-name">{{ m.label }}</span>
+              <span class="bbi-prompt-state" :class="{ 'is-custom': isTagPromptCustom(m.key) }">{{ isTagPromptCustom(m.key) ? '已自定义' : '默认' }}</span>
               <Icon name="edit" class="bbi-prompt-edit" />
             </button>
           </li>
@@ -1082,6 +1077,7 @@ async function confirmUpdate() {
 </template>
 
 <style scoped>
+.bbi-rule-mode { margin-top: 20px; width: fit-content; }
 .bbi-ver-row {
   display: inline-flex;
   align-items: center;

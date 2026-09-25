@@ -29,6 +29,17 @@ async function hydrateWithComfy(comfyui: Record<string, unknown> | undefined) {
 }
 
 describe('ComfyUI 工作流库迁移', () => {
+  it('persists an explicit mode per workflow while keeping legacy workflow text unchanged', async () => {
+    const settings = await hydrateWithComfy({ url: 'http://example:8188', activeWorkflowId: 'k', workflows: [
+      { id: 'a', name: '旧工作流', workflow: '{"1":{"class_type":"CLIPTextEncode","inputs":{"text":"%prompt%"}}}' },
+      { id: 'k', name: 'Krea2', promptMode: 'krea2', workflow: '{"2":{"class_type":"CLIPTextEncode","inputs":{"text":"%nl%"}}}' },
+    ] });
+    expect(settings.comfyui.workflows.map(p => p.promptMode)).toEqual(['anima', 'krea2']);
+    expect(settings.comfyui.workflows[0].workflow).toContain('%prompt%');
+    expect(settings.comfyui.url).toBe('http://example:8188');
+    const { effectiveComfyConn } = await import('@/state/settings');
+    expect(effectiveComfyConn().promptMode).toBe('krea2');
+  });
   it('persists separate workflow examples through reload and drops unowned paths', async () => {
     const path='/user/images/长夜的绘图器_工作流示例/wfimg_a.png';
     const settings=await hydrateWithComfy({workflows:[{id:'a',exampleImage:path},{id:'b',exampleImage:'https://example.com/a.png'},{id:'c'}]});
@@ -163,6 +174,7 @@ describe('ComfyUI 工作流库迁移', () => {
     expect(activeComfyPreset().name).toBe('B');
     const { simpleDefaults } = await import('@/backends/comfyTemplates');
     expect(effectiveComfyConn()).toEqual({
+      promptMode: 'anima',
       url: 'http://example:8188',
       workflow: '{"2":{}}',
       // 存量预设没有 mode/simple 字段 → custom + 简易模式默认值

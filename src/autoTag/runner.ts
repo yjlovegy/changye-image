@@ -48,6 +48,7 @@ import { applyMessageText, type ApplyMessageResult, type MessageExtraUpdate } fr
 import { getContext, isAiStoryMessage, isStoryMessage, type STMessage } from '@/st/context';
 import { hasImageTagTrace, parseImageTags, stripImageTags } from '@/st/imageTagRegex';
 import { activeComfyPreset, getTagGenChannel, isCurrentChatExcluded, settings } from '@/state/settings';
+import { normalizePromptMode, assertNaturalPrompt } from '@/promptMode';
 import { assertMixedPrompt } from '@/promptContent';
 
 function snapshotSceneNegative(): boolean {
@@ -56,7 +57,10 @@ function snapshotSceneNegative(): boolean {
 
 /** 为可识别的协议遗漏追加一次定向纠错；保持可选 assistant 预填充仍在最后。 */
 function addPromptValidationRetryHint(messages: ChatMsg[], error: unknown): void {
-  const instruction = error instanceof SceneNegativeValidationError ? SCENE_NEGATIVE_RETRY_INSTRUCTION
+  const natural = messages.some(message => message.content.includes('【Krea2 人物与空间约束】'));
+  const instruction = natural && error instanceof ExplicitAppearanceValidationError
+    ? '上次 nl 中包含 @角色占位符。请直接在 nl 中写明可见外貌，tag 保持空字符串，返回修正后的完整 JSON。'
+    : error instanceof SceneNegativeValidationError ? SCENE_NEGATIVE_RETRY_INSTRUCTION
     : error instanceof ExplicitAppearanceValidationError ? EXPLICIT_APPEARANCE_RETRY_INSTRUCTION : '';
   if (!instruction || messages.some(message => message.content === instruction)) return;
   const index = messages.at(-1)?.role === 'assistant' ? messages.length - 1 : messages.length;
@@ -307,6 +311,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
     // 纯本地渲染:建档由主请求在同一次输出里完成(changes 的 field="new")
     const anchors = resolveCharAnchors(entriesBefore, lockedNames);
     const negativeRequired = snapshotSceneNegative();
+    const promptMode = settings.defaultBackend === 'comfyui' ? normalizePromptMode(activeComfyPreset().promptMode) : undefined;
     const messages = await buildAutoTagMessages(
       context,
       floor,
@@ -315,6 +320,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
       preparedTarget,
       anchors.text,
       negativeRequired,
+      promptMode,
     );
     const channel = getTagGenChannel();
     // 失败重试:一般请求异常与解析/校验失败可重试；上游明确拒绝、截断或没有最终正文时停止。
@@ -341,8 +347,10 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
             preparedTarget.segments,
             settings.autoTag.minImages,
             settings.autoTag.maxImages,
+            promptMode,
           );
-          if (settings.defaultBackend === 'comfyui' || naiSupportsCharacterPrompts(settings.nai.model)) {
+          if (promptMode === 'krea2') candidate.images.forEach(image => assertNaturalPrompt(image));
+          else if (settings.defaultBackend === 'comfyui' || naiSupportsCharacterPrompts(settings.nai.model)) {
             candidate.images.forEach((image, index) => assertMixedPrompt(image, `图片 ${index + 1} `));
           }
           candidate.images.forEach((image, index) => assertExplicitAppearance(image, `图片 ${index + 1} `));
@@ -648,7 +656,8 @@ export async function requestSelectionImage(
     const anchors = resolveCharAnchors(selectionState.entries, locked);
     const options = { ...settings.autoTag, minImages: 1, maxImages: 1 };
     const negativeRequired = snapshotSceneNegative();
-    const messages = await buildAutoTagMessages(context, floor, options, memory, prepared, anchors.text, negativeRequired);
+    const promptMode = settings.defaultBackend === 'comfyui' ? normalizePromptMode(activeComfyPreset().promptMode) : undefined;
+    const messages = await buildAutoTagMessages(context, floor, options, memory, prepared, anchors.text, negativeRequired, promptMode);
     const userIndex = messages.findLastIndex(message => message.role === 'user');
     if (userIndex < 0) throw new Error('选段生图请求缺少正文消息');
     const reference = prepareTargetText(stripImageTags(snapshot.source), settings.excludes.customStripTags).promptText;
@@ -668,8 +677,9 @@ export async function requestSelectionImage(
       try {
         const parsed: { plan: ImagePlan | null } = { plan: null };
         const validate = (raw: string) => {
-          const candidate = parseImagePlan(raw, prepared.segments, 1, 1);
-          if (settings.defaultBackend === 'comfyui' || naiSupportsCharacterPrompts(settings.nai.model)) {
+          const candidate = parseImagePlan(raw, prepared.segments, 1, 1, promptMode);
+          if (promptMode === 'krea2') candidate.images.forEach(image => assertNaturalPrompt(image));
+          else if (settings.defaultBackend === 'comfyui' || naiSupportsCharacterPrompts(settings.nai.model)) {
             candidate.images.forEach(image => assertMixedPrompt(image));
           }
           if (negativeRequired) candidate.images.forEach((image, index) => assertSceneNegative(image.negative, `图片 ${index + 1} `));
@@ -726,7 +736,7 @@ export async function requestSelectionImage(
     image.characters = image.characters.map(character => ({
       ...character, tag: expand(character.tag, 'tag'), nl: expand(character.nl, 'nl'),
     }));
-    if (!image.tag || image.characters.some(character => !character.tag)) {
+    if ((image.promptMode === 'krea2' ? !image.nl : !image.tag) || image.characters.some(character => !character.tag)) {
       throw new Error('选段提示词包含无法匹配的角色，请补充角色外貌后重试');
     }
     if (floorBusy()) {

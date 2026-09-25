@@ -17,7 +17,7 @@ import { charTagLib, createCharTagNewOp, createCharTagSetOp, emptyCharFields, hy
 
 const state = vi.hoisted(() => ({
   context: null as STContext | null,
-  preset: { mode: 'custom', workflow: '', simple: { template: 'checkpoint' } },
+  preset: { mode: 'custom', promptMode: 'anima', workflow: '', simple: { template: 'checkpoint' } },
 }));
 vi.mock('@/st/context', () => ({
   getContext: () => state.context,
@@ -59,6 +59,7 @@ beforeEach(() => {
   settings.enabled = true;
   settings.defaultBackend = 'nai';
   state.preset.mode = 'custom';
+  state.preset.promptMode = 'anima';
   state.preset.workflow = '';
   state.preset.simple.template = 'checkpoint';
   settings.autoTag.retryCount = 0;
@@ -309,6 +310,20 @@ describe('manual selection image request', () => {
     expect(toastr.success).not.toHaveBeenCalled();
   });
 
+  it('inserts a Krea2 nl-only image below selected text and keeps the captured mode across a workflow switch', async () => {
+    settings.defaultBackend = 'comfyui';
+    state.preset.promptMode = 'krea2';
+    vi.mocked(requestViaMainApi).mockImplementation(async (_messages, options) => {
+      state.preset.promptMode = 'anima';
+      const raw = JSON.stringify({ images: [{ position: 'P1', tag: '', nl: 'The woman holds an open book beside a window.' }], changes: [] });
+      options?.validate?.(raw); return raw;
+    });
+    await requestSelectionImage(0, '她翻开书。', snapshotAt('她翻开书。'.length));
+    const result = parseImageTags(state.context!.chat[0].mes)[0];
+    expect(result).toContain('<nl>The woman holds an open book beside a window.</nl>');
+    expect(result).toContain('<prompt_mode>krea2</prompt_mode>');
+    expect(result).not.toContain('1girl');
+  });
   it('works with automatic switches off, inserts below the selection and migrates the original image history', async () => {
     const snapshot = snapshotAt('她翻开书。'.length);
     const oldDelta = state.context!.chat[0].extra!.bbiCharChanges;
@@ -322,7 +337,7 @@ describe('manual selection image request', () => {
     expect(requestCompletion).not.toHaveBeenCalled();
     expect(buildAutoTagMessages).toHaveBeenCalledWith(
       expect.anything(), 0, expect.objectContaining({ minImages: 1, maxImages: 1 }), null,
-      expect.objectContaining({ promptText: '她翻开书。 ⟦P1⟧' }), null, false,
+      expect.objectContaining({ promptText: '她翻开书。 ⟦P1⟧' }), null, false, undefined,
     );
     expect(parseImageTags(state.context!.chat[0].mes)).toEqual([
       '<bbi_image>1girl, holding a book<nl>The girl holds an open book, her eyes lowered toward the page.</nl><size>portrait</size></bbi_image>',

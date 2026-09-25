@@ -2,10 +2,16 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { inspectWorkflowFields, updateWorkflowFields } from '@/backends/comfyWorkflowControls';
 import { fetchComfyModelLists, type ComfyModelLists } from '@/backends/comfyObjectInfo';
+import { PROMPT_MODE_OPTIONS, normalizePromptMode, type PromptMode } from '@/promptMode';
+import BbiSelect from '@/components/BbiSelect.vue';
 import BbiCombo from '@/components/BbiCombo.vue';
-const props = defineProps<{ workflow: string; url: string }>();
-const emit = defineEmits<{ (event: 'update:workflow', value: string): void }>();
+const props = defineProps<{ workflow: string; url: string; promptMode?: PromptMode }>();
+const emit = defineEmits<{ (event: 'update:workflow', value: string): void; (event: 'update:promptMode', value: PromptMode): void }>();
 const draft = ref<Record<string, string | number>>({});
+const draftMode = ref(normalizePromptMode(props.promptMode));
+watch(() => props.promptMode, value => { draftMode.value = normalizePromptMode(value); saved.value = false; });
+watch(draftMode, () => { saved.value = false; });
+const fieldOrder = (options?: string) => ['unets','ggufs','checkpoints'].includes(options || '') ? 0 : options === 'clips' ? 1 : options === 'vaes' ? 2 : ['encoderTypes','dualEncoderTypes'].includes(options || '') ? 3 : options === 'samplers' ? 5 : options === 'schedulers' ? 6 : 7;
 const baseline = ref('');
 const saved = ref(false), error = ref(''), listError = ref(''), loading = ref(false);
 const lists = ref<ComfyModelLists | null>(null);
@@ -21,7 +27,7 @@ const orderedFields = computed(() => {
     : ['clips','encoderTypes','dualEncoderTypes'].includes(options || '') ? 1 : options === 'vaes' ? 2 : 3;
   return [...state.value.fields].sort((a,b) => rank(a.options) - rank(b.options));
 });
-const dirty = computed(() => JSON.stringify(draft.value) !== JSON.stringify(source.value));
+const dirty = computed(() => draftMode.value !== normalizePromptMode(props.promptMode) || JSON.stringify(draft.value) !== JSON.stringify(source.value));
 watch(source, value => {
   const serialized = JSON.stringify(value);
   if (serialized === baseline.value) return; // unrelated LoRA/JSON edits retain the parameter draft
@@ -44,8 +50,8 @@ watch(() => props.url, () => { ++fetchSequence; lists.value = null; loading.valu
 onBeforeUnmount(() => { ++fetchSequence; });
 async function save() {
   try {
-    const next = updateWorkflowFields(props.workflow, draft.value);
-    emit('update:workflow', next); await nextTick(); saved.value = true; error.value = '';
+    const next = state.value.fields.length ? updateWorkflowFields(props.workflow, draft.value) : props.workflow;
+    emit('update:workflow', next); emit('update:promptMode', draftMode.value); await nextTick(); saved.value = true; error.value = '';
   } catch (e) { error.value = e instanceof Error ? e.message : String(e); }
 }
 </script>
@@ -53,17 +59,22 @@ async function save() {
   <section class="model-controls" aria-label="模型与采样">
     <div class="control-head"><h3 class="bbi-field-label">模型与采样</h3><button type="button" class="bbi-btn bbi-btn-sm" :disabled="loading || !url.trim()" @click="refresh()">{{ loading ? '读取中…' : '刷新列表' }}</button></div>
     <div class="control-fields">
-      <div v-for="field in orderedFields" :key="field.id" class="control-field" :class="[field.options, { 'main-model': ['unets','ggufs','checkpoints'].includes(field.options || ''), 'numeric-field': !field.options }]">
+      <div v-for="field in orderedFields" :key="field.id" :style="{ order: fieldOrder(field.options) }" class="control-field" :class="[field.options, { 'main-model': ['unets','ggufs','checkpoints'].includes(field.options || ''), 'numeric-field': !field.options }]">
         <span class="bbi-field-label">{{ field.label }}</span>
         <BbiCombo v-if="field.options" :model-value="String(draft[field.id] ?? '')" @update:model-value="draft[field.id] = $event" :options="lists?.[field.options] ?? []" :aria-label="field.label" placeholder="选择或填写文件名 / 参数" />
         <input v-else v-model="draft[field.id]" type="number" class="bbi-input" :aria-label="field.label" :min="field.min" :max="field.max" :step="field.step" />
+      </div>
+      <div class="control-field prompt-mode" style="order:4">
+        <span class="bbi-field-label">提示词模式</span>
+        <BbiSelect v-model="draftMode" :options="PROMPT_MODE_OPTIONS" aria-label="提示词模式" />
+        <p class="bbi-field-hint">{{ draftMode === 'krea2' ? '使用连贯英文描述，随当前工作流保存。' : '使用核心标签与英文描述，随当前工作流保存。' }}</p>
       </div>
     </div>
     <p v-if="!state.fields.length && !state.error" class="bbi-field-hint">导入工作流后显示可编辑的模型和采样参数。</p>
     <p v-for="warning in state.warnings" :key="warning" class="bbi-field-hint">{{ warning }}</p>
     <p v-if="listError" class="bbi-field-hint" role="status">{{ listError }}</p>
     <p v-if="state.error || error" class="control-error" role="alert">{{ state.error || error }}</p>
-    <div class="control-actions"><span v-if="saved" class="control-success" role="status">✓ 已保存</span><button type="button" class="bbi-btn bbi-btn-primary" :disabled="!dirty || !state.fields.length || !!state.error" @click="save">保存模型与采样设置</button></div>
+    <div class="control-actions"><span v-if="saved" class="control-success" role="status">✓ 已保存</span><button type="button" class="bbi-btn bbi-btn-primary" :disabled="!dirty || !!state.error" @click="save">保存模型与采样设置</button></div>
   </section>
 </template>
 <style scoped>
@@ -71,8 +82,9 @@ async function save() {
 .control-head, .control-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .control-head h3 { margin: 0; }.control-actions { justify-content: flex-end; margin-top: 14px; }
 .control-fields { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 14px; margin-top: 14px; }
-.control-field { grid-column: span 3; display: grid; gap: 7px; min-width: 0; }.numeric-field { grid-column: span 2; }.main-model { grid-column: 1 / -1; }
-.control-field.clips { grid-column: span 4; }.control-field.encoderTypes,.control-field.dualEncoderTypes { grid-column: span 2; }.control-field.vaes { grid-column: 1 / -1; }
+.control-field { grid-column: span 3; display: grid; align-content: start; gap: 7px; min-width: 0; }.numeric-field { grid-column: span 2; }.main-model { grid-column: 1 / -1; }
+.prompt-mode :deep(.bbi-select-box) { width: 100%; min-width: 0; }
+.control-field.clips,.control-field.vaes { grid-column: span 3; }.control-field.encoderTypes,.control-field.dualEncoderTypes { grid-column: 1 / span 3; }.control-field.prompt-mode { grid-column: 4 / -1; }
 .control-field.samplers { grid-column: 1 / span 2; }.control-field.schedulers { grid-column: 3 / -1; }
 .control-error { color: var(--bbi-danger,#b3261e); font-size: 13px; overflow-wrap: anywhere; }.control-success { color: #27833d; font-size: 13px; }
 @media(max-width:620px) { .control-fields { grid-template-columns: minmax(0,1fr); }.control-fields > .control-field { grid-column: 1 / -1; }.model-controls { padding: 10px; } }

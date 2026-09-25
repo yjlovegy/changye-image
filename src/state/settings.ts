@@ -1,3 +1,4 @@
+import { normalizePromptMode, type PromptMode } from '@/promptMode';
 import { normalizeComfyFixedPrompts, type ComfyFixedPrompts } from '@/backends/comfyFixedPrompts';
 import { normalizeLoraFavorites, type ComfyLoraFavorite } from '@/backends/comfyLoraFavorites';
 import {
@@ -64,6 +65,7 @@ export interface BackendConn {
  * url 反过来仍是渠道级(一台 ComfyUI 服务器跑所有工作流)。
  */
 export interface ComfyWorkflowPreset extends SizePair {
+  promptMode?: PromptMode;
   /** 本工作流示例图的酒馆本地路径；图片不写入工作流 JSON 或生成请求。 */
   exampleImage?: string;
   /** v1.1.1: 用户默认尺寸；旧横竖尺寸保留用于旧配置兼容。 */
@@ -98,6 +100,7 @@ export interface ComfyWorkflowPreset extends SizePair {
  * 后端层拿到的应该是「这一次出图用什么」,而不是「用户存了几套工作流」。
  */
 export interface ComfyRunConn extends SizePair {
+  promptMode?: PromptMode;
   defaultSize?: string;
   /** 缺省兼容旧调用方，不追加任何固定词。 */
   fixedPrompts?: ComfyFixedPrompts;
@@ -863,6 +866,8 @@ export const DEFAULT_PREFILL_PROMPT = '<thinking>';
  * 那套单串 tag 版本 —— 已随模型列表收窄下线,无 UI 入口。键一律保留,免得动存量设置。
  */
 export interface AutoTagPrompts {
+  krea2Spec?: string;
+  krea2Thinking?: string;
   /** 破限词:置顶 system,降低副 API 拒答率。 */
   jailbreak: string;
   /** 【已下线,无 UI 入口】NAI 4 系及以下的单串 tag 规范;回落 DEFAULT_NAI_SPEC。 */
@@ -956,6 +961,7 @@ export function newComfyWorkflow(name = DEFAULT_WORKFLOW_NAME): ComfyWorkflowPre
     fixedPrompts: normalizeComfyFixedPrompts(),
     simple: simpleDefaults(),
     naturalLanguage: false,
+    promptMode: 'anima',
     portraitSize: DEFAULT_PORTRAIT_SIZE,
     defaultSize: DEFAULT_PORTRAIT_SIZE,
     landscapeSize: DEFAULT_LANDSCAPE_SIZE,
@@ -1050,6 +1056,8 @@ function defaults(): ImageSettings {
         jailbreak: '',
         naiSpec: '',
         naiV5Spec: '',
+        krea2Spec: '',
+        krea2Thinking: '',
         comfySpec: '',
         comfyThinking: '',
         naiThinking: '',
@@ -1135,6 +1143,7 @@ export function effectiveComfyConn(): ComfyRunConn {
   return {
     url: settings.comfyui.url,
     workflow: preset.workflow,
+    promptMode: normalizePromptMode(preset.promptMode),
     fixedPrompts: normalizeComfyFixedPrompts(preset.fixedPrompts),
     mode: preset.mode,
     simple: preset.simple,
@@ -1212,6 +1221,7 @@ function normalizeWorkflowPreset(raw: unknown, seq: number): ComfyWorkflowPreset
   }
   return {
     exampleImage: normalizeWorkflowExample(o.exampleImage),
+    promptMode: normalizePromptMode(o.promptMode),
     id: typeof o.id === 'string' && o.id ? o.id : `wf_${Date.now()}_${seq}`,
     name: typeof o.name === 'string' && o.name ? o.name : DEFAULT_WORKFLOW_NAME,
     // 简易编辑器已移除；旧参数一次性迁为动态 API 模板，原 JSON 留作恢复。
@@ -1530,10 +1540,8 @@ function normalize(raw: unknown): ImageSettings {
       typeof ru.autoCollapseImages === 'boolean' ? ru.autoCollapseImages : d.ui.autoCollapseImages,
   };
   // webui 已隐藏:存量数据里的 'webui' 一律迁移到默认后端(否则规范/出图口径会落空)
-  merged.defaultBackend =
-    merged.defaultBackend === 'comfyui' || merged.defaultBackend === 'nai'
-      ? merged.defaultBackend
-      : d.defaultBackend;
+  // v1.2 exposes ComfyUI only; dormant NAI settings remain intact for rollback.
+  merged.defaultBackend = 'comfyui';
   merged.webui = normalizeBackend(r.webui, d.webui);
   merged.comfyui = normalizeComfyUI(r.comfyui, d.comfyui);
   merged.nai = normalizeNai(r.nai, d.nai);
@@ -1583,6 +1591,8 @@ function normalize(raw: unknown): ImageSettings {
         jailbreak: typeof rp.jailbreak === 'string' ? rp.jailbreak : legacyJailbreak,
         naiSpec: typeof rp.naiSpec === 'string' ? rp.naiSpec : '',
         naiV5Spec: typeof rp.naiV5Spec === 'string' ? rp.naiV5Spec : '',
+        krea2Spec: typeof rp.krea2Spec === 'string' ? rp.krea2Spec : '',
+        krea2Thinking: typeof rp.krea2Thinking === 'string' ? rp.krea2Thinking : '',
         comfySpec: typeof rp.comfySpec === 'string' ? rp.comfySpec : '',
         comfyThinking: typeof rp.comfyThinking === 'string' ? rp.comfyThinking : legacyThinking,
         naiThinking: typeof rp.naiThinking === 'string' ? rp.naiThinking : legacyThinking,

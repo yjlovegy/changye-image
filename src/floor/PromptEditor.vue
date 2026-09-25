@@ -13,6 +13,7 @@ import { saveResolutionFavorite, removeResolutionFavorite } from '@/state/resolu
 import BbiTextarea from '@/components/BbiTextarea.vue';
 import Icon from '@/components/Icon.vue';
 import ModalMask from '@/components/ModalMask.vue';
+import { normalizePromptMode, assertNaturalPrompt } from '@/promptMode';
 import { assertMixedPrompt } from '@/promptContent';
 import { containsTagMarkup, type ImageTagContent } from '@/st/imageTagRegex';
 import { activeComfyPreset, settings } from '@/state/settings';
@@ -81,6 +82,9 @@ let disposed = false;
 
 const pose = ref<ComfyPose | undefined>(props.content.pose ? { ...props.content.pose } : undefined);
 const poseBusy = ref(false);
+const promptMode = props.content.promptMode ?? normalizePromptMode(activeComfyPreset().promptMode);
+const naturalOnly = promptMode === 'krea2';
+const showLegacyTags = ref(false);
 const tag = ref(props.content.tag);
 const nl = ref(props.content.nl);
 const negative = ref(props.content.negative);
@@ -106,6 +110,7 @@ function oneLine(text: string): string {
 
 /** 草稿归一后的结果 —— 保存与「有没有改」都以它为准,两处不能各算一次。 */
 const draft = computed<ImageTagContent>(() => ({
+  ...(naturalOnly || props.content.promptMode ? { promptMode } : {}),
   tag: oneLine(tag.value),
   nl: oneLine(nl.value),
   negative: oneLine(negative.value),
@@ -153,7 +158,7 @@ const dirty = computed(() => {
 /** 校验:tag 必填 + 全字段禁含子标签字面量(口径与 AI 侧同一份)。 */
 function validateContent(next: ImageTagContent, strict: boolean): string {
   if (next.resolution && !validResolution(next.resolution)) return '宽度和高度必须是 64–4096 范围内的整数';
-  if (!next.tag) return '画面 tag 不能为空';
+  if (naturalOnly ? !next.nl : !next.tag) return naturalOnly ? '画面描述不能为空' : '画面 tag 不能为空';
   const fields: Array<[string, string]> = [
     ['画面 tag', next.tag],
     ['自然语言', next.nl],
@@ -171,7 +176,8 @@ function validateContent(next: ImageTagContent, strict: boolean): string {
     const comfy = settings.defaultBackend === 'comfyui';
     const mixed = comfy || (settings.defaultBackend === 'nai' && naiSupportsCharacterPrompts(settings.nai.model));
     try {
-      if (mixed) assertMixedPrompt(comfy ? { ...next, characters: [] } : next, '修改草稿');
+      if (naturalOnly) assertNaturalPrompt(next);
+      else if (mixed) assertMixedPrompt(comfy ? { ...next, characters: [] } : next, '修改草稿');
       if (sceneNegativeOn.value) assertSceneNegative(next.negative, '修改草稿');
     } catch (failure) {
       return failure instanceof Error ? failure.message : String(failure);
@@ -194,7 +200,7 @@ function cancelRevision(showNotice = true): void {
 }
 
 async function generateRevision(): Promise<void> {
-  if (editingLocked.value || !instruction.value.trim() || !draft.value.tag) return;
+  if (editingLocked.value || !instruction.value.trim() || !(naturalOnly ? draft.value.nl : draft.value.tag)) return;
   if (!props.revise) {
     revisionError.value = '当前无法调用修改服务，请重新打开此窗口';
     return;
@@ -230,15 +236,6 @@ async function generateRevision(): Promise<void> {
   }
 }
 
-function addCharacter(): void {
-  if (editingLocked.value) return;
-  characters.value.push({ name: '', tag: '', nl: '' });
-}
-
-function removeCharacter(index: number): void {
-  if (editingLocked.value) return;
-  characters.value.splice(index, 1);
-}
 
 function apply(regenerate: boolean): void {
   if (!canApply.value) return;
@@ -334,7 +331,7 @@ onBeforeUnmount(() => {
             <button
               class="bbi-btn bbi-btn-primary"
               type="button"
-              :disabled="editingLocked || !instruction.trim() || !draft.tag"
+              :disabled="editingLocked || !instruction.trim() || !(naturalOnly ? draft.nl : draft.tag)"
               @click="generateRevision"
             >
               <Icon name="prompt" /> {{ revising ? '正在生成修改草稿…' : '生成修改草稿' }}
@@ -350,7 +347,8 @@ onBeforeUnmount(() => {
       <PoseControl v-model="pose" :disabled="Boolean(busy || revising)" @busy="poseBusy = $event" />
 
       <fieldset class="bbi-editor-fields" :disabled="editingLocked" aria-label="提示词草稿">
-      <div class="bbi-modal-field">
+      <button v-if="naturalOnly && tag" type="button" class="bbi-btn bbi-btn-sm" @click="showLegacyTags = !showLegacyTags">{{ showLegacyTags ? '收起旧标签' : '查看旧标签' }}</button>
+      <div v-if="!naturalOnly || showLegacyTags" class="bbi-modal-field">
         <span class="bbi-modal-label">画面 tag(danbooru 短 tag,逗号分隔)</span>
         <BbiTextarea
           v-model="tag"
@@ -363,7 +361,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="bbi-modal-field">
-        <span class="bbi-modal-label">完整英文描述（生成时必填；旧 NAI 模型除外）</span>
+        <span class="bbi-modal-label">{{ naturalOnly ? '画面描述（英文）' : '完整英文描述（生成时必填）' }}</span>
         <BbiTextarea
           v-model="nl"
           class="bbi-prompt-area"
@@ -422,43 +420,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="bbi-modal-field">
-        <span class="bbi-modal-label">
-          角色提示词(多角色;仅 NAI 后端发送)
-        </span>
-        <div v-for="(character, index) in characters" :key="index" class="bbi-char-row">
-          <input
-            v-model="character.name"
-            class="bbi-input bbi-char-name"
-            type="text"
-            placeholder="角色名"
-          />
-          <input
-            v-model="character.tag"
-            class="bbi-input bbi-char-tag"
-            type="text"
-            placeholder="tag(如 girl, black hair)"
-          />
-          <input
-            v-model="character.nl"
-            class="bbi-input bbi-char-nl"
-            type="text"
-            placeholder="自然语言(可空)"
-          />
-          <button
-            class="bbi-icon-mini"
-            type="button"
-            title="删除这个角色"
-            @click="removeCharacter(index)"
-          >
-            <Icon name="trash" />
-          </button>
-        </div>
-        <button class="bbi-btn bbi-btn-sm bbi-char-add" type="button" @click="addCharacter">
-          <Icon name="plus" /> 添加角色
-        </button>
-        <span class="bbi-field-hint">角色名与 tag 都填了才会生效,留空的行保存时自动丢弃。</span>
-      </div>
+
       </fieldset>
 
       <!-- 改提示词会换 promptHash 桶,而 stale 态只显示最新一张、翻页器不出现。

@@ -22,6 +22,7 @@
  * 故 decideSeed 单独导出:调用方先定种子(埋点需要它)、再把它显式传进来。
  */
 
+import type { PromptMode } from '@/promptMode';
 import type { ComfyPose } from '@/backends/comfyPose';
 import type { ImageCharacterPrompt } from '@/autoTag/protocol';
 import { validateSimpleConfig } from '@/backends/comfyTemplates';
@@ -34,6 +35,7 @@ import { activeComfyPreset, effectiveComfyConn, settings, type BackendId } from 
 
 /** 一次生成的输入。与协议层 ImageInsertion 同形,但不含正文位置信息。 */
 export interface GenerateInput {
+  promptMode?: PromptMode;
   /** 正向 danbooru 短 tag。 */
   prompt: string;
   pose?: ComfyPose;
@@ -195,6 +197,7 @@ export async function generateImage(
           effectiveComfyConn(),
           {
             prompt: input.prompt,
+            promptMode: input.promptMode,
             pose: input.pose,
             ...(input.resolution ?? {}),
             nl: input.nl ?? '',

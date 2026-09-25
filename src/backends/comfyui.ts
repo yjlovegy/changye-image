@@ -1,3 +1,4 @@
+import type { PromptMode } from '@/promptMode';
 import { preparePose, type ComfyPose } from '@/backends/comfyPose';
 import { composeComfyNegative, composeComfyPositive, normalizeComfyFixedPrompts, type ComfyFixedPrompts } from '@/backends/comfyFixedPrompts';
 import { buildSimpleWorkflow } from '@/backends/comfyTemplates';
@@ -10,6 +11,7 @@ type JsonObject = Record<string, unknown>;
 export type ComfyWorkflow = Record<string, JsonObject>;
 
 export interface ComfyTemplateValues {
+  promptMode?: PromptMode;
   prompt: string;
   pose?: ComfyPose;
   negative_prompt?: string;
@@ -191,10 +193,18 @@ export function renderWorkflowTemplate(template: string, values: ComfyTemplateVa
   }
 
   const seed = values.seed ?? randomSeed();
-  return replacePlaceholders(workflow, {
-    prompt: found.has('nl') ? values.prompt : combinePromptParts(values.prompt, values.nl),
+  const natural = values.promptMode === 'krea2';
+  const description = values.nl?.trim() || values.prompt.trim();
+  const prepare = (value: unknown): unknown => {
+    if (typeof value === 'string') return value.includes('%prompt%') && value.includes('%nl%') ? value.replaceAll('%prompt%', '') : value;
+    if (Array.isArray(value)) return value.map(prepare);
+    if (isObject(value)) return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, prepare(item)]));
+    return value;
+  };
+  return replacePlaceholders(natural ? prepare(workflow) : workflow, {
+    prompt: natural ? description : found.has('nl') ? values.prompt : combinePromptParts(values.prompt, values.nl),
     negative_prompt: values.negative_prompt ?? '',
-    nl: found.has('prompt') ? values.nl ?? '' : combinePromptParts(values.prompt, values.nl),
+    nl: natural ? description : found.has('prompt') ? values.nl ?? '' : combinePromptParts(values.prompt, values.nl),
     width: values.width ?? 0,
     height: values.height ?? 0,
     seed,
@@ -534,7 +544,8 @@ export async function generateComfyImage(
   hooks?: ComfyProgressHooks,
 ): Promise<ComfyImageResult> {
   if (!conn.url.trim()) throw new ComfyUIError('请先填写 ComfyUI 服务地址');
-  if (!values.prompt.trim()) throw new ComfyUIError('正向提示词不能为空');
+  values = { ...values, promptMode: values.promptMode ?? conn.promptMode };
+  if (!(values.promptMode === 'krea2' ? values.nl?.trim() || values.prompt.trim() : values.prompt.trim())) throw new ComfyUIError('正向提示词不能为空');
   // 按方向取渠道配置里的尺寸;解析不出就传空,由 renderWorkflowTemplate 决定是报错还是无视
   // (工作流没用 %width%/%height% 时,尺寸配错了也不该妨碍出图)
   const size = values.width && values.height
@@ -546,8 +557,8 @@ export async function generateComfyImage(
   if (conn.mode === 'simple') {
     try {
       workflow = buildSimpleWorkflow(conn.simple, {
-        prompt: values.prompt,
-        nl: values.nl,
+        prompt: values.promptMode === 'krea2' ? values.nl?.trim() || values.prompt : values.prompt,
+        nl: values.promptMode === 'krea2' ? '' : values.nl,
         negative: values.negative_prompt,
         seed: values.seed ?? randomSeed(),
         width: size?.width ?? 0,
