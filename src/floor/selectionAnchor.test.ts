@@ -3,11 +3,33 @@ import { locateSelectionSourceEnd } from './selectionAnchor';
 import { insertSelectionImage, prepareSelectionImageText } from '@/autoTag/selection';
 
 describe('selection source anchor', () => {
+  it.each(['div', 'section', 'article', 'content'])('keeps images after the last selected paragraph inside a %s wrapper', wrapper => {
+    const p1 = '<p>第一段。</p>', p2 = '<p><strong>第二段。</strong>剩余。</p>', p3 = '<p>第三段。</p>';
+    const start = `<${wrapper} class="story"><div>`;
+    const end = `</div></${wrapper}>`;
+    const source = start + p1 + p2 + p3 + end;
+    for (const [before, selection, offset] of [
+      ['', '第一段。', start.length + p1.length],
+      ['', '第一段。第二段。剩余。', start.length + p1.length + p2.length],
+      ['第一段。', '第二段。剩余。', start.length + p1.length + p2.length],
+      ['第一段。第二段。剩余。', '第三段。', source.indexOf(end)],
+    ] as const) {
+      const anchor = locateSelectionSourceEnd(source, '第一段。第二段。剩余。第三段。', before, selection);
+      expect(anchor).toEqual({ offset });
+      const next = insertSelectionImage(source, source, { tag: 'test', nl: '', negative: '', characters: [], size: 'portrait' }, anchor.offset)!;
+      expect(next.text.slice(0, offset)).toBe(source.slice(0, offset));
+      expect(next.text.endsWith(source.slice(offset))).toBe(true);
+      expect(next.text.indexOf('<bbi_image>')).toBeLessThan(next.text.indexOf(end));
+    }
+  });
+  it('keeps a source Markdown paragraph inside a styled narrative wrapper', () => {
+    const source = '<content class="story">\n第一段。\n\n第二段。\n\n第三段。\n</content>';
+    expect(locateSelectionSourceEnd(source, '第一段。第二段。第三段。', '第一段。', '第二段。')).toEqual({ offset: source.indexOf('第二段。') + 4 });
+  });
   it.each([
     ['<p><strong>她微笑。后文</strong>段尾。</p>', '她微笑。后文段尾。'],
     ['[她微笑。后文](https://example.com)', '她微笑。后文'],
     ['~~她微笑。后文~~', '她微笑。后文'],
-    ['<div><content>她微笑。后文</content></div>', '她微笑。后文'],
   ])('keeps partial selection prompts unchanged and inserts outside %s', (formatted, visible) => {
     const existing = '<bbi_image>old prompt<size>portrait</size></bbi_image>';
     const source = `<content>${formatted}\n${existing}\n下一段。</content>`;
@@ -59,8 +81,8 @@ describe('selection source anchor', () => {
     const source = '<think>她回头。</think><!--注释-->正文。\n`代码`\n<private>秘密</private>后文';
     expect(locateSelectionSourceEnd(source, '正文。后文', '', '正文。', ['private'])).toEqual({ offset: source.indexOf('正文。') + 3 });
   });
-  it('finishes enclosing HTML layouts but still rejects unmappable tables and text', () => {
-    expect(locateSelectionSourceEnd('<div><p>正文。</p><p>后文</p></div>', '正文。后文', '', '正文。')).toEqual({ offset: '<div><p>正文。</p><p>后文</p></div>'.length });
+  it('stays inside enclosing HTML layouts but still rejects unmappable tables and text', () => {
+    expect(locateSelectionSourceEnd('<div><p>正文。</p><p>后文</p></div>', '正文。后文', '', '正文。')).toEqual({ offset: '<div><p>正文。</p>'.length });
     expect(locateSelectionSourceEnd('|正文|\n|---|\n|内容|', '正文内容', '', '正文').reason).toBeTruthy();
     expect(locateSelectionSourceEnd('正文。后文', '正文。后文', '正文', '错误').reason).toBeTruthy();
   });
@@ -165,6 +187,6 @@ describe('selection source anchor', () => {
     ])).toEqual({ offset: source.indexOf(paragraph) + paragraph.length });
     const last = `<content>${paragraph}</content>`;
     expect(locateSelectionSourceEnd(last, paragraph, '', paragraph)).toEqual({ offset: last.indexOf('</content>') });
-    expect(locateSelectionSourceEnd(`<content style="display:grid">${paragraph}</content>`, paragraph, '', '她坐')).toEqual({ offset: ('<content style="display:grid">' + paragraph + '</content>').length });
+    expect(locateSelectionSourceEnd(`<content style="display:grid">${paragraph}</content>`, paragraph, '', paragraph)).toEqual({ offset: ('<content style="display:grid">' + paragraph).length });
   });
 });

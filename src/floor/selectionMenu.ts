@@ -101,15 +101,21 @@ function visibleSelectionText(messageText: HTMLElement, range: Range): { all: st
   return { all, before, selected: throughText.slice(before.length) };
 }
 
-/** Adjacent complete paragraphs provide an exact local anchor when other panels are rewritten. */
-function paragraphContexts(messageText: HTMLElement, range: Range, beforeText: string): SelectionAnchorContext[] {
-  const blockOf = (node: Node) => elementOf(node)?.closest('p') as HTMLElement | null;
-  let first = blockOf(range.startContainer), last = blockOf(range.endContainer);
+/** range.end may be just after a paragraph after normalizing an empty selection tail. */
+function lastSelectedParagraph(range: Range): HTMLElement | null {
+  let last = elementOf(range.endContainer)?.closest('p') as HTMLElement | null;
   // Normalizing a paragraph-end selection can put its end on the parent, just after the p.
   if (!last && range.endContainer instanceof Element && range.endOffset > 0) {
     const previous = range.endContainer.childNodes[range.endOffset - 1];
     if (previous instanceof HTMLElement && previous.matches('p')) last = previous;
   }
+  return last;
+}
+
+/** Adjacent complete paragraphs provide an exact local anchor when other panels are rewritten. */
+function paragraphContexts(messageText: HTMLElement, range: Range, beforeText: string): SelectionAnchorContext[] {
+  let first = elementOf(range.startContainer)?.closest('p') as HTMLElement | null;
+  let last = lastSelectedParagraph(range);
   if (!first || !last || !messageText.contains(first) || !messageText.contains(last)) return [];
   const contexts: SelectionAnchorContext[] = [];
   const eligible = (node: Element | null): node is HTMLElement => !!node && node.matches('p') &&
@@ -194,9 +200,17 @@ function readSelectedMessage(actions: SelectionImageMenuActions): SelectedMessag
   if (!Number.isSafeInteger(floor)) return null;
   const snapshot = actions.captureSnapshot(floor);
   if (!snapshot) return null;
-  const visible = visibleSelectionText(messageText, range);
+  // Only the anchor expands to the end of the last paragraph. `text`, `range` and
+  // rangeText stay the original selection for generation and stale-selection checks.
+  const anchorRange = range.cloneRange();
+  const lastParagraph = lastSelectedParagraph(range);
+  if (lastParagraph && messageText.contains(lastParagraph) && !isExcluded(lastParagraph)
+    && isVisible(lastParagraph) && !lastParagraph.querySelector(EXCLUDED_SELECTOR)) {
+    anchorRange.setEndAfter(lastParagraph);
+  }
+  const visible = visibleSelectionText(messageText, anchorRange);
   const anchor = locateSelectionSourceEnd(snapshot.source, visible.all, visible.before, visible.selected,
-    settings.excludes.customStripTags, paragraphContexts(messageText, range, visible.before));
+    settings.excludes.customStripTags, paragraphContexts(messageText, anchorRange, visible.before));
   return {
     floor, text, messageText, range, rangeText: range.toString(),
     snapshot: { ...snapshot, insertionOffset: anchor.offset }, anchorError: anchor.reason,
@@ -274,7 +288,7 @@ export function bindSelectionImageMenu(actions: SelectionImageMenuActions = {
     const hint = document.createElement('span');
     hint.id = 'selection-image-hint';
     hint.className = 'hint';
-    hint.textContent = selected.anchorError ?? '图片插在选区后的安全位置，必要时顺延到格式末尾；后文保留';
+    hint.textContent = selected.anchorError ?? '图片插在选区最后一段下方，后文保留；生图只参考选中文字';
     if (selected.anchorError) button.setAttribute('aria-disabled', 'true');
     const preview = document.createElement('span');
     preview.className = 'preview';

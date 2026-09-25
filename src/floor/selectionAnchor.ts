@@ -25,7 +25,10 @@ export function locateSelectionSourceEnd(
   if (source.length > 250_000) return fail('这条消息过长，暂时无法可靠定位选区');
   const hidden = new Uint8Array(source.length);
   const closing = new Map<number, number>();
-  const containers: Array<{ start: number; end: number }> = [];
+  const containers: Array<{ start: number; end: number; flow?: boolean }> = [];
+  // These wrappers can contain paragraph siblings and image blocks. Do not escape
+  // them when finishing a paragraph (a story wrapper may contain the entire reply).
+  const flowTags = new Set(['div', 'section', 'article', 'main', 'aside', 'header', 'footer', 'nav', 'blockquote', 'details', 'content', 'story', 'narrative']);
   const markdownBlocks: Array<{ start: number; end: number; multilineList: boolean }> = [];
   const hide = (start: number, end: number) => hidden.fill(1, start, end);
   const matches = (pattern: RegExp, visit: (match: RegExpMatchArray, start: number) => void) => {
@@ -112,8 +115,9 @@ export function locateSelectionSourceEnd(
       if (open?.name === name) {
         stack.pop();
         if (open.transparent) return;
-        containers.push({ start: open.start, end: i + m[0].length });
+        containers.push({ start: open.start, end: i + m[0].length, flow: flowTags.has(name) });
       }
+      if (flowTags.has(name)) return;
       if (name === 'content' && !open) return;
       closing.set(i, i + m[0].length);
     } else if (!m[0].endsWith('/>') && !['br', 'hr', 'img', 'input', 'wbr', 'meta', 'link'].includes(name)) {
@@ -165,8 +169,8 @@ export function locateSelectionSourceEnd(
   }
   let offset = ends[projectedEnd - 1];
   if (offset === undefined) return fail('无法定位选区，请重新选择');
-  // Keep the selection text unchanged; only advance the insertion anchor. An image
-  // cannot split an emphasis/link/HTML container, so finish all enclosing formats.
+  // The caller supplies the last selected paragraph's end, separately from the
+  // prompt selection. Finish inline/paragraph markup, but stay inside flow wrappers.
   while (true) {
     while (true) {
       let next = offset;
@@ -175,7 +179,7 @@ export function locateSelectionSourceEnd(
       if (end === undefined) break;
       offset = end;
     }
-    const enclosing = containers.filter(container => offset > container.start && offset < container.end);
+    const enclosing = containers.filter(container => !container.flow && offset > container.start && offset < container.end);
     if (!enclosing.length) break;
     const boundary = Math.max(...enclosing.map(container => container.end));
     if (boundary > source.length) return fail('选区所在的文字格式未闭合，无法安全插图，请选择格式完整的正文');

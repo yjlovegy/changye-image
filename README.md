@@ -1,6 +1,6 @@
 # 长夜的绘图器
 
-SillyTavern 剧情配图扩展，基于 **柏柏** 的 [柏宝绘 / ST-BaiBai-Image](https://github.com/baibai-git/ST-BaiBai-Image) 修改，当前版本 **V1.2**（安装版本 `1.2.0`）。
+SillyTavern 剧情配图扩展，基于 **柏柏** 的 [柏宝绘 / ST-BaiBai-Image](https://github.com/baibai-git/ST-BaiBai-Image) 修改，当前版本 **V1.2.1**（安装版本 `1.2.1`）。
 
 本仓库由长夜维护增强版，并非原作者官方仓库。原有设置键与数据格式保留兼容，部分界面和图片目录仍使用“柏宝绘”名称。
 
@@ -35,6 +35,10 @@ https://github.com/yjlovegy/changye-image
 - 图库管理；可选 Windows 文件夹助手。
 
 复杂姿态及人物一致性仍受底模、工作流、参考图和提示词影响，功能不保证每次出图完全一致。
+
+## V1.2.1
+
+- 修正选区插图被推到整篇正文末尾的问题：插图跟随选区最后一个段落，保留外层正文容器；即使只选中段落的一句话，也只使用所选内容生成。
 
 ## V1.2
 

@@ -461,7 +461,7 @@ async function confirmUpdate() {
           :title="updateState.checking ? '正在检查更新' : '点击检查更新'"
           @click="checkForUpdate(true)"
         >
-          {{ updateState.current === '1.2.0' ? 'V1.2' : 'v' + (updateState.current || '—') }}
+          {{ updateState.current === '1.2.0' ? 'V1.2' : 'V' + (updateState.current || '—') }}
         </button>
         <button
           v-if="updateState.available"
