@@ -9,7 +9,7 @@ export interface SelectionImageSnapshot {
   swipeId: number | null;
   source: string;
   message: STMessage;
-  /** 选区结束后在 source 中的 UTF-16 偏移；未可靠定位时不允许发起生图。 */
+  /** 选区之后的安全插图位置（必要时顺延到格式末尾）；未可靠定位时不允许发起生图。 */
   insertionOffset?: number;
 }
 
@@ -67,7 +67,7 @@ export function canInsertSelectionImage(currentText: string, insertionOffset: nu
   }, insertionOffset) !== null;
 }
 
-/** 精确插在选区后；返回新槽位序号，供调用方同步迁移原图关联。 */
+/** 插在预先定位的安全边界；返回新槽位序号，供调用方同步迁移原图关联。 */
 export function insertSelectionImage(
   currentText: string,
   expectedText: string,

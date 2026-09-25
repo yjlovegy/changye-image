@@ -100,26 +100,27 @@ export function locateSelectionSourceEnd(
       containers.push({ start: i, end: close + width });
     });
   }
-  const stack: Array<{ name: string; start: number }> = [];
+  const stack: Array<{ name: string; start: number; transparent: boolean }> = [];
   matches(/<\/?([a-zA-Z][\w:-]*)(?:\s[^<>]*?)?\s*\/?>/g, (m, i) => {
     if (hidden[i]) return;
     hide(i, i + m[0].length);
     const name = m[1].toLowerCase();
     // Rolecards use bare <content> as a narrative section marker, not an HTML layout.
     // Keep an inserted image inside this section so the card's display regex retains it.
-    if (name === 'content' && /^<\/?content\s*>$/i.test(m[0])) return;
     if (m[0].startsWith('</')) {
-      closing.set(i, i + m[0].length);
       const open = stack.at(-1);
       if (open?.name === name) {
         stack.pop();
+        if (open.transparent) return;
         containers.push({ start: open.start, end: i + m[0].length });
       }
+      if (name === 'content' && !open) return;
+      closing.set(i, i + m[0].length);
     } else if (!m[0].endsWith('/>') && !['br', 'hr', 'img', 'input', 'wbr', 'meta', 'link'].includes(name)) {
-      stack.push({ name, start: i });
+      stack.push({ name, start: i, transparent: name === 'content' && /^<content\s*>$/i.test(m[0]) });
     }
   });
-  for (const open of stack) containers.push({ start: open.start, end: source.length + 1 });
+  for (const open of stack) if (!open.transparent) containers.push({ start: open.start, end: source.length + 1 });
   let projected = '';
   const ends: number[] = [];
   const emit = (value: string, end: number) => {
@@ -164,16 +165,21 @@ export function locateSelectionSourceEnd(
   }
   let offset = ends[projectedEnd - 1];
   if (offset === undefined) return fail('无法定位选区，请重新选择');
-  // Include closing emphasis/HTML/link syntax without moving past any narrative text.
+  // Keep the selection text unchanged; only advance the insertion anchor. An image
+  // cannot split an emphasis/link/HTML container, so finish all enclosing formats.
   while (true) {
-    let next = offset;
-    while (/\s/.test(source[next] ?? '') && next < source.length) next++;
-    const end = closing.get(next);
-    if (end === undefined) break;
-    offset = end;
-  }
-  if (containers.some(container => offset > container.start && offset < container.end)) {
-    return fail('选区结束在文字格式内部，请选到该段格式结束处');
+    while (true) {
+      let next = offset;
+      while (/\s/.test(source[next] ?? '') && next < source.length) next++;
+      const end = closing.get(next);
+      if (end === undefined) break;
+      offset = end;
+    }
+    const enclosing = containers.filter(container => offset > container.start && offset < container.end);
+    if (!enclosing.length) break;
+    const boundary = Math.max(...enclosing.map(container => container.end));
+    if (boundary > source.length) return fail('选区所在的文字格式未闭合，无法安全插图，请选择格式完整的正文');
+    offset = boundary;
   }
   if (markdownBlocks.some(block => block.multilineList && offset > block.start && offset <= block.end)) {
     return fail('多行列表暂不支持插图，请选择列表外的普通剧情正文');

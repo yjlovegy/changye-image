@@ -274,7 +274,7 @@ export function bindSelectionImageMenu(actions: SelectionImageMenuActions = {
     const hint = document.createElement('span');
     hint.id = 'selection-image-hint';
     hint.className = 'hint';
-    hint.textContent = selected.anchorError ?? '图片插在选中文字下方，后面的正文继续保留';
+    hint.textContent = selected.anchorError ?? '图片插在选区后的安全位置，必要时顺延到格式末尾；后文保留';
     if (selected.anchorError) button.setAttribute('aria-disabled', 'true');
     const preview = document.createElement('span');
     preview.className = 'preview';

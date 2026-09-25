@@ -1,7 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import { locateSelectionSourceEnd } from './selectionAnchor';
+import { insertSelectionImage, prepareSelectionImageText } from '@/autoTag/selection';
 
 describe('selection source anchor', () => {
+  it.each([
+    ['<p><strong>她微笑。后文</strong>段尾。</p>', '她微笑。后文段尾。'],
+    ['[她微笑。后文](https://example.com)', '她微笑。后文'],
+    ['~~她微笑。后文~~', '她微笑。后文'],
+    ['<div><content>她微笑。后文</content></div>', '她微笑。后文'],
+  ])('keeps partial selection prompts unchanged and inserts outside %s', (formatted, visible) => {
+    const existing = '<bbi_image>old prompt<size>portrait</size></bbi_image>';
+    const source = `<content>${formatted}\n${existing}\n下一段。</content>`;
+    const selected = '她微笑。';
+    const anchor = locateSelectionSourceEnd(source, visible + '下一段。', '', selected);
+    expect(anchor).toEqual({ offset: '<content>'.length + formatted.length });
+    expect(prepareSelectionImageText(selected, []).segments.map(segment => segment.text).join('')).toBe(selected);
+    const image = { tag: '1girl', nl: 'A woman smiles.', negative: '', size: 'portrait' as const, characters: [] };
+    const inserted = insertSelectionImage(source, source, image, anchor.offset)!;
+    expect(inserted.seq).toBe(0);
+    expect(inserted.text).toContain(`${formatted}\n<bbi_image>1girl`);
+    expect(inserted.text).toContain(existing);
+    expect(inserted.text.replace(/\n<bbi_image>1girl[\s\S]*?<\/bbi_image>/, '')).toBe(source);
+  });
+  it('does not invent a closing boundary for malformed HTML', () => {
+    for (const source of ['<p>她微笑。后文', '<div><p>她微笑。后文</div>']) {
+      expect(locateSelectionSourceEnd(source, '她微笑。后文', '', '她微笑。').reason).toContain('未闭合');
+    }
+  });
   it('locates the selected occurrence of repeated text, including a partial sentence', () => {
     const source = '她回头。\n她回头。继续走。';
     expect(locateSelectionSourceEnd(source, '她回头。她回头。继续走。', '她回头。', '她回头。')).toEqual({ offset: 9 });
@@ -21,9 +46,9 @@ describe('selection source anchor', () => {
     ] as const) expect(locateSelectionSourceEnd(source, visible, '', '她微笑。')).toEqual({ offset: expected });
     expect(locateSelectionSourceEnd('A &amp; B&#x1f600;后文', 'A & B😀后文', '', 'A & B😀')).toEqual({ offset: 'A &amp; B&#x1f600;'.length });
   });
-  it('rejects a selection ending inside inline formatting instead of corrupting it', () => {
-    expect(locateSelectionSourceEnd('**她微笑。后文**', '她微笑。后文', '', '她微笑。').reason).toContain('格式内部');
-    expect(locateSelectionSourceEnd('<p>她微笑。后文</p>', '她微笑。后文', '', '她微笑。').reason).toContain('格式内部');
+  it('advances partial selections to the closing format boundary', () => {
+    expect(locateSelectionSourceEnd('**她微笑。后文**', '她微笑。后文', '', '她微笑。')).toEqual({ offset: '**她微笑。后文**'.length });
+    expect(locateSelectionSourceEnd('<p>她微笑。后文</p>', '她微笑。后文', '', '她微笑。')).toEqual({ offset: '<p>她微笑。后文</p>'.length });
   });
   it('requires the whole visible message to agree, refusing regex rewrites and ambiguous omitted copies', () => {
     expect(locateSelectionSourceEnd('她回头。她回头。', '她回头。', '', '她回头。').reason).toBeTruthy();
@@ -34,8 +59,8 @@ describe('selection source anchor', () => {
     const source = '<think>她回头。</think><!--注释-->正文。\n`代码`\n<private>秘密</private>后文';
     expect(locateSelectionSourceEnd(source, '正文。后文', '', '正文。', ['private'])).toEqual({ offset: source.indexOf('正文。') + 3 });
   });
-  it('rejects complex HTML and table layouts and mismatched selection text', () => {
-    expect(locateSelectionSourceEnd('<div><p>正文。</p><p>后文</p></div>', '正文。后文', '', '正文。').reason).toContain('格式内部');
+  it('finishes enclosing HTML layouts but still rejects unmappable tables and text', () => {
+    expect(locateSelectionSourceEnd('<div><p>正文。</p><p>后文</p></div>', '正文。后文', '', '正文。')).toEqual({ offset: '<div><p>正文。</p><p>后文</p></div>'.length });
     expect(locateSelectionSourceEnd('|正文|\n|---|\n|内容|', '正文内容', '', '正文').reason).toBeTruthy();
     expect(locateSelectionSourceEnd('正文。后文', '正文。后文', '正文', '错误').reason).toBeTruthy();
   });
@@ -129,7 +154,7 @@ describe('selection source anchor', () => {
     const paragraph = '她坐在窗边，左手扶着书页，抬眼望向门口。午后的阳光落在她的黑发上。';
     expect(locateSelectionSourceEnd(`**${paragraph}**`, `面板${paragraph}`, '面板', '她坐', [], [
       { text: paragraph, beforeSelection: '' },
-    ]).reason).toContain('格式内部');
+    ])).toEqual({ offset: paragraph.length + 4 });
   });
 
   it('inserts inside a rolecard narrative section while preserving its delimiters', () => {
@@ -140,6 +165,6 @@ describe('selection source anchor', () => {
     ])).toEqual({ offset: source.indexOf(paragraph) + paragraph.length });
     const last = `<content>${paragraph}</content>`;
     expect(locateSelectionSourceEnd(last, paragraph, '', paragraph)).toEqual({ offset: last.indexOf('</content>') });
-    expect(locateSelectionSourceEnd(`<content style="display:grid">${paragraph}</content>`, paragraph, '', '她坐').reason).toContain('格式内部');
+    expect(locateSelectionSourceEnd(`<content style="display:grid">${paragraph}</content>`, paragraph, '', '她坐')).toEqual({ offset: ('<content style="display:grid">' + paragraph + '</content>').length });
   });
 });
