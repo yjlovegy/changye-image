@@ -104,7 +104,6 @@ function restoreWorkflow() {
       <h3 class="bbi-field-label">LoRA 标签控制</h3>
       <button type="button" class="bbi-btn bbi-btn-sm" :disabled="!backup" @click="restoreOpen = true">恢复同步前工作流</button>
     </div>
-    <p class="bbi-field-hint">同步后可临时试图；点击上方「保存当前工作流」才会覆盖已保存配置。</p>
     <p v-if="state.error" class="lora-error" role="alert">{{ state.error }}</p>
     <p v-else-if="!state.groups.length" class="bbi-field-hint">当前工作流没有可识别的 LoRA 组。本控制支持 LoraManager 与 rgthree Power LoRA 列表节点；其它节点保留在 JSON 中编辑。</p>
     <fieldset v-for="group in state.groups" :key="group.nodeId" class="lora-group">

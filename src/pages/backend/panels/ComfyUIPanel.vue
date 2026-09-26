@@ -401,7 +401,6 @@ function applyAssist() {
 
         <section class="wf-group" aria-label="固定生图提示词">
           <div class="wf-group-head"><span class="bbi-field-label">固定生图提示词</span></div>
-          <p class="bbi-field-hint">临时用于当前工作流；点击「保存当前工作流」后保留。</p>
           <div class="wf-prompts">
             <div class="wf-fixed-field"><span class="bbi-field-label">固定正面 · 最前面</span><BbiTextarea v-model="active.fixedPrompts.positivePrefix" :rows="2" :max-rows="8" aria-label="固定正面最前面" placeholder="例如 illustration, soft lighting" /></div>
             <div class="wf-fixed-field"><span class="bbi-field-label">固定正面 · 最后面</span><BbiTextarea v-model="active.fixedPrompts.positiveSuffix" :rows="2" :max-rows="8" aria-label="固定正面最后面" placeholder="放在本次画面描述之后的固定内容" /></div>
