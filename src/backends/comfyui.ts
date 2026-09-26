@@ -26,6 +26,11 @@ export interface ComfyTemplateValues {
 }
 
 export interface ComfyImageResult {
+  /** Optional original retained by automatic repair. */
+  original?: ComfyImageResult;
+  workflowId?: string;
+  repairNotice?: string;
+  seed?: number;
   url: string;
   filename: string;
   format: string;
@@ -574,6 +579,16 @@ export async function generateComfyImage(
   if (values.pose) workflow = await preparePose(workflow, values.pose, conn.url, signal);
   workflow = prepareApiOutputNodes(workflow);
 
+  const original = await runComfyWorkflow(conn, workflow, signal, hooks);
+  original.workflowId = conn.workflowId;
+  if (conn.autoRepair?.enabled) {
+    const { autoRepairImage } = await import('./comfyInpaint');
+    return autoRepairImage(conn, workflow, original, signal, hooks, combinePromptParts(values.prompt, values.nl));
+  }
+  return original;
+}
+
+export async function runComfyWorkflow(conn: ComfyRunConn, workflow: ComfyWorkflow, signal?: AbortSignal, hooks?: ComfyProgressHooks): Promise<ComfyImageResult> {
   // 通道自动选择:浏览器直连优先;仅当请求根本没送达 ComfyUI(网络级失败)时回退 ST 后端转发。
   // 回退只发生在「排队」之前——拿到 prompt_id 后任务已入队,轮询阶段的任何失败都不重发,避免重复生图。
   let queued = false;

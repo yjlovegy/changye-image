@@ -26,6 +26,8 @@ import { isGenerationFloorLocked, trackGenerationOperation } from '@/floor/genSt
  */
 
 export interface BbiImageEntry {
+  workflowId?: string;
+  originalGenerationId?: string;
   /** 本次生成唯一 id。 */
   generationId: string;
   /** ST 静态路径 /user/images/... 或旧 /user/files/...（<img src> 直接引用）。 */
@@ -82,6 +84,7 @@ export function imageFileName(
 
 /** 侧写 json 的内容。v 是版本号：日后想加 backend/model 时靠它分辨老文件。 */
 export interface BbiImageSidecar {
+  workflowId?: string;
   v: 1;
   /** 可读角色名（图片文件名里那个是哈希，还原不回来）。 */
   character: string;
@@ -378,7 +381,7 @@ async function uploadImageWithSidecar(
   // 侧写:图库跨聊天浏览时,提示词只能从这里拿。
   // **失败只警告不抛** —— 图已经存好了,绝不能因为一个附属 json 让整次存图失败;
   // 用户宁可少看一段提示词,也不能丢图。
-  const sidecar: BbiImageSidecar = { v: 1, character: characterName, prompt: tag, seed, createdAt };
+  const sidecar: BbiImageSidecar = { v: 1, character: characterName, prompt: tag, seed, createdAt, ...(result.workflowId ? { workflowId: result.workflowId } : {}) };
   try {
     await uploadBase64File(sidecarFileName(imageFile), utf8ToBase64(JSON.stringify(sidecar)));
   } catch (error) {
@@ -406,6 +409,8 @@ export async function saveExternalImage(
   result: ComfyImageResult,
 ): Promise<string> {
   const name = characterName.trim() || '未命名角色';
+  if (result.original) await saveExternalImage(name, tag, seed, result.original);
+  seed = result.seed ?? seed;
   const { path } = await uploadImageWithSidecar(name, 0, promptHash(tag), tag, seed, result);
   return path;
 }
@@ -427,7 +432,17 @@ export async function saveImageResult(
   if (!ctx?.saveChat) throw new Error('SillyTavern 上下文不可用');
   const chatId = ctx.getCurrentChatId();
   if (!chatId) throw new Error('当前聊天不可用');
+  const originalMessage = ctx.chat[messageId];
+  const originalText = originalMessage?.mes;
+  const unchanged = () => {
+    const current = getContext();
+    if (!originalMessage || current?.getCurrentChatId() !== chatId || current.chat[messageId] !== originalMessage
+      || originalMessage.mes !== originalText || (originalMessage.swipe_id ?? 0) !== swipeId) throw new Error('聊天或楼层已变化，图片已留在图库，请回到原聊天重试');
+  };
 
+  const originalEntry = result.original ? await saveImageResult(messageId, swipeId, seq, tag, seed, result.original) : undefined;
+  unchanged();
+  seed = result.seed ?? seed;
   const hash = promptHash(tag);
   const characterName = ctx.chat[messageId]?.name?.trim() || ctx.name2?.trim() || '未命名角色';
   const { path, genId, createdAt } = await uploadImageWithSidecar(
@@ -440,6 +455,8 @@ export async function saveImageResult(
   );
 
   const entry: BbiImageEntry = {
+    ...(result.workflowId ? { workflowId: result.workflowId } : {}),
+    ...(originalEntry ? { originalGenerationId: originalEntry.generationId } : {}),
     generationId: genId,
     path,
     prompt: tag,
@@ -450,6 +467,7 @@ export async function saveImageResult(
     slotSeq: seq,
   };
 
+  unchanged();
   const saved = await mutateStore(ctx, messageId, store => appendEntry(store, swipeId, hash, entry));
   if (!saved) {
     console.warn('[长夜的绘图器] 图片已上传但 extra 写入失败，文件留作孤儿', path);

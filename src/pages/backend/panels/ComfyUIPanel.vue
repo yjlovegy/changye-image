@@ -7,6 +7,7 @@ import {
 } from '@/backends/comfyWorkflowAssistant';
 import ComfyLoraControls from './ComfyLoraControls.vue';
 import ComfyModelControls from './ComfyModelControls.vue';
+import ComfyAutoRepair from './ComfyAutoRepair.vue';
 import ComfyWorkflowJson from './ComfyWorkflowJson.vue';
 import WorkflowResolution from './WorkflowResolution.vue';
 import WorkflowExample from './WorkflowExample.vue';
@@ -298,6 +299,7 @@ function applyAssist() {
         <WorkflowExample :key="active.id" :preset="active" />
 
         <ComfyModelControls :key="active.id" v-model:workflow="active.workflow" v-model:prompt-mode="active.promptMode" :url="settings.comfyui.url" />
+        <ComfyAutoRepair :key="active.id" :preset="active" />
         <WorkflowResolution :key="active.id" :preset="active" />
 
         <section class="wf-group" aria-label="固定生图提示词">

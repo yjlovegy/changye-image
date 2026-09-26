@@ -1,3 +1,4 @@
+import { normalizeAutoRepair, type AutoRepairSettings } from '@/backends/comfyInpaintGraph';
 import { normalizePromptMode, type PromptMode } from '@/promptMode';
 import { normalizeComfyFixedPrompts, type ComfyFixedPrompts } from '@/backends/comfyFixedPrompts';
 import { normalizeLoraFavorites, type ComfyLoraFavorite } from '@/backends/comfyLoraFavorites';
@@ -65,6 +66,7 @@ export interface BackendConn {
  * url 反过来仍是渠道级(一台 ComfyUI 服务器跑所有工作流)。
  */
 export interface ComfyWorkflowPreset extends SizePair {
+  autoRepair?: AutoRepairSettings;
   promptMode?: PromptMode;
   /** 本工作流示例图的酒馆本地路径；图片不写入工作流 JSON 或生成请求。 */
   exampleImage?: string;
@@ -100,6 +102,8 @@ export interface ComfyWorkflowPreset extends SizePair {
  * 后端层拿到的应该是「这一次出图用什么」,而不是「用户存了几套工作流」。
  */
 export interface ComfyRunConn extends SizePair {
+  autoRepair?: AutoRepairSettings;
+  workflowId?: string;
   promptMode?: PromptMode;
   defaultSize?: string;
   /** 缺省兼容旧调用方，不追加任何固定词。 */
@@ -1138,11 +1142,12 @@ export function activeComfyPreset(): ComfyWorkflowPreset {
  * 出图/测试连接用的 conn:渠道级 url + 当前预设的工作流与横竖尺寸。
  * backends/comfyui.ts 只吃这个形状,不关心库里还有几套。
  */
-export function effectiveComfyConn(): ComfyRunConn {
-  const preset = activeComfyPreset();
+export function effectiveComfyConn(preset = activeComfyPreset()): ComfyRunConn {
   return {
     url: settings.comfyui.url,
     workflow: preset.workflow,
+    workflowId: preset.id,
+    autoRepair: normalizeAutoRepair(preset.autoRepair),
     promptMode: normalizePromptMode(preset.promptMode),
     fixedPrompts: normalizeComfyFixedPrompts(preset.fixedPrompts),
     mode: preset.mode,
@@ -1221,6 +1226,7 @@ function normalizeWorkflowPreset(raw: unknown, seq: number): ComfyWorkflowPreset
   }
   return {
     exampleImage: normalizeWorkflowExample(o.exampleImage),
+    autoRepair: normalizeAutoRepair(o.autoRepair),
     promptMode: normalizePromptMode(o.promptMode),
     id: typeof o.id === 'string' && o.id ? o.id : `wf_${Date.now()}_${seq}`,
     name: typeof o.name === 'string' && o.name ? o.name : DEFAULT_WORKFLOW_NAME,

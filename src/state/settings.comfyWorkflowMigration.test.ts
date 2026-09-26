@@ -174,6 +174,8 @@ describe('ComfyUI 工作流库迁移', () => {
     expect(activeComfyPreset().name).toBe('B');
     const { simpleDefaults } = await import('@/backends/comfyTemplates');
     expect(effectiveComfyConn()).toEqual({
+      workflowId: 'wf_b',
+      autoRepair: { enabled: false, hands: true, feet: true },
       promptMode: 'anima',
       url: 'http://example:8188',
       workflow: '{"2":{}}',

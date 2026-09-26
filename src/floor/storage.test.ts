@@ -319,6 +319,28 @@ describe('prepareImageForStorage', () => {
 });
 
 describe('saveImageResult', () => {
+  it('keeps original and repaired images as separate versions with actual seeds', async () => {
+    settings.storage.saveAsJpeg=false;
+    const message=fakeMessage(), tag='<bbi_image>a</bbi_image>', saveChat=vi.fn(async()=>undefined);
+    const ctx={chat:[message],saveChat,getRequestHeaders:()=>({}),getCurrentChatId:()=>'test'};
+    vi.stubGlobal('window',{SillyTavern:{getContext:()=>ctx}});
+    vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({path:'/user/images/test.png'}))));
+    const original={url:'data:image/png;base64,AAAA',filename:'base.png',format:'png',workflowId:'wf',revoke(){}};
+    const repaired={...original,filename:'repair.png',seed:999,original};
+    const entry=await saveImageResult(0,0,0,tag,123,repaired);
+    const versions=historyEntries(readStore(message),0,promptHash(tag),0);
+    expect(versions).toHaveLength(2);expect(versions[0].seed).toBe(123);expect(versions[1].seed).toBe(999);
+    expect(entry.originalGenerationId).toBe(versions[0].generationId);expect(entry.workflowId).toBe('wf');expect(saveChat).toHaveBeenCalledTimes(2);
+  });
+  it('does not attach an uploaded image after switching chats', async () => {
+    settings.storage.saveAsJpeg=false;
+    const message=fakeMessage(),saveChat=vi.fn(async()=>undefined);let chatId='original';
+    const ctx={chat:[message],saveChat,getRequestHeaders:()=>({}),getCurrentChatId:()=>chatId};
+    vi.stubGlobal('window',{SillyTavern:{getContext:()=>ctx}});
+    vi.stubGlobal('fetch',vi.fn(async()=>{chatId='other';return new Response(JSON.stringify({path:'/user/images/test.png'}));}));
+    await expect(saveImageResult(0,0,0,'<bbi_image>a</bbi_image>',123,{url:'data:image/png;base64,AAAA',filename:'x.png',format:'png',revoke(){}})).rejects.toThrow('聊天或楼层');
+    expect(saveChat).not.toHaveBeenCalled();expect(readStore(message)).toBeNull();
+  });
   beforeEach(() => {
     settings.storage.saveAsJpeg = false;
   });

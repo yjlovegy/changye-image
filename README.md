@@ -1,6 +1,6 @@
 # 长夜的绘图器
 
-SillyTavern 剧情配图扩展，基于 **柏柏** 的 [ST-BaiBai-Image](https://github.com/baibai-git/ST-BaiBai-Image) 修改，当前版本 **V1.2.2**（安装版本 `1.2.2`）。
+SillyTavern 剧情配图扩展，基于 **柏柏** 的 [ST-BaiBai-Image](https://github.com/baibai-git/ST-BaiBai-Image) 修改，当前版本 **V1.3.0**（安装版本 `1.3.0`）。
 
 本仓库由长夜维护增强版，并非原作者官方仓库。原有设置键与数据格式保留兼容，界面名称统一为“长夜的绘图器”；内部标识与历史图片目录沿用旧格式，以兼容已保存的数据。
 
@@ -35,6 +35,21 @@ https://github.com/yjlovegy/changye-image
 - 图库管理；可选 Windows 文件夹助手。
 
 复杂姿态及人物一致性仍受底模、工作流、参考图和提示词影响，功能不保证每次出图完全一致。
+
+## V1.3.0
+
+- 图片工具栏新增魔法棒“手动局部重绘”：自动载入当前图，支持画笔、橡皮擦、撤销、重做、缩放；涂选任意区域后描述修改要求。结果先对比，确认后保存为新版本，原图保留。
+- “工作流 → 模型与采样”下方新增“出图后自动修复”，按工作流独立保存手部/脚部选项，默认关闭。SAM3 识别区域后用 LanPaint 重绘；未识别到则保留原图，修复失败也返回底图。
+- Krea2 与 Anima 共用局部重绘处理，沿用所选工作流的模型、编码器、VAE、LoRA、步数、CFG 和采样配置。目前支持只有一个标准 KSampler、标准 CLIPTextEncode 与直接 VAE 解码的 API 工作流；复杂多采样工作流会明确提示，不猜测分支。
+- 手动重绘支持停止；保存时再次核对聊天与楼层，避免切换聊天后写错位置。自动修复前后的版本分别保存，并记录使用的工作流及随机种子。
+
+### 局部重绘依赖
+
+在 ComfyUI 安装 [LanPaint](https://github.com/scraed/LanPaint) 和 [Inpaint Crop and Stitch](https://github.com/lquesada/ComfyUI-Inpaint-CropAndStitch)，重启 ComfyUI。保留已有 Krea2 / Anima 主模型、对应的 Qwen 编码器和 VAE，无需额外专用重绘底模。编码器类型需与模型匹配（Krea2 使用 krea2，Anima 使用 anima）。
+
+自动修复还需要支持 SAM3_Detect 的 ComfyUI，以及 models/checkpoints 中的 SAM3 模型。本机验证使用 sam3.1_multiplex_fp16.safetensors。新电脑需要自行安装这些 ComfyUI 依赖；仅更新酒馆扩展不会下载模型。
+
+浏览器需要能直连 ComfyUI 并上传原图/遮罩；跨端口访问需要开启 ComfyUI CORS。仅在可信本地网络使用对应访问设置。检测到手脚不代表判断它画错，重绘也不保证改善，请用历史版本比较。局部重绘的修改要求直接传给模型，建议使用简洁英文目标画面描述。
 
 ## V1.2.2
 

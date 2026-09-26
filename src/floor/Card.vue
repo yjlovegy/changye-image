@@ -29,6 +29,7 @@ import { hydrateMessage } from '@/floor/hydrate';
 import { openLightbox } from '@/floor/lightbox';
 import { confirmImageMissing, isImageMissing } from '@/floor/missingImages';
 import { openPromptEditor } from '@/floor/promptEditor';
+import { openInpaintEditor } from '@/floor/inpaintEditor';
 import {
   deleteImageResult,
   promptHash,
@@ -308,6 +309,7 @@ async function generate(): Promise<void> {
     // 卡片从 extra 恢复为 ready(blob/dataURL 生命周期随之结束)。
     await saveImageResult(job.messageId, job.swipeId, job.seq, job.tag, seed, result);
     result.revoke();
+    if (result.repairNotice) toastr.warning(result.repairNotice, '长夜的绘图器');
     if (historyId !== null) safeHistory(() => finishImage(historyId!));
     // 先清运行态再重水合:重水合会重建本组件,清完才不会带着 generating 复活
     clearGen(slot, token);
@@ -351,6 +353,13 @@ function openImage(): void {
  * 楼层坐标与内容一律先快照(任一兄弟槽位出图都会重水合销毁本组件)。
  * 提示词的真源是正文,故写回与后续重水合都在 promptEditor.ts 里做,本组件不参与。
  */
+function openInpaint(): void {
+  const entry = shownEntry.value;
+  if (!entry || busy.value) return;
+  openInpaintEditor({ at: { chatId: props.chatId, messageId: props.messageId, swipeId: props.swipeId,
+    seq: props.seq, rawTag: props.tag, tagLayout: [...props.tagLayout] }, entry: { ...entry } });
+}
+
 function openEditor(revisionMode = false): void {
   openPromptEditor({
     at: {
@@ -560,6 +569,10 @@ onMounted(() => {
             @click="menuOpen = false; openEditor()"
           >
             <Icon name="edit" :size="15" />
+          </button>
+          <button v-if="shownEntry && comfyActive" class="bbi-fab" type="button" :disabled="busy"
+            title="手动局部重绘" aria-label="手动局部重绘" @click="menuOpen = false; openInpaint()">
+            <Icon name="prompt" :size="15" />
           </button>
           <button
             v-if="promptText"
