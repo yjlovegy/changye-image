@@ -19,7 +19,7 @@ defineExpose({ dirty, prepare });
   <section class="workflow-resolution" aria-label="默认生成尺寸">
     <div class="resolution-head"><h3 class="bbi-field-label">默认生成尺寸</h3><span>当前默认：{{current.width}} × {{current.height}}</span></div>
     <ResolutionControls scope="工作流" :width="draft.width" :height="draft.height" :sizes="settings.comfyui.resolutionFavorites" @change="change" @save="saveResolutionFavorite" @remove="removeResolutionFavorite" />
-    <div class="resolution-actions"><span v-if="saved" role="status">✓ 已用于临时测试</span><button type="button" class="bbi-btn" :disabled="!validResolution(draft)" @click="save">应用尺寸供测试</button></div>
+    <div class="resolution-actions"><span v-if="saved" role="status">✓ 已更新，待保存当前工作流</span><button type="button" class="bbi-btn" :disabled="!validResolution(draft)" @click="save">保存尺寸</button></div>
   </section>
 </template>
 <style scoped>

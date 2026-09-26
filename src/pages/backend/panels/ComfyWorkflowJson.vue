@@ -65,14 +65,14 @@ onBeforeUnmount(() => { ++importSequence; for (const [url, timer] of downloads) 
     <button type="button" class="json-heading" :aria-expanded="open" @click="open = !open">
       <span>工作流 JSON</span><span class="json-toggle">{{ open ? '收起' : '展开' }}</span>
     </button>
-    <div class="json-status"><span class="bbi-field-hint">{{ status }} · 应用后自动折叠。</span><span v-if="!dirty && saved" class="json-success">✓ 已载入</span><span v-else class="json-small">{{ dirty ? '尚未应用' : '' }}</span></div>
+    <div class="json-status"><span class="bbi-field-hint">{{ status }} · 点击保存后自动折叠。</span><span v-if="!dirty && saved" class="json-success">✓ 已载入</span><span v-else class="json-small">{{ dirty ? '尚未应用' : '' }}</span></div>
     <div v-show="open" class="json-body">
       <div class="json-toolbar">
         <button type="button" class="bbi-btn" :disabled="importing" @click="fileInput?.click()">{{ importing ? '读取中…' : '上传 JSON' }}</button>
         <input ref="fileInput" type="file" accept=".json,application/json" hidden aria-label="上传工作流 JSON 文件" @change="upload" />
         <button type="button" class="bbi-btn" :disabled="!modelValue.trim()" title="下载当前已应用的工作流（含临时修改）" @click="download">下载 JSON</button>
-        <button type="button" class="bbi-btn" :disabled="configuring || dirty || !modelValue.trim()" title="先应用 JSON；AI 配置会将节点和模型名发送到已配置的副 API" @click="emit('assist')">{{ configuring ? '分析中…' : 'AI 自动配置' }}</button>
-        <button type="button" class="bbi-btn json-save" :disabled="importing || stale" @click="save">应用 JSON 供测试</button>
+        <button type="button" class="bbi-btn" :disabled="configuring || dirty || !modelValue.trim()" title="先点击“保存工作流”；AI 配置会将节点和模型名发送到已配置的副 API" @click="emit('assist')">{{ configuring ? '分析中…' : 'AI 自动配置' }}</button>
+        <button type="button" class="bbi-btn json-save" :disabled="importing || stale" @click="save">保存工作流</button>
       </div>
       <BbiTextarea v-model="draft" :rows="8" :max-rows="24" mono aria-label="工作流 JSON 内容" placeholder="直接粘贴 API 格式的工作流 JSON" />
       <p v-if="stale" class="json-error" role="alert">工作流已被其他设置更新。<button type="button" class="bbi-btn bbi-btn-sm" @click="reloadSaved">放弃草稿并载入最新工作流</button></p>

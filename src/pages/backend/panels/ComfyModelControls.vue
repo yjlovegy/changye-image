@@ -80,7 +80,7 @@ defineExpose({ dirty, prepare });
     <p v-for="warning in state.warnings" :key="warning" class="bbi-field-hint">{{ warning }}</p>
     <p v-if="listError" class="bbi-field-hint" role="status">{{ listError }}</p>
     <p v-if="state.error || error" class="control-error" role="alert">{{ state.error || error }}</p>
-    <div class="control-actions"><span v-if="saved" class="control-success" role="status">✓ 已用于临时测试</span><button type="button" class="bbi-btn" :disabled="!dirty || !!state.error" @click="save">应用参数供测试</button></div>
+    <div class="control-actions"><span v-if="saved" class="control-success" role="status">✓ 已更新，待保存当前工作流</span><button type="button" class="bbi-btn" :disabled="!dirty || !!state.error" @click="save">保存模型与采样设置</button></div>
   </section>
 </template>
 <style scoped>

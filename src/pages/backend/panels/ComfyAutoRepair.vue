@@ -19,7 +19,7 @@ async function save(){
  if(busy.value)return;
  if(draft.value.enabled&&!draft.value.hands&&!draft.value.feet){status.value='请至少选择手部或脚部';return;}
  busy.value=true;status.value='';
- try{if(draft.value.enabled)await checkInpaintSupport(effectiveComfyConn(props.preset),true);props.preset.autoRepair={...draft.value};status.value='已用于临时测试';}
+ try{if(draft.value.enabled)await checkInpaintSupport(effectiveComfyConn(props.preset),true);props.preset.autoRepair={...draft.value};status.value='已更新，待保存当前工作流';}
  catch(e){status.value=e instanceof Error?e.message:String(e);}finally{busy.value=false;}
 }
 </script>
@@ -29,7 +29,7 @@ async function save(){
   <p class="bbi-field-hint">每次出图后，对检测到的指定部位进行一次局部重绘。</p>
   <div class="parts"><label><input v-model="draft.hands" type="checkbox" :disabled="!draft.enabled||busy">手部</label><label><input v-model="draft.feet" type="checkbox" :disabled="!draft.enabled||busy">脚部</label></div>
   <p class="bbi-field-hint">保留修复前的原图，修复结果另存为一个版本。识别部位不等于判断画错，可与原图对比。</p>
-  <footer><span role="status" class="bbi-field-hint">{{status}}</span><button class="bbi-btn" :disabled="busy" @click="save">{{busy?'检查依赖…':'应用修复设置供测试'}}</button></footer>
+  <footer><span role="status" class="bbi-field-hint">{{status}}</span><button class="bbi-btn" :disabled="busy" @click="save">{{busy?'检查依赖…':'保存修复设置'}}</button></footer>
  </Collapsible>
 </template>
 <style scoped>
