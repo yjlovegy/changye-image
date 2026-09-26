@@ -194,7 +194,7 @@ onUnmounted(() => window.removeEventListener('resize', onResize));
     @keydown="onKey"
   >
     <img v-if="orbImage" :src="orbImage" class="bbi-orb-img" alt="" draggable="false" />
-    <Icon v-else name="palette" class="bbi-orb-icon" />
+    <Icon v-else name="edit" class="bbi-orb-icon" />
   </div>
 </template>
 

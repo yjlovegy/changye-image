@@ -240,7 +240,7 @@ describe('manual selection image request', () => {
     await requestFloorTags(0, { replace: true });
     expect(requestViaMainApi).toHaveBeenCalledTimes(1);
     expect(applyMessageText).not.toHaveBeenCalled();
-    expect(toastr.error).toHaveBeenCalledWith(error.message, '长夜的绘图器自动 tag 失败');
+    expect(toastr.error).toHaveBeenCalledWith(error.message, '长夜的绘图器自动 TAG 失败');
   });
 
   it('keeps configured retries for ordinary malformed output and reports the actual count', async () => {
@@ -250,7 +250,7 @@ describe('manual selection image request', () => {
     await requestFloorTags(0, { replace: true });
     expect(requestViaMainApi).toHaveBeenCalledTimes(3);
     expect(applyMessageText).not.toHaveBeenCalled();
-    expect(toastr.error).toHaveBeenCalledWith('malformed JSON(已自动重试 2 次)', '长夜的绘图器自动 tag 失败');
+    expect(toastr.error).toHaveBeenCalledWith('malformed JSON(已自动重试 2 次)', '长夜的绘图器自动 TAG 失败');
     expect(vi.mocked(requestViaMainApi).mock.calls.every(([messages]) => messages.every(message => message.content !== SCENE_NEGATIVE_RETRY_INSTRUCTION))).toBe(true);
   });
 

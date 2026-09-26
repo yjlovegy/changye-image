@@ -24,9 +24,9 @@ export async function reviseImagePrompt(
   const edit = instruction.trim();
   if (!edit) throw new Error('请先填写本次图片的修改意见');
   const assigned = getTagGenChannel();
-  if (!assigned) throw new Error('请先在长夜的绘图器的副 API 设置中为“生成 tag”指定渠道，再使用 AI 修改');
+  if (!assigned) throw new Error('请先在副 API 设置中为“生成TAG”指定渠道，再使用 AI 修改');
   if (!assigned.url.trim() || !assigned.model.trim()) {
-    throw new Error('生成 tag 的副 API 渠道未配置完整：请填写地址和模型');
+    throw new Error('生成 TAG 的副 API 渠道未配置完整：请填写地址和模型');
   }
   // 所有能力、输入和渠道在首个 await 前快照；请求期间切换设置不能改变输出验收。
   const channel = { ...assigned, excludeParams: [...assigned.excludeParams] };

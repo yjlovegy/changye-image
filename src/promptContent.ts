@@ -14,7 +14,7 @@ export function assertMixedPrompt(
   label = '图片',
 ): void {
   const check = (tag: string, nl: string, part: string) => {
-    if (!tag.trim()) throw new Error(`${part}缺少核心 tag`);
+    if (!tag.trim()) throw new Error(`${part}缺少核心 TAG`);
     if (!nl.trim() || !/[A-Za-z]{2,}/.test(nl) || !/[.!?](?:\s|$)/.test(nl.trim())) {
       throw new Error(`${part}缺少完整英文自然语言描述：nl 必须包含英文句子和句末标点，不能留空或只写标签`);
     }

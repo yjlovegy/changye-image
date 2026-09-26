@@ -281,7 +281,7 @@ const CHANNEL_PROMPT_TARGETS: NaiPromptTarget[] = [
   {
     key: 'quality',
     label: '正面质量词',
-    hint: '拼在画面 tag 之后(整体顺序:画师串 → 画面 tag → 质量词)。画师串里设置了质量词时,会用画师串那份,这里的不生效。',
+    hint: '拼在画面 TAG 之后(整体顺序:画师串 → 画面 TAG → 质量词)。画师串里设置了质量词时,会用画师串那份,这里的不生效。',
     fallback: () => naiDefaultQualityTags(settings.nai.model),
     read: () => settings.nai.qualityTags,
     write: v => (settings.nai.qualityTags = v),
@@ -756,7 +756,7 @@ async function removeVibe(vibe: NaiVibe) {
             v-else
             class="bbi-btn conn-use"
             type="button"
-            title="tag 书写规范会切到 NAI"
+            title="TAG 书写规范会切到 NAI"
             @click="settings.defaultBackend = 'nai'"
           >
             使用此渠道出图
@@ -945,7 +945,7 @@ async function removeVibe(vibe: NaiVibe) {
             <BbiCombo v-model="settings.nai.landscapeSize" :options="['1216×832', '1536×1024', '1024×1024']" aria-label="横屏尺寸" placeholder="1216×832" />
           </div>
         </div>
-        <p class="bbi-field-hint">竖屏用于单人、特写、立绘;横屏用于群像、远景、全景;方向由自动 tag 判定。</p>
+        <p class="bbi-field-hint">竖屏用于单人、特写、立绘;横屏用于群像、远景、全景;方向由自动 TAG 判定。</p>
 
         <div class="be-row">
           <div class="bbi-field">

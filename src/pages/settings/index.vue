@@ -121,7 +121,7 @@ const TAG_PROMPT_METAS: TagPromptMeta[] = [
   {
     key: 'jailbreak',
     label: '破限词',
-    hint: '作为置顶 system 附加在自动 tag 请求里，降低副 API 拒答率。留空则用内置默认。全后端通用。',
+    hint: '作为置顶 system 附加在自动 TAG 请求里，降低副 API 拒答率。留空则用内置默认。全后端通用。',
     builtin: DEFAULT_JAILBREAK_PROMPT,
     macros: [],
   },
@@ -534,13 +534,13 @@ async function confirmUpdate() {
           <span class="bbi-field-label">在 ST 顶栏显示按钮</span>
           <input v-model="ui.showTopBar" type="checkbox" class="bbi-checkbox" />
         </label>
-        <p class="bbi-field-hint">在酒馆顶部导航栏加一个快速打开长夜的绘图器的按钮。左下角魔杖入口照旧保留。</p>
+        <p class="bbi-field-hint">在酒馆顶部导航栏加一个快速打开按钮。左下角魔杖入口照旧保留。</p>
 
         <label class="bbi-switch-row">
           <span class="bbi-field-label">显示屏幕悬浮球</span>
           <input v-model="ui.showOrb" type="checkbox" class="bbi-checkbox" />
         </label>
-        <p class="bbi-field-hint">在屏幕边缘挂一枚可拖动的悬浮球,点击即开长夜的绘图器。拖到中间可常驻悬浮,拖近左右边缘则吸附贴边。</p>
+        <p class="bbi-field-hint">在屏幕边缘挂一枚可拖动的悬浮球，点击即可打开。拖到中间可常驻悬浮，拖近左右边缘则吸附贴边。</p>
 
         <!-- 悬浮球外观:配置项多,开启后才收进小分组 -->
         <Collapsible v-if="ui.showOrb" title="悬浮球外观" :open="false">
@@ -576,18 +576,18 @@ async function confirmUpdate() {
         </Collapsible>
       </Collapsible>
 
-      <Collapsible title="自动生成 tag" :open="false">
+      <Collapsible title="自动生成 TAG" :open="false">
         <label class="bbi-switch-row">
-          <span class="bbi-field-label">自动生成 tag</span>
+          <span class="bbi-field-label">自动生成 TAG</span>
           <input v-model="settings.autoTag.enabled" type="checkbox" class="bbi-checkbox" />
         </label>
-        <p class="bbi-field-hint">AI 正文生成后自动判断该楼是否需要插图,需要就写入生图 tag。</p>
+        <p class="bbi-field-hint">AI 正文生成后自动判断该楼是否需要插图,需要就写入生图 TAG。</p>
 
         <label class="bbi-switch-row">
           <span class="bbi-field-label">自动生成图片</span>
           <input v-model="settings.autoTag.autoGenerate" type="checkbox" class="bbi-checkbox" />
         </label>
-        <p class="bbi-field-hint">写入 tag 后立即按当前出图渠道自动出图;关闭则只写 tag,在卡片上手动生成。</p>
+        <p class="bbi-field-hint">写入 TAG 后立即按当前出图渠道自动出图;关闭则只写 TAG,在卡片上手动生成。</p>
 
         <label class="bbi-num-row">
           <span class="bbi-field-label">携带最近 AI 楼数</span>
@@ -645,7 +645,7 @@ async function confirmUpdate() {
 
       <!-- 排除角色:名单与角色记忆插件共享(见 state/settings.ts 的共享存储),任一端改动自动同步 -->
       <Collapsible title="排除角色" :open="false">
-        <p class="bbi-field-hint">名单内角色的聊天里不自动生成生图 tag。名单与角色记忆插件共享,任一端改动自动同步。</p>
+        <p class="bbi-field-hint">名单内角色的聊天里不自动生成生图 TAG。名单与角色记忆插件共享,任一端改动自动同步。</p>
         <div class="bbi-channel-bar">
           <span class="bbi-field-label">已排除 {{ settings.excludes.excludedChars.length }} 个</span>
           <button class="bbi-btn bbi-btn-primary bbi-btn-sm" type="button" @click="openExclude">
@@ -660,13 +660,13 @@ async function confirmUpdate() {
             </button>
           </li>
         </ul>
-        <p v-else class="bbi-field-hint">名单为空,所有角色都启用自动 tag。</p>
+        <p v-else class="bbi-field-hint">名单为空,所有角色都启用自动 TAG。</p>
       </Collapsible>
 
       <!-- 排除世界书内容:与角色记忆插件同名单共享 -->
       <Collapsible title="排除世界书内容" :open="false">
         <p class="bbi-field-hint">
-          从生成 tag 参考的世界书里剔除对画面无用的条目,省 token 也避免干扰。名单与角色记忆插件共享;仅影响副 API。
+          从生成 TAG 参考的世界书里剔除对画面无用的条目,省 token 也避免干扰。名单与角色记忆插件共享;仅影响副 API。
         </p>
 
         <!-- 整本排除:复刻排除角色的搜索+勾选弹窗 -->
@@ -684,7 +684,7 @@ async function confirmUpdate() {
             </button>
           </li>
         </ul>
-        <p v-else class="bbi-field-hint">未排除任何世界书,全部激活条目都会进 tag 生成参考。</p>
+        <p v-else class="bbi-field-hint">未排除任何世界书,全部激活条目都会进 TAG 生成参考。</p>
 
         <hr class="bbi-rule" />
 
@@ -780,11 +780,11 @@ async function confirmUpdate() {
         <!-- 任务指派:只有一个任务——生成 tag -->
         <div class="bbi-field bbi-assign">
           <div class="bbi-assign-row">
-            <span class="bbi-field-label">生成 tag 使用</span>
-            <BbiSelect v-model="settings.assignments.tagGen" style="width:100%" aria-label="生成 tag 使用" :options="[{ value: '', label: '跟随主 API' }, ...settings.channels.map(c => ({ value: c.id, label: c.name }))]" />
+            <span class="bbi-field-label">生成 TAG 使用</span>
+            <BbiSelect v-model="settings.assignments.tagGen" style="width:100%" aria-label="生成 TAG 使用" :options="[{ value: '', label: '跟随主 API' }, ...settings.channels.map(c => ({ value: c.id, label: c.name }))]" />
           </div>
         </div>
-        <p class="bbi-field-hint">不指派渠道时跟随主 API:直接借用你主界面当前正在用的 API(聊天补全/文本补全)来生成画图 tag,无需额外配置。想用不同模型再在下方建副渠道指派。渠道列表与角色记忆插件共享,任一端改动都会自动同步到另一端。</p>
+        <p class="bbi-field-hint">不指派渠道时跟随主 API:直接借用你主界面当前正在用的 API(聊天补全/文本补全)来生成画图 TAG,无需额外配置。想用不同模型再在下方建副渠道指派。渠道列表与角色记忆插件共享,任一端改动都会自动同步到另一端。</p>
 
         <hr class="bbi-rule" />
 
@@ -804,7 +804,7 @@ async function confirmUpdate() {
             </button>
           </li>
         </ul>
-        <p v-else class="bbi-field-hint">还没有渠道。点「添加渠道」配置生成 tag 要用的 API。</p>
+        <p v-else class="bbi-field-hint">还没有渠道。点「添加渠道」配置生成 TAG 要用的 API。</p>
       </Collapsible>
     </div>
 

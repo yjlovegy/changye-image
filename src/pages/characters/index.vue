@@ -279,7 +279,7 @@ function confirmEntry() {
     return;
   }
   if (!previewTag.value) {
-    toastr.warning('至少填一个外貌字段(或整串 tag)', '长夜的绘图器');
+    toastr.warning('至少填一个外貌字段(或整串 TAG)', '长夜的绘图器');
     return;
   }
   if (draftHasInactiveRaw.value && !draftStartedWithFields.value && confirmedFieldPreview.value !== previewTag.value) {
@@ -526,7 +526,7 @@ function sourceLabel(entry: CharTagEntry): string {
       <div class="bbi-fold-wrap" :class="{ 'is-collapsed': !chatShown }">
         <div class="bbi-fold-inner">
           <p class="bbi-field-hint">
-            仅当前聊天生效:角色记忆插件角色自动建档,AI 随剧情报告永久变化;可查看历史并回滚。
+            仅当前聊天生效：根据同步的角色记忆自动建档，AI 随剧情记录永久变化；可查看历史并回滚。
           </p>
           <ul v-if="chatEntries.length" class="bbi-char-grid">
           <li v-for="entry in chatEntries" :key="entry.name" class="bbi-char-card">
@@ -562,7 +562,7 @@ function sourceLabel(entry: CharTagEntry): string {
           </li>
           </ul>
           <p v-else class="bbi-char-empty">
-            本聊天还没有角色。生成 tag 时角色记忆插件角色会自动建档,也可点右上角「+」手动补。
+            本聊天还没有角色。生成 TAG 时会根据同步的角色记忆自动建档，也可点右上角「+」手动添加。
           </p>
         </div>
       </div>
@@ -603,20 +603,20 @@ function sourceLabel(entry: CharTagEntry): string {
             </button>
           </div>
           <span class="bbi-field-hint">
-            {{ draftScope === 'global' ? '全局:所有聊天生效,AI 不会修改,tag 有问题需手动改。' : '本聊天:仅当前聊天,AI 可随剧情自动变更。' }}
+            {{ draftScope === 'global' ? '全局:所有聊天生效,AI 不会修改,TAG 有问题需手动改。' : '本聊天:仅当前聊天,AI 可随剧情自动变更。' }}
           </span>
         </div>
 
         <label class="bbi-modal-field">
           <span class="bbi-modal-label">角色名</span>
-          <input v-model="draft.name" class="bbi-input" placeholder="与正文/角色记忆插件中的名字一致" @input="markManual" />
+          <input v-model="draft.name" class="bbi-input" placeholder="与正文或角色资料中的名字一致" @input="markManual" />
         </label>
-        <span class="bbi-field-hint">按这个名字去正文和角色记忆插件角色参考里匹配;AI 引用时也用它(@角色名)。改名不会自动跟随。</span>
+        <span class="bbi-field-hint">按这个名字匹配正文和角色记忆，AI 引用时也使用它（@角色名）。改名不会自动跟随。</span>
 
         <div class="bbi-modal-field">
           <span class="bbi-modal-label">固定外貌</span>
           <span class="bbi-field-hint">
-            填写英文 tag 或短语,只写设定明确的特征;不确定可留空。可点击下方「从资料补全外貌」从角色卡、世界书和剧情中提取缺项,已有字段保留。左右指角色自身的左右。
+            填写英文 TAG 或短语,只写设定明确的特征;不确定可留空。可点击下方「从资料补全外貌」从角色卡、世界书和剧情中提取缺项,已有字段保留。左右指角色自身的左右。
           </span>
           <p v-if="completionSummary" class="bbi-field-hint" role="status">{{ completionSummary }}</p>
           <fieldset v-for="group in FIELD_GROUPS" :key="group.title" class="bbi-char-field-group">
@@ -650,7 +650,7 @@ function sourceLabel(entry: CharTagEntry): string {
         <fieldset class="bbi-char-field-group bbi-char-preferences">
           <legend class="bbi-char-group-label">神态、动作与姿势偏好（可选）</legend>
           <p class="bbi-field-hint">
-            剧情优先:本次剧情有明确描述时按剧情生成;没有说明时才参考偏好。留空则完全随剧情。偏好由你手动维护,不会拼进固定外貌 tag。
+            剧情优先:本次剧情有明确描述时按剧情生成;没有说明时才参考偏好。留空则完全随剧情。偏好由你手动维护,不会拼进固定外貌 TAG。
           </p>
           <div class="bbi-char-form">
             <label v-for="f in CHAR_PREFERENCE_FIELDS" :key="f" class="bbi-char-form-row">
@@ -673,10 +673,10 @@ function sourceLabel(entry: CharTagEntry): string {
             :rows="2"
             :max-rows="6"
             mono
-            placeholder="上方字段全部留空时,以这段整串 tag 为准;填写字段后,整串仅作为备份保留"
+            placeholder="上方字段全部留空时,以这段整串 TAG 为准;填写字段后,整串仅作为备份保留"
             @update:model-value="markManual"
           />
-          <span class="bbi-field-hint">有字段时使用字段;字段全部留空时使用整串。下方预览显示保存后实际生效的外貌 tag。</span>
+          <span class="bbi-field-hint">有字段时使用字段;字段全部留空时使用整串。下方预览显示保存后实际生效的外貌 TAG。</span>
         </label>
         <p v-if="draftHasInactiveRaw" class="bbi-char-raw-notice" role="status">
           当前使用上方字段，旧整串仅保留为备份；请把原有外貌中仍需保留的特征移入字段，或将上方字段留空继续使用整串。
@@ -689,14 +689,14 @@ function sourceLabel(entry: CharTagEntry): string {
             :rows="2"
             :max-rows="4"
             mono
-            placeholder="一句连贯英文外貌描述,自然语言模式下替换 nl 里的 @角色名 用;留空则用 tag 串替换"
+            placeholder="一句连贯英文外貌描述,自然语言模式下替换 nl 里的 @角色名 用;留空则用 TAG 串替换"
             @update:model-value="markManual"
           />
           <span class="bbi-field-hint">只写固定外貌,神态与动作请填上方偏好。外貌字段或整串改变后,若此处仍是原文,保存时会清空旧描述以免冲突;需要保留时请同步更新。</span>
         </label>
 
         <div class="bbi-char-preview">
-          <span class="bbi-field-label">固定外貌 tag 预览</span>
+          <span class="bbi-field-label">固定外貌 TAG 预览</span>
           <code class="bbi-char-preview-tag">{{ previewTag || '(空)' }}</code>
           <span v-if="draftIsRaw" class="bbi-char-preview-mode">整串模式</span>
           <span v-else-if="draftHasFields" class="bbi-char-preview-mode">字段模式</span>
@@ -770,7 +770,7 @@ function sourceLabel(entry: CharTagEntry): string {
           @confirm="confirmRawTransition"
         >
           当前使用上方字段，旧整串仅保留为备份。请确认原有外貌中仍需保留的特征已移入字段；也可返回,将上方字段留空继续使用整串。
-          <span class="bbi-char-confirm-preview-label">保存后实际生效的外貌 tag:</span>
+          <span class="bbi-char-confirm-preview-label">保存后实际生效的外貌 TAG:</span>
           <code class="bbi-char-confirm-preview">{{ previewTag }}</code>
         </ConfirmDialog>
 
@@ -783,7 +783,7 @@ function sourceLabel(entry: CharTagEntry): string {
           top-layer
           @confirm="confirmRemove"
         >
-          确定删除「{{ editingName }}」的固定外貌 tag 吗?之后生成时该角色的外貌将不再锚定。
+          确定删除「{{ editingName }}」的固定外貌 TAG 吗?之后生成时该角色的外貌将不再锚定。
         </ConfirmDialog>
 
         <ConfirmDialog

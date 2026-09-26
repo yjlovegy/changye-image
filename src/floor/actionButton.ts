@@ -57,8 +57,8 @@ async function onActivate(button: HTMLElement): Promise<void> {
   const hasTags = hasImageTagTrace(message.mes ?? '');
   if (hasTags) {
     const ok = await confirmDialog({
-      title: '重新生成 tag',
-      text: '本楼已有生图 tag。重新生成会先删除原 tag 再写入新的；已生成的图片保留在卡片历史里，不会丢失。',
+      title: '重新生成 TAG',
+      text: '本楼已有生图 TAG。重新生成会先删除原 TAG 再写入新的；已生成的图片保留在卡片历史里，不会丢失。',
       confirmText: '重新生成',
     });
     if (!ok) return;
@@ -77,7 +77,7 @@ function createButton(): HTMLDivElement {
   const button = document.createElement('div');
   // mes_button 与 .extraMesButtons 里的 ST 原生扩展按钮同类(menu_button 是通用菜单按钮,样式不同)
   button.className = `mes_button fa-solid ${ICON_CLASS} ${BUTTON_CLASS}`;
-  button.title = '生成生图 tag（已有 tag 时重新生成）';
+  button.title = '生成生图 TAG（已有 TAG 时重新生成）';
   button.setAttribute('role', 'button');
   button.setAttribute('tabindex', '0');
 

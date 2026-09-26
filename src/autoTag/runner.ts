@@ -135,11 +135,11 @@ interface RunOptions {
 
 /** 放弃写入的用户可读原因。文本变化已不在其中——那是正常情况,会 rebase 后照常写入。 */
 const ABANDON_REASON: Partial<Record<ApplyMessageResult, string>> = {
-  'chat-changed': '已切换聊天，本次没有写入生图 tag',
-  'floor-changed': '该楼层已被删除或替换，本次没有写入生图 tag',
-  'swipe-changed': '已切换 swipe，本次没有写入生图 tag',
-  'build-failed': '楼层正文已被大幅改写或已存在生图 tag，本次没有写入',
-  unavailable: '当前聊天不可写入，本次没有写入生图 tag',
+  'chat-changed': '已切换聊天，本次没有写入生图 TAG',
+  'floor-changed': '该楼层已被删除或替换，本次没有写入生图 TAG',
+  'swipe-changed': '已切换 swipe，本次没有写入生图 TAG',
+  'build-failed': '楼层正文已被大幅改写或已存在生图 TAG，本次没有写入',
+  unavailable: '当前聊天不可写入，本次没有写入生图 TAG',
 };
 
 /** 重定位结果的一行摘要;全部原位命中时返回空串(无需记日志)。 */
@@ -221,7 +221,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
   // 排除角色闸门(与角色记忆插件同名单):该角色名所在聊天的自动 tag 全流程停用,
   // 手动按钮也在 actionButton 层撤掉,这里做兜底(手动触发时给反馈)。
   if (isCurrentChatExcluded()) {
-    abort(floor, 'chat-excluded', opts.manual, '该角色已被排除，不生成生图 tag');
+    abort(floor, 'chat-excluded', opts.manual, '该角色已被排除，不生成生图 TAG');
     return;
   }
   const message = context.chat[floor];
@@ -248,15 +248,15 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
       floor,
       'already-has-image-tag',
       opts.manual,
-      '本楼已有生图 tag，没有确认重新生成，本次未改动',
+      '本楼已有生图 TAG，没有确认重新生成，本次未改动',
     );
-    if (!opts.manual) console.debug(`[长夜的绘图器] 第 ${floor} 楼已经含有 bbi_image tag，跳过自动分析`);
+    if (!opts.manual) console.debug(`[长夜的绘图器] 第 ${floor} 楼已经含有 bbi_image TAG，跳过自动分析`);
     return;
   }
   // replace:分析和注入都基于剔除旧 tag 后的正文;写回时旧 tag 随之消失
   const source = opts.replace ? stripImageTags(rawSource) : rawSource;
   if (!source.trim()) {
-    abort(floor, 'empty-source', opts.manual, '本楼正文是空的（或只剩生图 tag），没有可分析的内容');
+    abort(floor, 'empty-source', opts.manual, '本楼正文是空的（或只剩生图 TAG），没有可分析的内容');
     return;
   }
   const preparedTarget = prepareTargetText(source, settings.excludes.customStripTags);
@@ -273,7 +273,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
 
   const chatId = context.getCurrentChatId?.() ?? '';
   if (!chatId) {
-    abort(floor, 'missing-chat-id', opts.manual, '当前没有打开的聊天，本次没有生成生图 tag');
+    abort(floor, 'missing-chat-id', opts.manual, '当前没有打开的聊天，本次没有生成生图 TAG');
     return;
   }
   if (selectionRunning.has(`${chatId}\u0000${floor}`)) {
@@ -366,7 +366,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
         };
         // 有重试时给 source 带上第几次,历史里两条记录一眼看出是重试关系
         const source =
-          retries > 0 ? `自动 tag(第 ${floor} 楼 · 第 ${attempt + 1} 次)` : `自动 tag(第 ${floor} 楼)`;
+          retries > 0 ? `自动 TAG(第 ${floor} 楼 · 第 ${attempt + 1} 次)` : `自动 TAG(第 ${floor} 楼)`;
         if (channel) {
           await requestCompletion(channel, messages, {
             signal: controller.signal,
@@ -393,7 +393,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
         lastError = error instanceof Error ? error.message : String(error);
         if (error instanceof Error && 'retryable' in error && error.retryable === false) break;
         if (attempt < retries) addPromptValidationRetryHint(messages, error);
-        console.warn(`[长夜的绘图器] 第 ${floor} 楼第 ${attempt + 1}/${retries + 1} 次生成 tag 失败`, error);
+        console.warn(`[长夜的绘图器] 第 ${floor} 楼第 ${attempt + 1}/${retries + 1} 次生成 TAG 失败`, error);
       }
     }
     if (!plan) {
@@ -401,7 +401,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
       processed.delete(identity);
       toastr.error(
         `${lastError}${attempted > 1 ? `(已自动重试 ${attempted - 1} 次)` : ''}`,
-        '长夜的绘图器自动 tag 失败',
+        '长夜的绘图器自动 TAG 失败',
       );
       return;
     }
@@ -520,9 +520,9 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
     );
     if (result === 'saved') {
       recomputeCharTags();
-      if (rebaseNote) console.info(`[长夜的绘图器] 第 ${floor} 楼 tag 位置重定位:${rebaseNote}`);
+      if (rebaseNote) console.info(`[长夜的绘图器] 第 ${floor} 楼 TAG 位置重定位:${rebaseNote}`);
       if (plan.images.length) {
-        toastr.success(`已在第 ${floor} 楼插入 ${plan.images.length} 个生图 tag`, '长夜的绘图器');
+        toastr.success(`已在第 ${floor} 楼插入 ${plan.images.length} 个生图 TAG`, '长夜的绘图器');
       } else if (opts.manual) {
         toastr.info('模型认为本楼没有值得插图的画面', '长夜的绘图器');
       } else {
@@ -531,8 +531,8 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
       return;
     }
     if (marked) clearAutoGenerateForFloor(chatId, floor);
-    console.info(`[长夜的绘图器] 第 ${floor} 楼放弃写入生图 tag：${result}`);
-    toastr.warning(ABANDON_REASON[result] ?? '本次没有写入生图 tag', '长夜的绘图器');
+    console.info(`[长夜的绘图器] 第 ${floor} 楼放弃写入生图 TAG：${result}`);
+    toastr.warning(ABANDON_REASON[result] ?? '本次没有写入生图 TAG', '长夜的绘图器');
   } catch (error) {
     // 请求失败或被切换聊天取消时允许同一正文在后续重新渲染后重试。
     processed.delete(identity);
@@ -540,8 +540,8 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
     clearAutoGenerateForFloor(chatId, floor);
     if (controller.signal.aborted) return;
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`[长夜的绘图器] 第 ${floor} 楼自动生成 tag 失败`, error);
-    toastr.error(message, '长夜的绘图器自动 tag 失败');
+    console.error(`[长夜的绘图器] 第 ${floor} 楼自动生成 TAG 失败`, error);
+    toastr.error(message, '长夜的绘图器自动 TAG 失败');
   } finally {
     if (running.get(slot) === controller) running.delete(slot);
   }

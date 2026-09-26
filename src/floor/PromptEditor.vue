@@ -158,9 +158,9 @@ const dirty = computed(() => {
 /** 校验:tag 必填 + 全字段禁含子标签字面量(口径与 AI 侧同一份)。 */
 function validateContent(next: ImageTagContent, strict: boolean): string {
   if (next.resolution && !validResolution(next.resolution)) return '宽度和高度必须是 64–4096 范围内的整数';
-  if (naturalOnly ? !next.nl : !next.tag) return naturalOnly ? '画面描述不能为空' : '画面 tag 不能为空';
+  if (naturalOnly ? !next.nl : !next.tag) return naturalOnly ? '画面描述不能为空' : '画面 TAG 不能为空';
   const fields: Array<[string, string]> = [
-    ['画面 tag', next.tag],
+    ['画面 TAG', next.tag],
     ['自然语言', next.nl],
     ['负面提示词', next.negative],
   ];
@@ -349,7 +349,7 @@ onBeforeUnmount(() => {
       <fieldset class="bbi-editor-fields" :disabled="editingLocked" aria-label="提示词草稿">
       <button v-if="naturalOnly && tag" type="button" class="bbi-btn bbi-btn-sm" @click="showLegacyTags = !showLegacyTags">{{ showLegacyTags ? '收起旧标签' : '查看旧标签' }}</button>
       <div v-if="!naturalOnly || showLegacyTags" class="bbi-modal-field">
-        <span class="bbi-modal-label">画面 tag(danbooru 短 tag,逗号分隔)</span>
+        <span class="bbi-modal-label">画面 TAG(danbooru 短 TAG,逗号分隔)</span>
         <BbiTextarea
           v-model="tag"
           class="bbi-prompt-area"
@@ -442,7 +442,7 @@ onBeforeUnmount(() => {
           class="bbi-btn bbi-btn-primary"
           type="button"
           :disabled="!canApply || !configured"
-          :title="revisionRequired ? '先生成修改草稿，再确认生图' : configured ? '保存提示词并立即出图' : '请先在长夜的绘图器「工作流」页完成配置'"
+          :title="revisionRequired ? '先生成修改草稿，再确认生图' : configured ? '保存提示词并立即出图' : '请先在「工作流」页完成配置'"
           @click="apply(true)"
         >
           <Icon name="palette" /> {{ needsRevisionValidation ? '确认并重新生图' : '应用并重新生成' }}

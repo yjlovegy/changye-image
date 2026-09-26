@@ -89,7 +89,7 @@ function failureReason(result: Exclude<ApplyMessageResult, 'saved'>): string {
     case 'swipe-changed':
       return '已切换到别的 swipe,提示词未保存';
     case 'build-failed':
-      return '正文里的这条 tag 已被改动,请关闭弹窗后重新编辑';
+      return '正文里的这条 TAG 已被改动,请关闭弹窗后重新编辑';
     case 'unavailable':
       return 'SillyTavern 上下文不可用,提示词未保存';
   }

@@ -277,7 +277,7 @@ function copyAll(record: HistoryRecord): void {
     </div>
     <p v-else-if="records.length" class="bbi-field-hint">当前筛选下没有记录。</p>
     <p v-else class="bbi-field-hint">
-      本次会话还没有请求记录。触发一次自动 tag 或生成一张图，这里就会出现条目（刷新页面会清空）。
+      本次会话还没有请求记录。触发一次自动 TAG 或生成一张图，这里就会出现条目（刷新页面会清空）。
     </p>
 
     <!-- ===== 单段全文弹窗 ===== -->

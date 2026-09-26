@@ -238,7 +238,7 @@ describe('reviseImagePrompt', () => {
 
   it('does not invoke the main API when no auxiliary channel is assigned', async () => {
     settings.assignments.tagGen = '';
-    await expect(reviseImagePrompt(source(), 'Change the shirt.')).rejects.toThrow('为“生成 tag”指定渠道');
+    await expect(reviseImagePrompt(source(), 'Change the shirt.')).rejects.toThrow('为“生成TAG”指定渠道');
     expect(request).not.toHaveBeenCalled();
   });
 

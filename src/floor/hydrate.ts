@@ -146,7 +146,7 @@ export function hydrateMessage(messageId: number, ctx: STContext): void {
         const anchors = [...mesText.querySelectorAll<HTMLElement>(BBI_SLOT_SELECTOR)];
         if (anchors.length !== tags.length) {
           console.warn(
-            `[长夜的绘图器] 楼层 #${messageId} 锚点 ${anchors.length} 个 ≠ 生图 tag ${tags.length} 个,按少者配对`,
+            `[长夜的绘图器] 楼层 #${messageId} 锚点 ${anchors.length} 个 ≠ 生图 TAG ${tags.length} 个,按少者配对`,
           );
         }
         const count = Math.min(anchors.length, tags.length);

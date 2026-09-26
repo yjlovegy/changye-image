@@ -224,10 +224,10 @@ const barText = computed(() => {
 /** 无图且后端未就绪时,占位区中央的配置引导。 */
 const pendingHint = computed(() => {
   if (!comfyActive.value && !naiActive.value)
-    return '出图后端未选择,请到长夜的绘图器「渠道」页选择出图渠道';
+    return '出图后端未选择,请到长夜的绘图器「工作流」页选择出图渠道';
   return naiActive.value
-    ? '未配置 NAI,请到长夜的绘图器「渠道」页填写 API Key'
-    : '未配置 ComfyUI,请到长夜的绘图器「渠道」页填写工作流';
+    ? '未配置 NAI,请到长夜的绘图器「工作流」页填写 API Key'
+    : '未配置 ComfyUI,请到长夜的绘图器「工作流」页填写工作流';
 });
 
 async function generate(): Promise<void> {
@@ -530,7 +530,7 @@ onMounted(() => {
             class="bbi-fab"
             type="button"
             :disabled="!configured"
-            :title="configured ? '重绘' : '请先在长夜的绘图器「工作流」页完成配置'"
+            :title="configured ? '重绘' : '请先在「工作流」页完成配置'"
             @click="menuOpen = false; generate()"
           >
             <Icon name="refresh" :size="15" />

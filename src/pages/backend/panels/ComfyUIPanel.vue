@@ -143,9 +143,9 @@ async function onTestConnection() {
 }
 
 const purposeLabels: Record<WorkflowBindingPurpose, string> = {
-  positive_tag: '正向 tag',
+  positive_tag: '正向 TAG',
   positive_nl: '独立自然语言',
-  positive_combined: '正向 tag + 自然语言共用',
+  positive_combined: '正向 TAG + 自然语言共用',
   negative: '负面提示词',
   seed: '随机种子',
   width: '主画布宽度',
@@ -358,7 +358,7 @@ function applyAssist() {
         <BbiTextarea v-model="assistDraft" :rows="10" :max-rows="24" mono />
 
         <p v-if="assistResult.nlMode !== 'none'" class="workflow-detection">
-          自然语言：{{ assistResult.nlMode === 'combined' ? '与正向 tag 共用输入' : '使用独立输入' }}
+          自然语言：{{ assistResult.nlMode === 'combined' ? '与正向 TAG 共用输入' : '使用独立输入' }}
         </p>
         <p v-if="assistResult.hasNegative" class="workflow-detection">
           已配置动态负面词；AI 每张必须返回本画面负面词，空结果会按重试设置重新请求。
