@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Icon from '@/components/Icon.vue';
 import { PAGES } from '@/pages/registry';
-import { closePanel, ui } from '@/state/ui';
+import { closePanel, navigatePanel, ui } from '@/state/ui';
 import { updateState } from '@/update';
 
 const props = defineProps<{ placement: 'top' | 'bottom'; narrow?: boolean }>();
@@ -17,7 +17,7 @@ function onNavClick(id: string) {
     closePanel();
     return;
   }
-  ui.activePage = id;
+  navigatePanel(id);
 }
 </script>
 

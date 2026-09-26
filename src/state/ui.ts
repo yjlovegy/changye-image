@@ -158,14 +158,31 @@ watch(
  */
 export let lastOpenedAt = 0;
 
+let leaveGuard: (() => Promise<boolean>) | undefined;
+let leaving = false;
+export function registerPanelLeaveGuard(guard: () => Promise<boolean>): () => void {
+  leaveGuard = guard;
+  return () => { if (leaveGuard === guard) leaveGuard = undefined; };
+}
+export async function leavePanel(action: () => void): Promise<void> {
+  if (leaving) return;
+  leaving = true;
+  try { if (!leaveGuard || await leaveGuard()) action(); }
+  finally { leaving = false; }
+}
+export function navigatePanel(page: string) {
+  if (ui.activePage !== page) void leavePanel(() => { ui.activePage = page; });
+}
+
 export function openPanel(page?: string) {
+  if (page && ui.open && ui.activePage !== page) { void leavePanel(() => { ui.activePage = page; }); return; }
   if (page) ui.activePage = page;
   ui.open = true;
   lastOpenedAt = performance.now();
 }
 
 export function closePanel() {
-  ui.open = false;
+  void leavePanel(() => { ui.open = false; });
 }
 
 /** 题首按钮:在所有已注册主题间循环切换 */

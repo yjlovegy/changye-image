@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue';
 import Icon from '@/components/Icon.vue';
 import { openLightbox } from '@/floor/lightbox';
 import { saveImageFile } from '@/floor/download';
-import { settings, type ComfyWorkflowPreset } from '@/state/settings';
+import { comfyExampleOwners, type ComfyWorkflowPreset } from '@/state/settings';
 import { normalizeWorkflowExample, removeWorkflowExample, setWorkflowExample } from '@/st/workflowExamples';
 
 const props = defineProps<{ preset: ComfyWorkflowPreset }>();
@@ -12,7 +12,8 @@ const busy = ref(false);
 const broken = ref(false);
 const status = ref('');
 const src = computed(() => normalizeWorkflowExample(props.preset.exampleImage));
-const owners = () => settings.comfyui.workflows;
+const owners = comfyExampleOwners;
+defineExpose({ busy });
 let pickedTarget: ComfyWorkflowPreset | undefined;
 const filename = computed(() => `${props.preset.name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_') || '工作流'}-示例图.${src.value?.split('.').pop() || 'png'}`);
 watch(src, () => { broken.value = false; status.value = ''; }, { flush: 'sync' });
@@ -32,7 +33,7 @@ async function upload(event: Event) {
   status.value = '';
   try {
     const cleaned = await setWorkflowExample(target, file, owners);
-    status.value = '✓ 示例图已保存';
+    status.value = '✓ 已上传；保存当前工作流后保留关联';
     if (!cleaned) toastr.warning('新图已保存，旧文件清理失败，可在示例图目录手动清理');
   } catch (error) { toastr.error(error instanceof Error ? error.message : String(error), '示例图上传失败'); }
   finally { busy.value = false; }

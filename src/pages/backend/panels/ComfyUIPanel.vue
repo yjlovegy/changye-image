@@ -18,13 +18,18 @@ import Collapsible from '@/components/Collapsible.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import Icon from '@/components/Icon.vue';
 import ModalMask from '@/components/ModalMask.vue';
+import { confirmDialog } from '@/components/confirm';
+import { registerPanelLeaveGuard, leavePanel } from '@/state/ui';
 import {
-  activeComfyPreset,
   effectiveComfyConn,
   newComfyWorkflow,
   settings,
+  savedComfyPreset,
+  comfyWorkflowDrafts,
+  saveComfyWorkflow,
+  comfyExampleOwners,
 } from '@/state/settings';
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, ref, onBeforeUnmount, onMounted } from 'vue';
 
 const testing = ref(false);
 const configuring = ref(false);
@@ -40,11 +45,93 @@ const inUse = computed(() => settings.defaultBackend === 'comfyui');
 
 /* ============ 工作流库 ============ */
 
-/** 当前预设。settings 是 reactive,直接把它的字段绑 v-model 即可就地编辑。 */
-const active = computed(() => activeComfyPreset());
+/** Edit a runtime draft; the persisted preset changes only at the explicit save boundary. */
+const active = computed(() => comfyWorkflowDrafts.edit(savedComfyPreset()));
+const revision = ref(0);
+const editorKey = computed(() => `${active.value.id}:${revision.value}`);
+const modelEditor = ref<InstanceType<typeof ComfyModelControls>>();
+const loraEditor = ref<InstanceType<typeof ComfyLoraControls>>();
+const jsonEditor = ref<InstanceType<typeof ComfyWorkflowJson>>();
+const sizeEditor = ref<InstanceType<typeof WorkflowResolution>>();
+const repairEditor = ref<InstanceType<typeof ComfyAutoRepair>>();
+const exampleEditor = ref<InstanceType<typeof WorkflowExample>>();
+const saving = ref(false), saveStatus = ref(''), saveError = ref('');
+const dirty = computed(() => comfyWorkflowDrafts.dirty(active.value.id) || renaming.value
+  || modelEditor.value?.dirty || loraEditor.value?.dirty || jsonEditor.value?.dirty
+  || sizeEditor.value?.dirty || repairEditor.value?.dirty);
+const leaveOpen = ref(false);
+let resolveLeave: ((allowed: boolean) => void) | undefined;
+
+/** Gather all visible inputs first; a validation failure must not partly save a workflow. */
+async function applyTemporary(): Promise<void> {
+  if (exampleEditor.value?.busy || configuring.value) throw new Error('图片或工作流正在处理，请完成后再保存');
+  commitRename();
+  const target = active.value;
+  if (jsonEditor.value?.dirty && (modelEditor.value?.dirty || loraEditor.value?.dirty)) {
+    throw new Error('JSON 与模型或 LoRA 同时有未应用修改，请先处理 JSON，再修改对应控件，避免互相覆盖');
+  }
+  let workflow = jsonEditor.value?.prepare() ?? target.workflow;
+  const model = modelEditor.value?.prepare(workflow);
+  if (model) workflow = model.workflow;
+  workflow = loraEditor.value?.prepare(workflow) ?? workflow;
+  if (workflow.trim()) getWorkflowPlaceholders(workflow);
+  const defaultSize = sizeEditor.value?.prepare() ?? target.defaultSize;
+  const autoRepair = await repairEditor.value?.prepare(workflow) ?? target.autoRepair;
+  if (active.value !== target) throw new Error('当前工作流已变化，请重新操作');
+  Object.assign(target, { workflow, defaultSize, autoRepair, promptMode: model?.promptMode ?? target.promptMode });
+  revision.value++;
+  await nextTick();
+}
+
+async function saveCurrent(): Promise<boolean> {
+  if (saving.value) return false;
+  saving.value = true; saveError.value = ''; saveStatus.value = '';
+  const previousImage = savedComfyPreset().exampleImage;
+  try {
+    await applyTemporary();
+    saveComfyWorkflow(active.value.id);
+    await nextTick();
+    saveStatus.value = '已保存';
+    await cleanUnusedWorkflowExample(previousImage, comfyExampleOwners);
+    return true;
+  } catch (error) { saveError.value = errorMessage(error); return false; }
+  finally { saving.value = false; }
+}
+
+async function discardCurrent(ask = true): Promise<boolean> {
+  if (exampleEditor.value?.busy || saving.value) return false;
+  if (ask && !await confirmDialog({title:'放弃当前修改',text:'恢复到这套工作流上次保存的配置，临时修改将被丢弃。',confirmText:'放弃修改',cancelText:'继续编辑'})) return false;
+  const previousImage = active.value.exampleImage;
+  comfyWorkflowDrafts.discard(active.value.id);
+  renaming.value = false; revision.value++; saveError.value = ''; saveStatus.value = '已恢复上次保存';
+  await cleanUnusedWorkflowExample(previousImage, comfyExampleOwners);
+  return true;
+}
+
+function finishLeave(allowed: boolean) { leaveOpen.value = false; resolveLeave?.(allowed); resolveLeave = undefined; }
+async function leaveWith(choice: 'save' | 'keep' | 'discard') {
+  if (choice === 'save') { if (await saveCurrent()) finishLeave(true); return; }
+  if (choice === 'discard') { if (await discardCurrent(false)) finishLeave(true); return; }
+  if (saving.value) return;
+  saving.value = true; saveError.value = '';
+  try { await applyTemporary(); finishLeave(true); }
+  catch (error) { saveError.value = errorMessage(error); }
+  finally { saving.value = false; }
+}
+const unregisterLeave = registerPanelLeaveGuard(async () => {
+  if (saving.value || exampleEditor.value?.busy || configuring.value) { saveError.value = '正在处理，请稍后再操作'; return false; }
+  if (!dirty.value) return true;
+  leaveOpen.value = true;
+  return new Promise<boolean>(resolve => { resolveLeave = resolve; });
+});
+function beforeUnload(event: BeforeUnloadEvent) {
+  if (dirty.value || comfyWorkflowDrafts.values().some(p=>comfyWorkflowDrafts.dirty(p.id))) { event.preventDefault(); event.returnValue = ''; }
+}
+onMounted(() => window.addEventListener('beforeunload', beforeUnload));
+onBeforeUnmount(() => { unregisterLeave(); finishLeave(false); window.removeEventListener('beforeunload', beforeUnload); });
 
 const workflowOptions = computed(() =>
-  settings.comfyui.workflows.map(w => ({ value: w.id, label: w.name || '未命名工作流' })),
+  settings.comfyui.workflows.map(w => ({ value: w.id, label: `${comfyWorkflowDrafts.current(w).name || '未命名工作流'}${comfyWorkflowDrafts.dirty(w.id) ? ' · 未保存' : ''}` })),
 );
 
 /**
@@ -54,7 +141,7 @@ const workflowOptions = computed(() =>
 const activeId = computed<string>({
   get: () => active.value.id,
   set: id => {
-    settings.comfyui.activeWorkflowId = id;
+    if (id !== active.value.id) void leavePanel(() => { settings.comfyui.activeWorkflowId = id; saveStatus.value = ''; saveError.value = ''; });
   },
 });
 
@@ -82,18 +169,17 @@ function commitRename() {
   renaming.value = false;
 }
 
-function addWorkflow() {
+function addWorkflow() { void leavePanel(() => {
   const preset = newComfyWorkflow(`工作流 ${settings.comfyui.workflows.length + 1}`);
   settings.comfyui.workflows.push(preset);
   switchTo(preset);
-}
+}); }
 
-function duplicateWorkflow() {
+function duplicateWorkflow() { void leavePanel(() => {
   // 拷全部字段(JSON/开关/尺寸一起复制),只换 id 与名字;id 生成仍由 settings 统一口径。
   // simple 是嵌套对象(含 loras 数组),必须深拷——浅拷会让两套预设共享同一份参数。
   const preset = {
-    ...active.value,
-    fixedPrompts: { ...active.value.fixedPrompts },
+    ...JSON.parse(JSON.stringify(active.value)),
     id: newComfyWorkflow().id,
     name: `${active.value.name} 副本`,
     simple: {
@@ -103,7 +189,7 @@ function duplicateWorkflow() {
   };
   settings.comfyui.workflows.push(preset);
   switchTo(preset);
-}
+}); }
 
 async function confirmRemoveWorkflow() {
   confirmDeleteOpen.value = false;
@@ -112,9 +198,10 @@ async function confirmRemoveWorkflow() {
   const index = list.findIndex(w => w.id === active.value.id);
   if (index < 0) return;
   const [removed] = list.splice(index, 1);
+  comfyWorkflowDrafts.discard(removed.id);
   // 删掉的是当前项:接位到原位置那一条(已是最后一条则退一格)
   settings.comfyui.activeWorkflowId = list[Math.min(index, list.length - 1)].id;
-  if (!await cleanUnusedWorkflowExample(removed.exampleImage, () => settings.comfyui.workflows)) {
+  if (!await cleanUnusedWorkflowExample(removed.exampleImage, comfyExampleOwners)) {
     toastr.warning('工作流已删除，示例图文件清理失败，可在示例图目录手动清理');
   }
 }
@@ -183,8 +270,9 @@ function closeAssist() {
 
 function applyAssist() {
   try {
-    const target = settings.comfyui.workflows.find(w => w.id === assistTargetId.value);
-    if (!target) throw new Error('目标工作流已被删除，请重新配置');
+    const savedTarget = settings.comfyui.workflows.find(w => w.id === assistTargetId.value);
+    if (!savedTarget) throw new Error('目标工作流已被删除，请重新配置');
+    const target = comfyWorkflowDrafts.edit(savedTarget);
     const placeholders = getWorkflowPlaceholders(assistDraft.value);
     if (!placeholders.includes('prompt') && !placeholders.includes('nl')) throw new Error('预览工作流缺少 %prompt% 或 %nl% 正向占位符');
     target.workflow = assistDraft.value;
@@ -230,6 +318,7 @@ function applyAssist() {
       </Collapsible>
 
       <Collapsible title="工作流" :open="false">
+        <fieldset class="wf-edit-fieldset" :disabled="saving">
         <div class="wf-row">
           <span class="bbi-field-label">当前工作流</span>
           <input
@@ -293,18 +382,26 @@ function applyAssist() {
           </span>
         </div>
 
+        <div class="wf-save-row">
+          <span role="status" :class="{'wf-unsaved':dirty}">{{ dirty ? '有未保存修改' : saveStatus || '已保存' }}</span>
+          <button type="button" class="bbi-btn" :disabled="!dirty || saving" @click="discardCurrent()">放弃修改</button>
+          <button type="button" class="bbi-btn bbi-btn-primary" :disabled="!dirty || saving" @click="saveCurrent">{{saving ? '保存中…' : '保存当前工作流'}}</button>
+        </div>
+        <p class="bbi-field-hint">临时修改可用于试图；保存后才覆盖原配置，放弃修改可恢复。收藏库仍单独自动保存。</p>
+        <p v-if="saveError" class="wf-fixed-warning" role="alert">{{saveError}}</p>
         <!-- 分界:线以下的开关、尺寸与 JSON 均跟随当前选中的这一套 -->
         <hr class="wf-divider" />
+        <div :key="editorKey">
 
-        <WorkflowExample :key="active.id" :preset="active" />
+        <WorkflowExample ref="exampleEditor" :preset="active" />
 
-        <ComfyModelControls :key="active.id" v-model:workflow="active.workflow" v-model:prompt-mode="active.promptMode" :url="settings.comfyui.url" />
-        <ComfyAutoRepair :key="active.id" :preset="active" />
-        <WorkflowResolution :key="active.id" :preset="active" />
+        <ComfyModelControls ref="modelEditor" v-model:workflow="active.workflow" v-model:prompt-mode="active.promptMode" :url="settings.comfyui.url" />
+        <ComfyAutoRepair ref="repairEditor" :preset="active" />
+        <WorkflowResolution ref="sizeEditor" :preset="active" />
 
         <section class="wf-group" aria-label="固定生图提示词">
           <div class="wf-group-head"><span class="bbi-field-label">固定生图提示词</span></div>
-          <p class="bbi-field-hint">仅跟随当前工作流保存，切换角色卡仍生效。输入后自动保存。</p>
+          <p class="bbi-field-hint">临时用于当前工作流；点击「保存当前工作流」后保留。</p>
           <div class="wf-prompts">
             <div class="wf-fixed-field"><span class="bbi-field-label">固定正面 · 最前面</span><BbiTextarea v-model="active.fixedPrompts.positivePrefix" :rows="2" :max-rows="8" aria-label="固定正面最前面" placeholder="例如 illustration, soft lighting" /></div>
             <div class="wf-fixed-field"><span class="bbi-field-label">固定正面 · 最后面</span><BbiTextarea v-model="active.fixedPrompts.positiveSuffix" :rows="2" :max-rows="8" aria-label="固定正面最后面" placeholder="放在本次画面描述之后的固定内容" /></div>
@@ -314,10 +411,26 @@ function applyAssist() {
           <p v-if="fixedNegativeIssue" class="wf-fixed-warning">{{ fixedNegativeIssue }}</p>
         </section>
 
-        <ComfyLoraControls :workflow-id="active.id" v-model:workflow="active.workflow" v-model:backup="active.loraWorkflowBackup" v-model:favorites="settings.comfyui.loraFavorites" />
-        <ComfyWorkflowJson :key="active.id" v-model="active.workflow" :name="active.name" :configuring="configuring" @assist="onAutoConfigure" />
+        <ComfyLoraControls ref="loraEditor" :workflow-id="active.id" v-model:workflow="active.workflow" v-model:backup="active.loraWorkflowBackup" v-model:favorites="settings.comfyui.loraFavorites" />
+        <ComfyWorkflowJson ref="jsonEditor" v-model="active.workflow" :name="active.name" :configuring="configuring" @assist="onAutoConfigure" />
+        </div>
+        </fieldset>
       </Collapsible>
     </div>
+
+    <ModalMask :open="leaveOpen" top-layer @close="!saving && finishLeave(false)">
+      <section class="bbi-modal" role="dialog" aria-modal="true" aria-label="工作流有未保存修改">
+        <header class="bbi-modal-head"><span class="bbi-modal-title">工作流有未保存修改</span></header>
+        <p>「{{active.name}}」的修改尚未保存。保留临时修改可继续试图，刷新页面后恢复为上次保存的配置。</p>
+        <p v-if="saveError" class="wf-fixed-warning" role="alert">{{saveError}}</p>
+        <footer class="wf-leave-actions">
+          <button class="bbi-btn" :disabled="saving" @click="finishLeave(false)">取消</button>
+          <button class="bbi-btn" :disabled="saving" @click="leaveWith('discard')">放弃修改</button>
+          <button class="bbi-btn" :disabled="saving" @click="leaveWith('keep')">保留临时修改</button>
+          <button class="bbi-btn bbi-btn-primary" :disabled="saving" @click="leaveWith('save')">保存并继续</button>
+        </footer>
+      </section>
+    </ModalMask>
 
     <ConfirmDialog
       v-model:open="confirmDeleteOpen"
@@ -380,6 +493,7 @@ function applyAssist() {
 </template>
 
 <style scoped>
+.wf-edit-fieldset{border:0;padding:0;margin:0;min-width:0}.wf-save-row{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin:10px 0}.wf-save-row>span{margin-right:auto;font-size:13px;color:var(--bbi-ink-muted)}.wf-save-row>span.wf-unsaved{color:var(--bbi-accent)}.wf-save-row .bbi-btn,.wf-leave-actions .bbi-btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;line-height:1.4}.wf-leave-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:20px}
 .wf-sizes { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:18px 0; }
 .wf-size-field { display:grid;gap:8px;min-width:0; }
 .wf-group { margin:18px 0;padding:16px;border:1px solid var(--bbi-line);border-radius:var(--bbi-radius-sm); }

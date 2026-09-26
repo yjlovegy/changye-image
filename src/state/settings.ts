@@ -1,4 +1,5 @@
 import { normalizeAutoRepair, type AutoRepairSettings } from '@/backends/comfyInpaintGraph';
+import { createWorkflowDrafts } from './workflowDrafts';
 import { normalizePromptMode, type PromptMode } from '@/promptMode';
 import { normalizeComfyFixedPrompts, type ComfyFixedPrompts } from '@/backends/comfyFixedPrompts';
 import { normalizeLoraFavorites, type ComfyLoraFavorite } from '@/backends/comfyLoraFavorites';
@@ -1133,9 +1134,25 @@ export function getTagGenChannel(): ApiChannel | null {
  * 「UI 运行中把库改坏」这种时序,让调用方不必到处判空。
  * 刻意只读不写:本函数在 computed 里被调用,写 settings 会引起递归求值。
  */
-export function activeComfyPreset(): ComfyWorkflowPreset {
+export const comfyWorkflowDrafts = createWorkflowDrafts<ComfyWorkflowPreset>();
+
+export function savedComfyPreset(): ComfyWorkflowPreset {
   const list = settings.comfyui.workflows;
   return list.find(w => w.id === settings.comfyui.activeWorkflowId) ?? list[0] ?? newComfyWorkflow();
+}
+
+export function activeComfyPreset(): ComfyWorkflowPreset {
+  return comfyWorkflowDrafts.current(savedComfyPreset());
+}
+
+export function saveComfyWorkflow(id: string): void {
+  const index = settings.comfyui.workflows.findIndex(p => p.id === id);
+  if (index < 0) throw new Error('工作流已删除');
+  settings.comfyui.workflows[index] = comfyWorkflowDrafts.commit(settings.comfyui.workflows[index]);
+}
+
+export function comfyExampleOwners(): ComfyWorkflowPreset[] {
+  return [...settings.comfyui.workflows, ...comfyWorkflowDrafts.values()];
 }
 
 /**
@@ -1143,6 +1160,7 @@ export function activeComfyPreset(): ComfyWorkflowPreset {
  * backends/comfyui.ts 只吃这个形状,不关心库里还有几套。
  */
 export function effectiveComfyConn(preset = activeComfyPreset()): ComfyRunConn {
+  preset = comfyWorkflowDrafts.current(preset);
   return {
     url: settings.comfyui.url,
     workflow: preset.workflow,

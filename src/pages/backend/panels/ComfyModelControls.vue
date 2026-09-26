@@ -54,6 +54,12 @@ async function save() {
     emit('update:workflow', next); emit('update:promptMode', draftMode.value); await nextTick(); saved.value = true; error.value = '';
   } catch (e) { error.value = e instanceof Error ? e.message : String(e); }
 }
+function prepare(workflow: string) {
+  if (state.value.error) throw new Error(state.value.error);
+  const changed = Object.fromEntries(Object.entries(draft.value).filter(([id,value]) => value !== source.value[id]));
+  return { workflow: Object.keys(changed).length ? updateWorkflowFields(workflow, changed) : workflow, promptMode: draftMode.value };
+}
+defineExpose({ dirty, prepare });
 </script>
 <template>
   <section class="model-controls" aria-label="模型与采样">
@@ -74,7 +80,7 @@ async function save() {
     <p v-for="warning in state.warnings" :key="warning" class="bbi-field-hint">{{ warning }}</p>
     <p v-if="listError" class="bbi-field-hint" role="status">{{ listError }}</p>
     <p v-if="state.error || error" class="control-error" role="alert">{{ state.error || error }}</p>
-    <div class="control-actions"><span v-if="saved" class="control-success" role="status">✓ 已保存</span><button type="button" class="bbi-btn bbi-btn-primary" :disabled="!dirty || !!state.error" @click="save">保存模型与采样设置</button></div>
+    <div class="control-actions"><span v-if="saved" class="control-success" role="status">✓ 已用于临时测试</span><button type="button" class="bbi-btn" :disabled="!dirty || !!state.error" @click="save">应用参数供测试</button></div>
   </section>
 </template>
 <style scoped>

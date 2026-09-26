@@ -25,9 +25,15 @@ const state = computed(() => {
   catch (reason) { return { groups: [], error: reason instanceof Error ? reason.message : String(reason) }; }
 });
 const targets = computed(() => state.value.groups.filter(group => group.editable));
+let previousTags: Record<string, string> = {};
 watch([() => props.workflowId, () => props.workflow], (value, previous) => {
-  for (const key of Object.keys(drafts)) delete drafts[key];
-  for (const group of state.value.groups) drafts[group.nodeId] = group.tags;
+  const switching = value[0] !== previous?.[0];
+  const ids = new Set(state.value.groups.map(group=>group.nodeId));
+  for (const key of Object.keys(drafts)) if (switching || !ids.has(key)) delete drafts[key];
+  for (const group of state.value.groups) {
+    if (switching || drafts[group.nodeId] === undefined || drafts[group.nodeId] === previousTags[group.nodeId]) drafts[group.nodeId] = group.tags;
+  }
+  previousTags = Object.fromEntries(state.value.groups.map(group=>[group.nodeId,group.tags]));
   error.value = '';
   message.value = '';
   favoriteUseMessage.value = '';
@@ -73,6 +79,15 @@ async function syncLoras() {
     error.value = reason instanceof Error ? reason.message : String(reason);
   }
 }
+function prepare(workflow: string) {
+  if (state.value.error) throw new Error(state.value.error);
+  let next = workflow;
+  for (const group of state.value.groups) {
+    if (group.editable && drafts[group.nodeId] !== group.tags) next = updateWorkflowLoras(next, group.nodeId, drafts[group.nodeId] ?? '');
+  }
+  return next;
+}
+defineExpose({ dirty, prepare });
 function restoreWorkflow() {
   if (!props.backup) return;
   emit('update:workflow', props.backup);
@@ -89,7 +104,7 @@ function restoreWorkflow() {
       <h3 class="bbi-field-label">LoRA 标签控制</h3>
       <button type="button" class="bbi-btn bbi-btn-sm" :disabled="!backup" @click="restoreOpen = true">恢复同步前工作流</button>
     </div>
-    <p class="bbi-field-hint">添加、删除或修改权重后，点击「同步LoRA到工作流」。</p>
+    <p class="bbi-field-hint">同步后可临时试图；点击上方「保存当前工作流」才会覆盖已保存配置。</p>
     <p v-if="state.error" class="lora-error" role="alert">{{ state.error }}</p>
     <p v-else-if="!state.groups.length" class="bbi-field-hint">当前工作流没有可识别的 LoRA 组。本控制支持 LoraManager 与 rgthree Power LoRA 列表节点；其它节点保留在 JSON 中编辑。</p>
     <fieldset v-for="group in state.groups" :key="group.nodeId" class="lora-group">
