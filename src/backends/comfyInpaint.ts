@@ -3,6 +3,8 @@ import { composeComfyNegative, composeComfyPositive, normalizeComfyFixedPrompts 
 import { parseWorkflowTemplate, runComfyWorkflow, type ComfyImageResult, type ComfyWorkflow, type ComfyProgressHooks } from './comfyui';
 import type { ComfyRunConn } from '@/state/settings';
 import { muteWorkflowNegative } from './comfyNegativePolicy';
+import { defaultInpaintTuning, inpaintTargetSize, validateInpaintTuning, type InpaintTuning } from './inpaintTuning';
+import { decodePixels, maskBounds, protectedInpaintResult } from './inpaintComposite';
 
 const endpoint=(url:string,path:string)=>`${url.trim().replace(/\/+$/,'')}/${path}`;
 async function request(url:string, init?:RequestInit):Promise<Response>{
@@ -42,16 +44,22 @@ async function hasWhitePixels(blob:Blob):Promise<boolean>{
     for(let i=0;i<data.length;i+=4)if(data[i]>25)return true;return false;
   }finally{bitmap.close();}
 }
-export interface InpaintRequest { source:string; mask:Blob; instruction:string; negative?:string; seed:number; context?:number }
+export interface InpaintRequest { source:string; mask:Blob; instruction:string; negative?:string; seed:number; context?:number; tuning?:InpaintTuning }
 export async function inpaintImage(conn:ComfyRunConn,input:InpaintRequest,signal?:AbortSignal,hooks?:ComfyProgressHooks):Promise<ComfyImageResult>{
+  const tuning=input.tuning??{...defaultInpaintTuning(),context:input.context??1.5};
+  validateInpaintTuning(tuning);
   await checkInpaintSupport(conn,false,signal);
-  if(!await hasWhitePixels(input.mask))throw new Error('请先涂选要修改的区域');
+  const maskPixels=await decodePixels(input.mask),bounds=maskBounds(maskPixels);
   const source=await imageBlob(input.source,signal);
+  const sourcePixels=await decodePixels(source);
+  if(maskPixels.width!==sourcePixels.width||maskPixels.height!==sourcePixels.height)throw new Error('选区尺寸与原图不一致');
   const [image,mask]=await Promise.all([uploadInpaintImage(conn.url,source,signal),uploadInpaintImage(conn.url,input.mask,signal)]);
   const fixed=normalizeComfyFixedPrompts(conn.fixedPrompts);
-  const graph=buildInpaintGraph(parseWorkflowTemplate(conn.workflow),{image,mask,seed:input.seed,context:input.context,
+  const graph=buildInpaintGraph(parseWorkflowTemplate(conn.workflow),{image,mask,seed:input.seed,...tuning,targetSize:inpaintTargetSize(tuning,bounds.width,bounds.height),
     positive:composeComfyPositive(input.instruction,fixed),negative:conn.negativeEnabled === false ? '' : composeComfyNegative(input.negative??'',fixed)});
-  const result=await runComfyWorkflow(conn,conn.negativeEnabled === false ? muteWorkflowNegative(graph) : graph,signal,hooks);result.workflowId=conn.workflowId;return result;
+  const result=await runComfyWorkflow(conn,conn.negativeEnabled === false ? muteWorkflowNegative(graph) : graph,signal,hooks);
+  const protectedResult=await protectedInpaintResult(sourcePixels,maskPixels,result,tuning.feather,signal);
+  protectedResult.workflowId=conn.workflowId;return protectedResult;
 }
 
 /** Best-effort post processing. The successful base image remains available when detection/repair fails. */
@@ -61,7 +69,8 @@ export async function autoRepairImage(conn:ComfyRunConn,source:ComfyWorkflow,ori
   let detection:ComfyImageResult|undefined;
   try{
     const {checkpoint}=await checkInpaintSupport(conn,true,signal);
-    const image=await uploadInpaintImage(conn.url,await imageBlob(original.url,signal),signal);
+    const sourceBlob=await imageBlob(original.url,signal);
+    const image=await uploadInpaintImage(conn.url,sourceBlob,signal);
     detection=await runComfyWorkflow(conn,buildDetectionGraph(image,checkpoint!,repair),signal,hooks);
     const maskBlob=await imageBlob(detection.url,signal);
     if(!await hasWhitePixels(maskBlob)){original.repairNotice='未检测到所选部位，已保留原图';return original;}
@@ -69,7 +78,10 @@ export async function autoRepairImage(conn:ComfyRunConn,source:ComfyWorkflow,ori
     const fixed=normalizeComfyFixedPrompts(conn.fixedPrompts);
     const seed=Math.floor(Math.random()*2**48);
     const graph=buildInpaintGraph(source,{image,mask,positive:composeComfyPositive(`Anatomically correct ${[repair.hands?'hands with five distinct fingers':'',repair.feet?'feet with natural toes':''].filter(Boolean).join(' and ')}. Preserve the original pose, clothing, colors, lighting and illustration style. ${scene}`,fixed),negative:conn.negativeEnabled === false ? '' : composeComfyNegative('extra fingers, fused fingers, extra limbs, deformed hands, deformed feet',fixed),seed});
-    const result=await runComfyWorkflow(conn,conn.negativeEnabled === false ? muteWorkflowNegative(graph) : graph,signal,hooks);
+    const rawResult=await runComfyWorkflow(conn,conn.negativeEnabled === false ? muteWorkflowNegative(graph) : graph,signal,hooks);
+    let sourcePixels,maskPixels;
+    try {sourcePixels=await decodePixels(sourceBlob);maskPixels=await decodePixels(maskBlob);} catch(e){rawResult.revoke();throw e;}
+    const result=await protectedInpaintResult(sourcePixels,maskPixels,rawResult,6,signal);
     const revoke=result.revoke;result.original=original;result.workflowId=conn.workflowId;result.seed=seed;
     result.revoke=()=>{revoke();original.revoke();};return result;
   }catch(e){

@@ -41,6 +41,8 @@ export function inspectInpaintSource(graph: ComfyWorkflow) {
 export interface InpaintGraphOptions {
   image: string; mask: string; positive: string; negative: string; seed: number;
   context?: number; targetSize?: number; thinkingSteps?: number;
+  denoise?: number; steps?: number | null; cfg?: number | null;
+  promptMode?: 'Image First' | 'Prompt First';
 }
 
 /** API graph shared by Krea2 and Anima; retain the model/CLIP/LoRA graph without editing the saved workflow. */
@@ -60,20 +62,20 @@ export function buildInpaintGraph(source: ComfyWorkflow, o: InpaintGraphOptions)
     image,mask,downscale_algorithm:'bilinear',upscale_algorithm:'bicubic',
     preresize:false,preresize_mode:'ensure minimum resolution',preresize_min_width:1024,preresize_min_height:1024,
     preresize_max_width:16384,preresize_max_height:16384,mask_fill_holes:false,mask_expand_pixels:0,
-    mask_invert:false,mask_blend_pixels:16,mask_hipass_filter:0.1,extend_for_outpainting:false,
+    mask_invert:false,mask_blend_pixels:0,mask_hipass_filter:0.1,extend_for_outpainting:false,
     extend_up_factor:1,extend_down_factor:1,extend_left_factor:1,extend_right_factor:1,
     context_from_mask_extend_factor:o.context??1.5,output_resize_to_target_size:true,
-    output_target_width:o.targetSize??768,output_target_height:o.targetSize??768,output_padding:'32',device_mode:'cpu (compatible)',
+    output_target_width:o.targetSize??1024,output_target_height:o.targetSize??1024,output_padding:'32',device_mode:'cpu (compatible)',
   });
   const croppedImage:Link=[crop[0],1], croppedMask:Link=[crop[0],2];
   const latent=add('LanPaint_ImageEncode',{image:croppedImage,mask:croppedMask,vae});
   const positive=add('CLIPTextEncode',{clip,text:o.positive}), negative=add('CLIPTextEncode',{clip,text:o.negative});
   const sample=add('LanPaint_KSampler',{
-    model,positive,negative,latent_image:latent,seed:o.seed,steps:sampler.steps,cfg:sampler.cfg,
-    sampler_name:sampler.sampler_name,scheduler:sampler.scheduler,denoise:1,
-    LanPaint_NumSteps:o.thinkingSteps??3,LanPaint_PromptMode:'Image First',LanPaint_Info:'',Inpainting_mode:'🖼️ Image Inpainting',
+    model,positive,negative,latent_image:latent,seed:o.seed,steps:o.steps??sampler.steps,cfg:o.cfg??sampler.cfg,
+    sampler_name:sampler.sampler_name,scheduler:sampler.scheduler,denoise:o.denoise??0.7,
+    LanPaint_NumSteps:o.thinkingSteps??5,LanPaint_PromptMode:o.promptMode??'Image First',LanPaint_Info:'',Inpainting_mode:'🖼️ Image Inpainting',
   });
-  const decoded=add('LanPaint_ImageDecode',{samples:sample,vae,image:croppedImage,mask:croppedMask,blend_overlap:9});
+  const decoded=add('LanPaint_ImageDecode',{samples:sample,vae,image:croppedImage,mask:croppedMask,blend_overlap:1});
   const stitched=add('InpaintStitchImproved',{stitcher:crop,inpainted_image:decoded});
   const output=add('SaveImage',{images:stitched,filename_prefix:'changye/inpaint'});
   return dependencyGraph(graph,[output[0]]);

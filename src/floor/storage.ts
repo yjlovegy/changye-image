@@ -332,7 +332,7 @@ export async function prepareImageForStorage(result: ComfyImageResult): Promise<
   base64: string;
   format: string;
 }> {
-  if (settings.storage.saveAsJpeg) {
+  if (settings.storage.saveAsJpeg && !result.preservePixels) {
     try {
       // data URL/blob URL 都能被 fetch 成 Blob
       const response = await fetch(result.url);

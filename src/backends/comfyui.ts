@@ -28,6 +28,8 @@ export interface ComfyTemplateValues {
 }
 
 export interface ComfyImageResult {
+  /** Mask-protected output must not be recompressed with lossy storage preferences. */
+  preservePixels?: boolean;
   /** Optional original retained by automatic repair. */
   original?: ComfyImageResult;
   workflowId?: string;

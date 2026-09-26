@@ -10,11 +10,17 @@ const source=():ComfyWorkflow=>({
 });
 const opts={image:'source.png',mask:'mask.png',positive:'blue sleeves',negative:'blur',seed:123};
 describe('shared inpaint graph',()=>{
+ it('applies independent repair quality settings and disables outward mask blending',()=>{
+  const g=buildInpaintGraph(source(),{...opts,denoise:0.4,steps:18,cfg:0,thinkingSteps:7,targetSize:1536,context:1.2,promptMode:'Prompt First'});
+  expect(Object.values(g).find(n=>n.class_type==='LanPaint_KSampler')?.inputs).toMatchObject({denoise:0.4,steps:18,cfg:0,LanPaint_NumSteps:7,LanPaint_PromptMode:'Prompt First'});
+  expect(Object.values(g).find(n=>n.class_type==='InpaintCropImproved')?.inputs).toMatchObject({mask_blend_pixels:0,mask_expand_pixels:0,output_target_width:1536,output_target_height:1536,context_from_mask_extend_factor:1.2});
+  expect(Object.values(g).find(n=>n.class_type==='LanPaint_ImageDecode')?.inputs).toMatchObject({blend_overlap:1});
+ });
  it('retains loaded model/LoRA/encoder, removes unrelated requests and does not mutate source',()=>{
   const s=source(),before=JSON.stringify(s),g=buildInpaintGraph(s,opts);expect(JSON.stringify(s)).toBe(before);
   expect(g.lora).toEqual(s.lora);expect(g.clip.inputs).toEqual({clip_name:'qwen',type:'krea2'});expect(g.unused).toBeUndefined();expect(g.positive).toBeUndefined();
   const sampler=Object.values(g).find(n=>n.class_type==='LanPaint_KSampler')!;
-  expect(sampler.inputs).toMatchObject({steps:8,cfg:1,seed:123,model:['lora',0],denoise:1});
+  expect(sampler.inputs).toMatchObject({steps:8,cfg:1,seed:123,model:['lora',0],denoise:0.7,LanPaint_NumSteps:5});
   expect(Object.values(g).filter(n=>n.class_type==='SaveImage')).toHaveLength(1);
   expect(Object.values(g).find(n=>n.class_type==='ImageToMask')?.inputs).toMatchObject({channel:'red'});
   expect(Object.values(g).find(n=>n.class_type==='LanPaint_ImageDecode')?.inputs).toHaveProperty('mask');

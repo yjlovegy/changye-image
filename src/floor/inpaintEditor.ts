@@ -1,6 +1,7 @@
 import { h, render } from 'vue';
 import InpaintEditor from './InpaintEditor.vue';
 import { inpaintImage } from '@/backends/comfyInpaint';
+import { normalizeInpaintTuning, validateInpaintTuning, type InpaintTuning } from '@/backends/inpaintTuning';
 import { randomSeed, type ComfyImageResult } from '@/backends/comfyui';
 import { activeComfyPreset, effectiveComfyConn, settings } from '@/state/settings';
 import { parseImageTagContent, matchesImageTagLayout } from '@/st/imageTagRegex';
@@ -29,13 +30,13 @@ export function openInpaintEditor(options:{at:PromptEditorAt;entry:BbiImageEntry
   let resultSeed=0,closed=false;
   const container=document.createElement('div');root.appendChild(container);active=true;
   const close=()=>{if(closed)return;closed=true;render(null,container);container.remove();active=false;};
-  const run=async (args:{workflow:string;mask:Blob;instruction:string;seed:number;context:number}, signal:AbortSignal)=>{
+  const run=async (args:{workflow:string;mask:Blob;instruction:string;seed:number;context:number;tuning?:InpaintTuning}, signal:AbortSignal)=>{
     check();const selectedPreset=presets.find(p=>p.id===args.workflow);if(!selectedPreset)throw new Error('请选择有效的工作流');
     resultSeed=args.seed<0?randomSeed():args.seed;
     const release=trackGenerationOperation(at.chatId,at.messageId);
     const id=safeHistory(()=>beginImage({backend:'comfyui',model:`局部重绘 · ${selectedPreset.name}`,prompt:args.instruction,nl:'',negative:content.negative,characters:[],seed:resultSeed,size:content.size,floor:at.messageId,seq:at.seq}));
     try{
-      const result=await inpaintImage(selectedPreset.conn,{source:options.entry.path,mask:args.mask,instruction:args.instruction,negative:content.negative,seed:resultSeed,context:args.context},signal);
+      const result=await inpaintImage(selectedPreset.conn,{source:options.entry.path,mask:args.mask,instruction:args.instruction,negative:content.negative,seed:resultSeed,context:args.context,tuning:args.tuning},signal);
       if(signal.aborted){result.revoke();throw new DOMException('已停止','AbortError');}
       if(id!==null)safeHistory(()=>finishImage(id));return result;
     }catch(e){if(id!==null)safeHistory(()=>failImage(id,e instanceof Error?e.message:String(e),signal.aborted));throw e;}
@@ -48,5 +49,7 @@ export function openInpaintEditor(options:{at:PromptEditorAt;entry:BbiImageEntry
     }finally{release();}
   };
   render(h(InpaintEditor,{source:options.entry.path,workflowId:selected,workflowOptions:presets.map(p=>({value:p.id,label:p.name})),
+    profiles:Object.fromEntries(presets.map(p=>[p.id,normalizeInpaintTuning(settings.inpaintProfiles?.[p.id])])),
+    saveDefaults:(id:string,tuning:InpaintTuning)=>{validateInpaintTuning(tuning);settings.inpaintProfiles={...settings.inpaintProfiles,[id]:{...tuning}};},
     missingWorkflow:!options.entry.workflowId,run,save,onClose:close}),container);
 }

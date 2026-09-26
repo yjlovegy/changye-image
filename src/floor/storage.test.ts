@@ -257,6 +257,11 @@ describe('mutateStore (CAS)', () => {
 
 describe('prepareImageForStorage', () => {
   const pngResult = { url: 'data:image/png;base64,AAAA', filename: 'x.png', format: 'png', revoke() {} };
+  it('keeps protected inpaint PNG bytes even when lossy storage is enabled', async () => {
+    settings.storage.saveAsJpeg = true;
+    const out = await prepareImageForStorage({...pngResult,preservePixels:true});
+    expect(out).toEqual({format:'png',base64:'AAAA'});
+  });
 
   afterEach(() => {
     settings.storage.saveAsJpeg = false;

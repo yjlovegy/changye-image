@@ -1,4 +1,5 @@
 import { normalizeAutoRepair, type AutoRepairSettings } from '@/backends/comfyInpaintGraph';
+import { normalizeInpaintTuning, type InpaintTuning } from '@/backends/inpaintTuning';
 import { createWorkflowDrafts } from './workflowDrafts';
 import { normalizePromptMode, type PromptMode } from '@/promptMode';
 import { normalizeComfyFixedPrompts, type ComfyFixedPrompts } from '@/backends/comfyFixedPrompts';
@@ -902,6 +903,8 @@ export interface AutoTagPrompts {
 }
 
 export interface ImageSettings {
+  /** Explicitly saved editor defaults, keyed by workflow ID; independent of generation drafts. */
+  inpaintProfiles?: Record<string, InpaintTuning>;
   /** 插件总开关。 */
   enabled: boolean;
   /** 界面偏好(主题/导航位置等),随设置存进 extension_settings → 跨设备同步 */
@@ -1548,6 +1551,8 @@ function normalize(raw: unknown): ImageSettings {
   const d = defaults();
   const r = raw as Partial<ImageSettings>;
   const merged: ImageSettings = { ...d, ...r };
+  merged.inpaintProfiles = r.inpaintProfiles && typeof r.inpaintProfiles === 'object' && !Array.isArray(r.inpaintProfiles)
+    ? Object.fromEntries(Object.entries(r.inpaintProfiles).map(([id,value]) => [id,normalizeInpaintTuning(value)])) : {};
   // ui 是嵌套对象,展开合并不会补全缺字段,逐字段兜底
   const ru = (r.ui ?? {}) as Partial<UiPrefs>;
   merged.ui = {
@@ -1658,6 +1663,7 @@ export function onSettingsReady(cb: () => void): void {
 }
 
 function applyInto(target: ImageSettings, src: ImageSettings): void {
+  target.inpaintProfiles = src.inpaintProfiles;
   target.enabled = src.enabled;
   target.ui = src.ui;
   target.defaultBackend = src.defaultBackend;
