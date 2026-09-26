@@ -274,6 +274,51 @@ describe('generateComfyImage 取消', () => {
     await vi.waitFor(() => expect(calls.some(c => c.url.includes('/history/'))).toBe(true));
   }
 
+  it('stopping during submission rejects immediately, then removes the late accepted task by ID', async () => {
+    let accepted!: (value: Response) => void;
+    const calls: Array<{url:string;body:unknown}> = [];
+    vi.stubGlobal('fetch', vi.fn((input: unknown, init?: RequestInit) => {
+      const url = String(input), body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      calls.push({url, body});
+      if (url.endsWith('/prompt')) return new Promise<Response>(resolve => { accepted = resolve; });
+      return Promise.resolve(new Response(JSON.stringify({queue_running:[[0,'other']],queue_pending:[[1,'late-id']]})));
+    }));
+    const controller = new AbortController();
+    const job = generateComfyImage(CONN, {prompt:'a vase'}, controller.signal);
+    controller.abort();
+    await expect(job).rejects.toMatchObject({name:'AbortError'});
+    accepted(new Response(JSON.stringify({prompt_id:'late-id'})));
+    await vi.waitFor(() => expect(calls.find(c => c.url.endsWith('/queue') && c.body)?.body).toEqual({delete:['late-id']}));
+    expect(calls.some(c => c.url.includes('/history/') || c.url.endsWith('/interrupt'))).toBe(false);
+  });
+
+  it('does not dispatch an already aborted workflow', async () => {
+    const fetch = vi.fn();vi.stubGlobal('fetch', fetch);
+    const controller = new AbortController();controller.abort();
+    await expect(generateComfyImage(CONN, {prompt:'a vase'}, controller.signal)).rejects.toMatchObject({name:'AbortError'});
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('interrupts its own task if it starts running just before queue deletion', async () => {
+    let deleted = false;
+    const interrupt = vi.fn();
+    vi.stubGlobal('fetch', vi.fn(async (input: unknown, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/prompt')) return new Response(JSON.stringify({prompt_id:'race-id'}));
+      if (url.endsWith('/interrupt')) interrupt(JSON.parse(String(init?.body)));
+      if (url.endsWith('/queue') && init?.body) deleted = true;
+      return new Response(JSON.stringify(url.endsWith('/queue')
+        ? {queue_running:deleted ? [[0,'race-id']] : [],queue_pending:deleted ? [] : [[1,'race-id']]}
+        : {}));
+    }));
+    const controller = new AbortController();
+    let polling!:()=>void; const started = new Promise<void>(resolve=>{polling=resolve;});
+    const job = generateComfyImage(CONN, {prompt:'a vase'}, controller.signal, {onQueue:polling});
+    await started;controller.abort();
+    await expect(job).rejects.toMatchObject({name:'AbortError'});
+    await vi.waitFor(()=>expect(interrupt).toHaveBeenCalledWith({prompt_id:'race-id'}));
+  });
+
   it('任务仍在排队 → 用 /queue delete 摘除,不 interrupt', async () => {
     const calls = stubFetch({
       queue_running: [[0, 'other-running-task']],

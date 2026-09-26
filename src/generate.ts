@@ -31,6 +31,7 @@ import { generateNaiImage, naiRandomSeed, naiSupportsCharacterPrompts } from '@/
 import type { Orientation, ImageSize } from '@/backends/size';
 import { resolutionText } from '@/backends/resolution';
 import { acquireNaiSlot } from '@/floor/genQueue';
+import { imageAbortError, trackImageTask } from '@/state/imageTasks';
 import { activeComfyPreset, effectiveComfyConn, settings, type BackendId } from '@/state/settings';
 
 /** 一次生成的输入。与协议层 ImageInsertion 同形,但不含正文位置信息。 */
@@ -177,11 +178,21 @@ export async function generateImage(
   // 支持与否由后端说了算:ComfyUI 恒不支持;NAI 看模型是否 4.5/V5
   const charactersApplied = characters.length > 0 && status.supportsCharacters;
 
+  const parentSignal = signal;
+  const controller = new AbortController();
+  const abort = () => controller.abort(imageAbortError());
+  if (parentSignal?.aborted) abort();
+  else parentSignal?.addEventListener('abort', abort, { once: true });
+  signal = controller.signal;
+  const untrack = trackImageTask(controller);
   let release: (() => void) | null = null;
   try {
+    if (signal.aborted) throw imageAbortError();
     // 持槽:取到槽位后本函数内一直持有,直到 finally 释放
     if (isNai) release = await acquireNaiSlot(signal);
+    if (signal.aborted) throw imageAbortError();
     progress.onStart?.();
+    if (signal.aborted) throw imageAbortError();
 
     const size = input.size ?? 'portrait';
     const result = isNai
@@ -209,10 +220,19 @@ export async function generateImage(
           { onQueue: ahead => progress.onQueue?.(ahead) },
         );
 
+    if (signal.aborted) {
+      result.revoke();
+      throw imageAbortError();
+    }
     // 退避文案到此为止:图已拿到,落盘还要一会儿,不该继续显示「稍后重试」
     progress.onRetry?.(null);
     return { result, seed: input.seed, backend: status.backend, charactersApplied };
+  } catch (error) {
+    if (signal.aborted) throw imageAbortError();
+    throw error;
   } finally {
     release?.();
+    untrack();
+    parentSignal?.removeEventListener('abort', abort);
   }
 }

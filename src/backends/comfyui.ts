@@ -373,11 +373,27 @@ async function queueDirect(
   workflow: ComfyWorkflow,
   signal?: AbortSignal,
 ): Promise<string> {
+  if (signal?.aborted) throw new DOMException('已停止生图', 'AbortError');
+  // 提交后仍收取任务 ID；直接中断 POST 会丢失 ID，留下无法撤销的排队任务。
+  const submitted = submitDirect(conn, workflow);
+  if (!signal) return submitted;
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(new DOMException('已停止生图', 'AbortError'));
+    signal.addEventListener('abort', abort, { once: true });
+    if (signal.aborted) abort();
+    submitted.then(id => {
+      if (signal.aborted) void cancelPrompt(conn, id);
+      else resolve(id);
+    }, reject).finally(() => signal.removeEventListener('abort', abort));
+  });
+}
+
+async function submitDirect(conn: ComfyRunConn, workflow: ComfyWorkflow): Promise<string> {
   const queued = await fetch(endpoint(conn.url, 'prompt'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt: workflow }),
-    signal,
+    signal: AbortSignal.timeout(60_000),
   });
   if (!queued.ok) throw await responseError(queued, 'ComfyUI 拒绝了工作流');
   const queuedData = (await queued.json()) as { prompt_id?: unknown; node_errors?: unknown };
@@ -471,6 +487,10 @@ async function cancelPrompt(conn: ComfyRunConn, promptId: string): Promise<void>
     if (position) {
       // 位置已确认:在排队(ahead>=0)或已结束(ahead=null),都只需摘队列
       await post('queue', { delete: [promptId] });
+      // 删除前可能恰好开始执行；再核对一次，只中断自己的任务。
+      if (position.ahead !== null && (await fetchQueuePosition(conn, promptId))?.running) {
+        await post('interrupt', { prompt_id: promptId });
+      }
       return;
     }
     // 位置未知:两条都发,谁生效算谁
@@ -501,6 +521,10 @@ async function pollDirectResult(
   signal?.addEventListener('abort', onAbort, { once: true });
 
   try {
+    if (signal?.aborted) {
+      onAbort();
+      throw new DOMException('已停止生图', 'AbortError');
+    }
     const startedAt = Date.now();
     let file: ComfyOutputFile | null = null;
     // 一旦观察到自己在执行就不再查队列:位置信息已无意义,省掉每轮一次请求

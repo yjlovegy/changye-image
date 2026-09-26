@@ -16,12 +16,15 @@
  */
 
 /** 标记模式:见文件头注释。 */
+import { computed, shallowReactive } from 'vue';
+
 export type AutoGenerateMode = 'auto' | 'force';
 
 /** 卡片展示相位(与 Card.vue 的 Phase 同构;这里只列判定用得到的)。 */
 export type AutoGeneratePhase = 'pending' | 'queued' | 'generating' | 'ready' | 'stale' | 'error';
 
-const flags = new Map<string, { mode: AutoGenerateMode; isCurrent?: () => boolean }>();
+const flags = shallowReactive(new Map<string, { mode: AutoGenerateMode; isCurrent?: () => boolean }>());
+export const pendingAutoGenerateCount = computed(() => flags.size);
 
 function key(chatId: string, messageId: number, swipeId: number, seq: number): string {
   return `${chatId}|${messageId}|${swipeId}|${seq}`;

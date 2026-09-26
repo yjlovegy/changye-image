@@ -5,6 +5,7 @@ import BbiSelect from '@/components/BbiSelect.vue';
 import ModalMask from '@/components/ModalMask.vue';
 import { confirmDialog } from '@/components/confirm';
 import type { ComfyImageResult } from '@/backends/comfyui';
+import { imageAbortError, trackImageTask } from '@/state/imageTasks';
 const props=defineProps<{
  source:string;workflowId:string;workflowOptions:{value:string;label:string}[];missingWorkflow?:boolean;
  run:(args:{workflow:string;mask:Blob;instruction:string;seed:number;context:number},signal:AbortSignal)=>Promise<ComfyImageResult>;
@@ -42,10 +43,12 @@ async function generate(){
  if(!instruction.value.trim()){notice.value='请填写修改要求';return;}
  if(!Number.isSafeInteger(seed.value)||seed.value< -1){notice.value='随机种子应为 −1 或非负整数';return;}
  busy.value=true;notice.value='';controller=new AbortController();const current=controller;
- try{const next=await props.run({workflow:workflow.value,mask:await maskBlob(),instruction:instruction.value.trim(),seed:seed.value,context:Number(context.value)},current.signal);
+ const untrack=trackImageTask(current);
+ try{const mask=await maskBlob();if(current.signal.aborted)throw imageAbortError();
+  const next=await props.run({workflow:workflow.value,mask,instruction:instruction.value.trim(),seed:seed.value,context:Number(context.value)},current.signal);
   if(closed||current.signal.aborted){next.revoke();return;}result.value?.revoke();result.value=next;showResult.value=true;
  }catch(e){notice.value=current.signal.aborted?'已停止，选区与修改要求已保留':e instanceof Error?e.message:String(e);}
- finally{if(controller===current){busy.value=false;controller=undefined;}}
+ finally{untrack();if(controller===current){busy.value=false;controller=undefined;}}
 }
 async function save(){if(!result.value||disabled.value)return;saving.value=true;notice.value='';try{await props.save(result.value);emit('close');}catch(e){notice.value=e instanceof Error?e.message:String(e);}finally{saving.value=false;}}
 async function close(){if(saving.value||asking)return;if(busy.value||strokes.value.length||instruction.value.trim()||result.value){asking=true;

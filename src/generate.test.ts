@@ -5,6 +5,8 @@ import { generateNaiImage } from '@/backends/nai';
 import { acquireNaiSlot } from '@/floor/genQueue';
 import { backendStatus, decideSeed, generateImage } from '@/generate';
 import { settings, type NaiModel } from '@/state/settings';
+import { activeImageTasks } from '@/state/imageTasks';
+import { stopGenerationTasks } from '@/state/generationTasks';
 
 vi.mock('@/backends/nai', async importOriginal => ({
   ...(await importOriginal<typeof import('@/backends/nai')>()),
@@ -21,6 +23,7 @@ function fakeResult() {
 }
 
 beforeEach(() => {
+  stopGenerationTasks();
   vi.clearAllMocks();
   vi.mocked(acquireNaiSlot).mockResolvedValue(vi.fn());
   vi.mocked(generateNaiImage).mockResolvedValue(fakeResult());
@@ -106,6 +109,70 @@ describe('decideSeed', () => {
 });
 
 describe('generateImage', () => {
+  it('registers ComfyUI jobs even without a caller signal and forwards history stop', async () => {
+    comfyReady();
+    let received!: AbortSignal;
+    vi.mocked(generateComfyImage).mockImplementationOnce((_conn, _input, signal) => {
+      received = signal!;
+      return new Promise((_resolve, reject) => signal!.addEventListener('abort', () => reject(signal!.reason)));
+    });
+    const job = generateImage({ prompt: 'a vase', seed: 1 });
+    expect(activeImageTasks.value).toBe(1);
+    stopGenerationTasks();
+    await expect(job).rejects.toMatchObject({ name: 'AbortError' });
+    expect(received.aborted).toBe(true);
+    expect(activeImageTasks.value).toBe(0);
+    await expect(generateImage({ prompt: 'a vase', seed: 2 })).resolves.toMatchObject({ seed: 2 });
+  });
+
+  it('revokes late output after stop instead of allowing it to be saved', async () => {
+    comfyReady();
+    const image = fakeResult();
+    let finish!: (result: ReturnType<typeof fakeResult>) => void;
+    vi.mocked(generateComfyImage).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    const job = generateImage({ prompt: 'a vase', seed: 1 });
+    stopGenerationTasks();
+    finish(image);
+    await expect(job).rejects.toMatchObject({ name: 'AbortError' });
+    expect(image.revoke).toHaveBeenCalledOnce();
+  });
+
+  it('keeps per-image cancellation and rejects an already cancelled request without dispatch', async () => {
+    comfyReady();
+    const controller = new AbortController();
+    controller.abort('user-stop');
+    await expect(generateImage({ prompt: 'a vase', seed: 1 }, controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
+    expect(generateComfyImage).not.toHaveBeenCalled();
+    expect(activeImageTasks.value).toBe(0);
+  });
+
+  it('links a caller cancellation without cancelling the other image', async () => {
+    comfyReady();
+    vi.mocked(generateComfyImage).mockImplementation((_conn, _input, signal) =>
+      new Promise((_resolve, reject) => signal!.addEventListener('abort', () => reject(signal!.reason))));
+    const parent = new AbortController();
+    const first = generateImage({ prompt: 'a vase', seed: 1 }, parent.signal);
+    const second = generateImage({ prompt: 'a vase', seed: 2 });
+    parent.abort('cancel-one');
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+    expect(activeImageTasks.value).toBe(1);
+    stopGenerationTasks();
+    await expect(second).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  it('stops a queued NAI request before it can dispatch and releases its slot', async () => {
+    naiReady();
+    const release = vi.fn();
+    let acquire!: (release: () => void) => void;
+    vi.mocked(acquireNaiSlot).mockImplementationOnce(() => new Promise(resolve => { acquire = resolve; }));
+    const job = generateImage({ prompt: 'a vase', seed: 1 });
+    stopGenerationTasks();
+    acquire(release);
+    await expect(job).rejects.toMatchObject({ name: 'AbortError' });
+    expect(generateNaiImage).not.toHaveBeenCalled();
+    expect(release).toHaveBeenCalledOnce();
+  });
+
   it('passes explicit per-image dimensions to ComfyUI and rejects damaged dimensions before a request', async () => {
     comfyReady();
     await generateImage({prompt:'a vase',seed:5,resolution:{width:1080,height:1920}});

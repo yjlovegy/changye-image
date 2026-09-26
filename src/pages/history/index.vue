@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { activePromptTasks, stopPromptTasks } from '@/state/promptTasks';
+import { activeGenerationTasks, stopGenerationTasks } from '@/state/generationTasks';
 import { computed, ref } from 'vue';
 
 import Collapsible from '@/components/Collapsible.vue';
@@ -209,9 +209,9 @@ function copyAll(record: HistoryRecord): void {
       <button
         class="bbi-btn bbi-btn-danger bbi-btn-sm"
         type="button"
-        :disabled="!activePromptTasks"
-        title="停止正在生成的提示词"
-        @click="stopPromptTasks"
+        :disabled="!activeGenerationTasks"
+        title="停止正在进行的提示词与图片生成"
+        @click="stopGenerationTasks"
       >
         <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" /></svg> 停止
       </button>
