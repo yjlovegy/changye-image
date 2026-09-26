@@ -442,7 +442,7 @@ onBeforeUnmount(() => {
           class="bbi-btn bbi-btn-primary"
           type="button"
           :disabled="!canApply || !configured"
-          :title="revisionRequired ? '先生成修改草稿，再确认生图' : configured ? '保存提示词并立即出图' : '请先在柏宝绘「渠道」页完成配置'"
+          :title="revisionRequired ? '先生成修改草稿，再确认生图' : configured ? '保存提示词并立即出图' : '请先在长夜的绘图器「工作流」页完成配置'"
           @click="apply(true)"
         >
           <Icon name="palette" /> {{ needsRevisionValidation ? '确认并重新生图' : '应用并重新生成' }}

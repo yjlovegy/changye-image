@@ -137,9 +137,9 @@ export async function buildAutoTagMessages(
         )}`,
     )
     .join('\n\n');
-  const memoryText = memory ? memory.text : '角色参考：柏宝书本次未提供。';
+  const memoryText = memory ? memory.text : '角色参考：角色记忆插件本次未提供。';
 
-  // 世界书/角色卡/人设:与柏宝书摘要副 API 同口径(有则带,取不到降级为空,不影响主流程)。
+  // 世界书/角色卡/人设:与角色记忆插件摘要副 API 同口径(有则带,取不到降级为空,不影响主流程)。
   // 世界书扫描文本 = 目标楼 + 携带的上下文楼(关键词激活与主对话一致)。
   const scanFloors = recentFloors(context, targetFloor, options.contextMessages);
   const [worldInfo, charCard, persona] = await Promise.all([
@@ -206,14 +206,14 @@ export async function buildAutoTagMessages(
     ? '\n   - NAI V5 profile requirement: every field:"new" change must include a non-empty nl containing a concise English natural-language description of the character fixed appearance. The name must be the character exact name from the card/lorebook/story — a Chinese name stays Chinese (小雪), never pinyin or translation. Fandom characters must also include their identity tag in fields.fandom, e.g. {"name":"冬海","field":"new","fields":{"sex":"1girl","hair":"long black hair","eyes":"blue eyes","fandom":"kasumi (blue archive)"},"nl":"A girl with long black hair and blue eyes.","position":"P2","reason":"first appearance"}; original characters omit fandom. If an existing library entry lacks fandom but the character is fandom, report a changes item with field:"fandom". Describe only fixed appearance: no current outfit, pose, or location — temporary states never enter the profile.'
     : '';
   const newCharacterRule = `
-   - **建档先于画图**：先通读目标正文，找出每个有名有姓、且【角色固定外貌库】里还没有的正式角色——只要角色卡、世界书、柏宝书或持续剧情为他给出了设定，或他是持续参与剧情的角色，首次出场就必须建档，不论他是否入选本次图片。判断依据是发给你的全部设定内容，由你自己通读判断。一次性无名路人不建。
+   - **建档先于画图**：先通读目标正文，找出每个有名有姓、且【角色固定外貌库】里还没有的正式角色——只要角色卡、世界书、角色记忆插件或持续剧情为他给出了设定，或他是持续参与剧情的角色，首次出场就必须建档，不论他是否入选本次图片。判断依据是发给你的全部设定内容，由你自己通读判断。一次性无名路人不建。
    - **建档资格与入画资格是两回事**：不建档只表示他不进角色库，不表示他不能入画；已建档也不表示他必须入画。先按本图的主体和核心互动取景，再为镜头内的人写外貌，不按档案状态决定取舍。无名角色若是核心互动的参与者，照常入画，不得仅因缺档案放弃画面、改选瞬间或裁掉他；仅仅在场不构成入画理由，无关在场者可以留在镜头外。
-   - “已建档”只能按【角色固定外貌库】区块中的同名条目判断：只有名字实际列在该区块中才算已建档；世界书、角色卡、柏宝书或正文里的详细设定只是建档依据，绝不等于已经在库。每个在场正式角色必须二选一：指出库中的同名条目，或在 changes 中输出 field:"new"。一次性无名角色不在这条二选一之内：他既不建档也不写 changes，不需要指出任何库条目，缺档案是正常状态而非遗漏。
+   - “已建档”只能按【角色固定外貌库】区块中的同名条目判断：只有名字实际列在该区块中才算已建档；世界书、角色卡、角色记忆插件或正文里的详细设定只是建档依据，绝不等于已经在库。每个在场正式角色必须二选一：指出库中的同名条目，或在 changes 中输出 field:"new"。一次性无名角色不在这条二选一之内：他既不建档也不写 changes，不需要指出任何库条目，缺档案是正常状态而非遗漏。
    - 建档写法：{"name":"角色名","field":"new","fields":{"sex":"1girl","hair":"long black hair","eyes":"blue eyes","face":"oval face, softly tapered jaw","eyeShape":"almond-shaped eyes","eyebrows":"thin arched eyebrows","nose":"straight nose bridge","mouth":"full lower lip, defined cupid's bow"},"position":"P2","reason":"首次出场建档；未明确的面部结构为五官补全设计"}；position 填他首次出现的位置，仅作记录——建档在本楼全程有效，本楼任意位置的图片都可以立即使用这套外貌。
    - 建档字段记录稳定外貌：${CHAR_TAG_FIELDS.map(field => `${field}（${CHAR_TAG_FIELD_LABELS[field]}）`).join('、')}。hair 同时保留发色、长度、发型、刘海；eyes 保留已有瞳色及眼部特征，eyeShape 单独记录缺失的眼型、眼睑和睫毛；旧 eyes 已含相同特征时不重复；face/eyebrows/nose/mouth/ears 分别保留脸部轮廓、眉形、鼻形、唇形、耳形；age/height/body 保留明确的年龄外观、身高比例和体态；skin 保留明确的肤色肤质；extra 保留痣、疤、纹身等特征的具体位置和角色自身左右侧。accessories/outfit 只填明确长期固定的配饰/招牌着装。判定为同人角色的，fields 里必须写 fandom（模型可识别的英文 Danbooru 身份 tag，格式 character name (copyright name)），原创角色不写 fandom。动作、姿势、所在场景、临时状态（lying on carpet、standing、sitting、unzipped、湿身、伤势等）一律不得写进任何固定字段。
    - 设定已明确的精细五官必须记录，不能缩成 beautiful face、pretty girl 这类泛称；未明确的脸型、眉形、眼型、鼻形和唇形按用户授权做相容的补全设计并固定保存；精确年龄、发色、瞳色、种族等未明确项仍留空。优先使用简洁英文 tag；没有对应 tag 时用准确的英文视觉短语，不强行发明标签。
-   - 建档取值优先级：目标正文明确的当前外貌 > 柏宝书当前角色状态 > 角色卡/世界书明确人设。人设明确写了颜色时必须原样转换，不得擅改。允许部分有据档案：hair、eyes 或其它字段没有依据就留空，不得为了填满字段，依据性格、职业、名字、画风或常见审美编造发色、瞳色、种族或精确年龄。五官补全只限 face/eyeShape/eyebrows/nose/mouth，须服从现有外貌，不改变已确定结构。
-   - 已有未锁定档案也必须检查空字段：逐项对照角色卡、人设、世界书、柏宝书和正文，发现可直接支持的稳定特征时输出 {"name":"角色名","field":"face","value":"oval face","fillOnly":true,"reason":"角色卡明确写鹅蛋脸"}。fillOnly 只补当前为空的结构字段，本楼全程可用，不代表此刻变脸；原值非空时不覆盖，不能用于 raw/nl、偏好或临时表情动作。face/eyeShape/eyebrows/nose/mouth 缺少明确资料时，也须按已知外貌合理设计后用 fillOnly:true 补空，reason 必须写“五官补全设计”，以区别原文事实。已有 eyes/raw/nl 中可提取的结构先复用，不能另造冲突值。没有资料的其他字段保持空白；[locked] 全局条目不补写。纯旧整串档案保持原格式，不用少数字段替换整串。
+   - 建档取值优先级：目标正文明确的当前外貌 > 角色记忆插件当前角色状态 > 角色卡/世界书明确人设。人设明确写了颜色时必须原样转换，不得擅改。允许部分有据档案：hair、eyes 或其它字段没有依据就留空，不得为了填满字段，依据性格、职业、名字、画风或常见审美编造发色、瞳色、种族或精确年龄。五官补全只限 face/eyeShape/eyebrows/nose/mouth，须服从现有外貌，不改变已确定结构。
+   - 已有未锁定档案也必须检查空字段：逐项对照角色卡、人设、世界书、角色记忆插件和正文，发现可直接支持的稳定特征时输出 {"name":"角色名","field":"face","value":"oval face","fillOnly":true,"reason":"角色卡明确写鹅蛋脸"}。fillOnly 只补当前为空的结构字段，本楼全程可用，不代表此刻变脸；原值非空时不覆盖，不能用于 raw/nl、偏好或临时表情动作。face/eyeShape/eyebrows/nose/mouth 缺少明确资料时，也须按已知外貌合理设计后用 fillOnly:true 补空，reason 必须写“五官补全设计”，以区别原文事实。已有 eyes/raw/nl 中可提取的结构先复用，不能另造冲突值。没有资料的其他字段保持空白；[locked] 全局条目不补写。纯旧整串档案保持原格式，不用少数字段替换整串。
    - 建完档就直接用：同一次输出里，先在 changes 里确立该角色的固定外貌，再在图片 ${krea2 ? 'nl' : naiCharPromptsOn ? 'characters[].tag' : 'tag'} 中保留这套外貌，并围绕它补充服装、动作、场景；同一张图里这套外貌只写一遍。${newCharacterNlRule}`;
   const multiCharacterBindingRule = naiCharPromptsOn
     ? '- 多人画面中，每个角色的发色、瞳色、体型、服装、物件和个人动作都必须放进各自的 characters[].tag，禁止放进 Base 或分配给其他角色。'
@@ -253,9 +253,9 @@ ${characterRule}
 
   const spec = backendPromptSpec(options, nlOn, naiCharPromptsOn, settings.defaultBackend, promptMode);
 
-  // 消息顺序与柏宝书摘要请求一致:破限 → 角色设定 → 主角设定 → 世界设定 → 任务规则 → 正文。
+  // 消息顺序与角色记忆插件摘要请求一致:破限 → 角色设定 → 主角设定 → 世界设定 → 任务规则 → 正文。
   const messages: ChatMsg[] = [];
-  // 破限词与柏宝书同口径:留空回落内置默认(同款文本),永远置顶第一条 system。
+  // 破限词与角色记忆插件同口径:留空回落内置默认(同款文本),永远置顶第一条 system。
   const jailbreak = (options.prompts?.jailbreak ?? '').trim() || DEFAULT_JAILBREAK_PROMPT;
   if (jailbreak) messages.push({ role: 'system', content: jailbreak });
   if (charCard) messages.push({ role: 'system', content: buildCharCardSystem(charCard) });
@@ -280,7 +280,7 @@ ${negativeOn ? '本轮工作流支持负面输入：每张图必须提供非空�
 ${facialDetailContract({ mixed: nlOn, characterPrompts: naiCharPromptsOn, allowDesign: true })}
 ${poseSpatialContract({ mixed: nlOn, characterPrompts: naiCharPromptsOn, negativeRequired: negativeOn })}
 分析只做简短核对：选定时点与在场者→躯干和肢体状态→接触支撑与相对位置→镜头可见性→已知可见特征与服装连续性→tag/nl一致性。不要在思考中预写完整tag、完整nl或JSON；只在最终JSON交付一次。${comfyOn ? '这些检查在内部完成，最终只输出JSON，不展示推理过程或thinking标签。' : ''}` });
-  const libraryBlock = library?.trim() || `【角色固定外貌库】[system-maintained; currently empty]\n（当前为空，没有任何角色已建档。世界书、角色卡、柏宝书和正文只提供建档依据；未列在本区块中的正式角色必须通过 field:"new" 建档。）`;
+  const libraryBlock = library?.trim() || `【角色固定外貌库】[system-maintained; currently empty]\n（当前为空，没有任何角色已建档。世界书、角色卡、角色记忆插件和正文只提供建档依据；未列在本区块中的正式角色必须通过 field:"new" 建档。）`;
   const userContent = `${memoryText}\n\n${libraryBlock}\n\n${previous ? `${previous}\n\n` : ''}--- 目标正文｜${roleLabel(context, targetFloor)} ---\n${preparedTarget.promptText}`;
   messages.push({ role: 'user', content: userContent });
   // 预填充:以 <thinking> 开头,强制模型从思考清单续写;渠道「发送预填充」关闭时由 client 丢弃。

@@ -34,7 +34,7 @@ import { settings } from '@/state/settings';
  * 把它连同 shadow root 一起删掉,而事件层对此完全无感。用户报的
  * 「图在生成、楼层里看不到界面」就是它——genState 是模块级的,卡片死了生成照样跑完。
  *
- * 相邻的柏宝书没这个毛病,不是因为它更结实,是因为它的宿主挂在 .mes_text **外面**
+ * 相邻的角色记忆插件没这个毛病,不是因为它更结实,是因为它的宿主挂在 .mes_text **外面**
  * 当兄弟节点,`.html()`/`.empty()` 只清 innerHTML,碰不到兄弟。而本插件的卡片必须
  * 落在 tag 的行内位置(多 tag 楼层要按位置分别成图),搬不出去——同一条约束下
  * 当初也否掉了官方 extra.media 方案(architecture.md §6)。故自愈是位置约束下的唯一解。
@@ -146,7 +146,7 @@ export function hydrateMessage(messageId: number, ctx: STContext): void {
         const anchors = [...mesText.querySelectorAll<HTMLElement>(BBI_SLOT_SELECTOR)];
         if (anchors.length !== tags.length) {
           console.warn(
-            `[柏宝绘] 楼层 #${messageId} 锚点 ${anchors.length} 个 ≠ 生图 tag ${tags.length} 个,按少者配对`,
+            `[长夜的绘图器] 楼层 #${messageId} 锚点 ${anchors.length} 个 ≠ 生图 tag ${tags.length} 个,按少者配对`,
           );
         }
         const count = Math.min(anchors.length, tags.length);
@@ -291,7 +291,7 @@ function warnHiddenByHost(host: Element): void {
   if (hiddenWarned.has(id)) return;
   hiddenWarned.add(id);
   console.warn(
-    `[柏宝绘] 楼层 #${floor ?? '?'} 的卡片已挂载但不可见:该楼 .mes_text 被 ST 的 ` +
+    `[长夜的绘图器] 楼层 #${floor ?? '?'} 的卡片已挂载但不可见:该楼 .mes_text 被 ST 的 ` +
       'inline_media 规则整段隐藏(本楼有附件图且 extra.inline_image 为 false)。' +
       '这是宿主的有意行为,插件不强行解除;如需看到卡片,请让该楼恢复显示正文。',
   );

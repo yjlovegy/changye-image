@@ -176,7 +176,7 @@ describe('auto tag prompt', () => {
     expect(messages.some(m => m.content.includes('"field":"new"'))).toBe(true);
     expect(messages.some(m => m.content.includes('"hair":"long black hair","eyes":"blue eyes"'))).toBe(true);
     expect(messages.some(m => m.content.includes('首次出场就必须建档'))).toBe(true);
-    expect(messages.some(m => m.content.includes('角色卡、世界书、柏宝书或持续剧情'))).toBe(true);
+    expect(messages.some(m => m.content.includes('角色卡、世界书、角色记忆插件或持续剧情'))).toBe(true);
     expect(messages.some(m => m.content.includes('允许部分有据档案'))).toBe(true);
     expect(messages.some(m => m.content.includes('"position":"P2"'))).toBe(true);
     expect(messages.some(m => m.content.includes('不擅自改变发色、瞳色、种族或年龄'))).toBe(true);
@@ -780,7 +780,7 @@ describe('auto tag prompt', () => {
     );
 
     expect(messages.some(message => message.content.includes('首次出场就必须'))).toBe(true);
-    expect(messages.some(message => message.content.includes('柏宝书本次未提供'))).toBe(false);
+    expect(messages.some(message => message.content.includes('角色记忆插件本次未提供'))).toBe(false);
   });
 
   it('uses the dedicated NAI V5 Base and Character Prompt contract', async () => {

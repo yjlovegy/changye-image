@@ -9,7 +9,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
  *
  * 菜单为什么 Teleport 到 modalHost 而不是就地绝对定位:
  * 设置项都在 Collapsible(overflow:hidden)与 .bbi-body 滚动容器里,就地定位会被裁剪
- * (柏宝书踩过同款坑)。modalHost 是 .bbi-root 直接子级,菜单用视口级 fixed 定位,
+ * (角色记忆插件踩过同款坑)。modalHost 是 .bbi-root 直接子级,菜单用视口级 fixed 定位,
  * 由触发器的 getBoundingClientRect 推算,下方空间不足时向上翻。
  * 窗口元素平时无 transform(仅移动端拖动抽屉时临时有),fixed 相对视口成立。
  *

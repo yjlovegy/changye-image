@@ -73,7 +73,7 @@ export function injectPose(workflow: ComfyWorkflow, pose: ComfyPose): ComfyWorkf
   const add = (class_type: string, fields: Record<string, unknown>): [string, number] => {
     while (out[String(next)]) next++;
     const id = String(next++);
-    out[id] = { class_type, inputs: fields, _meta: { title: `柏宝绘姿态 · ${class_type}` } };
+    out[id] = { class_type, inputs: fields, _meta: { title: `长夜的绘图器姿态 · ${class_type}` } };
     return [id, 0];
   };
   let image = add('LoadImage', { image: p.image });

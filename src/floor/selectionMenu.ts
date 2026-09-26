@@ -311,13 +311,13 @@ export function bindSelectionImageMenu(actions: SelectionImageMenuActions = {
       if (disposed || menu !== host) return;
       closeMenu();
       if (selected.anchorError) {
-        toastr.warning(selected.anchorError, '柏宝绘');
+        toastr.warning(selected.anchorError, '长夜的绘图器');
         return;
       }
       // Preserve the context-menu snapshot; runner verifies identity again before writing.
       void actions.requestImage(selected.floor, selected.text, selected.snapshot).catch(error => {
-        console.error('[柏宝绘] 选中文字生图失败', error);
-        toastr.error(error instanceof Error ? error.message : '选中文字生图失败,请重试', '柏宝绘');
+        console.error('[长夜的绘图器] 选中文字生图失败', error);
+        toastr.error(error instanceof Error ? error.message : '选中文字生图失败,请重试', '长夜的绘图器');
       });
     });
   };

@@ -3,7 +3,7 @@ import { openPanel } from '@/state/ui';
 const MENU_ITEM_ID = 'bbi-menu-item';
 
 /**
- * 往 ST 的 #extensionsMenu(魔杖菜单)末尾注入"柏宝绘"入口。
+ * 往 ST 的 #extensionsMenu(魔杖菜单)末尾注入"长夜的绘图器"入口。
  * 菜单是懒加载的,用轮询等它出现;注入一次即可。
  */
 export function injectMenuButton() {
@@ -14,9 +14,9 @@ export function injectMenuButton() {
 
     const $item = $(`
       <div class="extension_container interactable" tabindex="0">
-        <a id="${MENU_ITEM_ID}" class="list-group-item" href="#" title="柏宝绘">
+        <a id="${MENU_ITEM_ID}" class="list-group-item" href="#" title="长夜的绘图器">
           <i class="fa-solid fa-palette"></i>
-          <span>柏宝绘</span>
+          <span>长夜的绘图器</span>
         </a>
       </div>
     `);

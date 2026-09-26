@@ -159,7 +159,7 @@ async function onAutoConfigure() {
   try {
     const result = await configureWorkflowWithAi(active.value.workflow);
     if (!result.changes.length) {
-      toastr.info('工作流中的动态参数已经配置，无需修改', '柏宝绘');
+      toastr.info('工作流中的动态参数已经配置，无需修改', '长夜的绘图器');
       return;
     }
     assistResult.value = result;
@@ -189,7 +189,7 @@ function applyAssist() {
     target.workflow = assistDraft.value;
     const name = target.name;
     closeAssist();
-    toastr.success(`已应用 AI 配置的工作流（${name}）`, '柏宝绘');
+    toastr.success(`已应用 AI 配置的工作流（${name}）`, '长夜的绘图器');
   } catch (error) {
     toastr.error(errorMessage(error), '工作流无法应用');
   }

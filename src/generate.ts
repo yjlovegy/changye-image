@@ -12,7 +12,7 @@
  * **闸门不可绕过**,这是本模块存在的首要理由:直接调 backends/nai.ts 的
  * generateNaiImage 会跑在 floor/genQueue.ts 的并发闸门与全局节奏之外,0.2.0 整版的
  * NAI 限流自愈(429 全局冷却、相邻请求最小间隔、退避重试)当场失效。第三方并发调用
- * 是常态,绕过去的症状是用户 NAI 账号吃一串密集 429 —— 而用户只会认为柏宝绘坏了。
+ * 是常态,绕过去的症状是用户 NAI 账号吃一串密集 429 —— 而用户只会认为长夜的绘图器坏了。
  * 故公开接口与卡片共用本函数,闸门在这里包死。
  *
  * 本模块**刻意不碰**:楼层坐标、genState、extra、水合、请求历史埋点。
@@ -132,7 +132,7 @@ export function backendStatus(): BackendStatus {
     configured: false,
     model: '',
     supportsCharacters: false,
-    reason: '出图后端未选择,请在柏宝绘「渠道」页选择出图渠道',
+    reason: '出图后端尚未配置，请在长夜的绘图器「工作流」页完成配置',
   };
 }
 

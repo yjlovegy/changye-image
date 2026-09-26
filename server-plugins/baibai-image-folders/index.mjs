@@ -2,7 +2,7 @@ import path from 'node:path';
 import { lstat, realpath, stat } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 
-export const info = { id: 'baibai-image-folders', name: '柏宝绘文件夹助手', description: '在本机打开当前用户的柏宝绘图片目录（v1.1.0）' };
+export const info = { id: 'baibai-image-folders', name: '长夜的绘图器文件夹助手', description: '在本机打开当前用户的长夜的绘图器图片目录（v1.1.0）' };
 const loopback = host => ['127.0.0.1', '::1', '::ffff:127.0.0.1', 'localhost', '[::1]'].includes(host);
 const fail = (status, message) => Object.assign(new Error(message), { status });
 

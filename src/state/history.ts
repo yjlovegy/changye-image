@@ -363,7 +363,7 @@ export function safeHistory<T>(fn: () => T): T | null {
   try {
     return fn();
   } catch (e) {
-    console.debug('[柏宝绘] 请求历史记录失败(已忽略)', e);
+    console.debug('[长夜的绘图器] 请求历史记录失败(已忽略)', e);
     return null;
   }
 }

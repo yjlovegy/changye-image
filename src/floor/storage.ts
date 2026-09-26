@@ -238,7 +238,7 @@ export async function mutateStore(
       await ctx.saveChat();
       return true;
     }
-    console.warn('[柏宝绘] extra 写入重试耗尽，放弃本次写入');
+    console.warn('[长夜的绘图器] extra 写入重试耗尽，放弃本次写入');
     return false;
   } finally {
     settled();
@@ -342,7 +342,7 @@ export async function prepareImageForStorage(result: ComfyImageResult): Promise<
       }
       return { base64: await blobToBase64(original), format: result.format };
     } catch (error) {
-      console.warn('[柏宝绘] JPG 转码失败，本次回退保存原格式', error);
+      console.warn('[长夜的绘图器] JPG 转码失败，本次回退保存原格式', error);
     }
   }
   return { base64: await resultToBase64(result), format: result.format };
@@ -382,7 +382,7 @@ async function uploadImageWithSidecar(
   try {
     await uploadBase64File(sidecarFileName(imageFile), utf8ToBase64(JSON.stringify(sidecar)));
   } catch (error) {
-    console.warn('[柏宝绘] 侧写元数据写入失败（不影响图片）', error);
+    console.warn('[长夜的绘图器] 侧写元数据写入失败（不影响图片）', error);
   }
 
   return { path, genId, createdAt, imageFile };
@@ -393,7 +393,7 @@ async function uploadImageWithSidecar(
  *
  * 与 saveImageResult 的分工:那个存完还要写 extra 指针、触发重水合,让楼层卡片显示它;
  * 这个只把文件放进图库就收工 —— 第三方插件自己决定图显示在哪(这正是公开接口的意义),
- * 柏宝绘不替它往聊天记录里塞任何东西。
+ * 长夜的绘图器不替它往聊天记录里塞任何东西。
  *
  * swipeId 固定 0:文件名里那一格本是「同一楼的第几个 swipe」,外部图没有楼层坐标,
  * 取 0 只为让文件名保持同一格式(图库与 sidecarPathFor 都靠格式认图)。
@@ -452,7 +452,7 @@ export async function saveImageResult(
 
   const saved = await mutateStore(ctx, messageId, store => appendEntry(store, swipeId, hash, entry));
   if (!saved) {
-    console.warn('[柏宝绘] 图片已上传但 extra 写入失败，文件留作孤儿', path);
+    console.warn('[长夜的绘图器] 图片已上传但 extra 写入失败，文件留作孤儿', path);
     throw new Error('图片已上传，但聊天记录保存失败');
   }
   return entry;
@@ -484,7 +484,7 @@ export async function deleteImageFileOnly(path: string): Promise<void> {
   try {
     await deleteUploadedFile(sidecar);
   } catch (error) {
-    console.warn('[柏宝绘] 删除侧写元数据失败（留作孤儿）', error);
+    console.warn('[长夜的绘图器] 删除侧写元数据失败（留作孤儿）', error);
   }
 }
 
@@ -525,7 +525,7 @@ export async function deleteImageResult(
     try {
       await deleteUserImage(pathToDelete);
     } catch (error) {
-      console.warn('[柏宝绘] 删除图片文件失败（留作孤儿）', error);
+      console.warn('[长夜的绘图器] 删除图片文件失败（留作孤儿）', error);
     }
     // 侧写跟着走。deleteUploadedFile 对 404 返回 false 不抛（老图本就没有侧写，属正常）
     const sidecar = sidecarPathFor(pathToDelete);
@@ -533,7 +533,7 @@ export async function deleteImageResult(
       try {
         await deleteUploadedFile(sidecar);
       } catch (error) {
-        console.warn('[柏宝绘] 删除侧写元数据失败（留作孤儿）', error);
+        console.warn('[长夜的绘图器] 删除侧写元数据失败（留作孤儿）', error);
       }
     }
   }

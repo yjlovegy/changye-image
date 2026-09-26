@@ -12,7 +12,7 @@ import {
 
 /**
  * 通过 SillyTavern 的服务端代理调用任意 OpenAI 兼容端点。
- * (与柏宝书 src/api/client.ts 同源,行为保持一致。)
+ * (与角色记忆插件 src/api/client.ts 同源,行为保持一致。)
  *
  * 关键:以 chat_completion_source='openai' + reverse_proxy(base url)+ proxy_password(key)
  * 走 /api/backends/chat-completions/generate。请求由 ST 服务端转发,
@@ -158,7 +158,7 @@ async function estimateTokens(id: number, messages: ChatMsg[], response: string)
       ),
     );
   } catch (e) {
-    console.debug('[柏宝绘] token 估算失败(已忽略)', e);
+    console.debug('[长夜的绘图器] token 估算失败(已忽略)', e);
   }
 }
 

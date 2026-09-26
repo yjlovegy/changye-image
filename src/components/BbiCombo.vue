@@ -8,7 +8,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
  * 输入框既是当前值也是过滤词,聚焦弹出候选菜单;候选为空时退化为普通输入框。
  *
  * 为什么菜单 Teleport 到 modalHost 而不是就地绝对定位(副 API 那个是就地):
- * 本组件用在 Collapsible(overflow:hidden)里,就地定位会被裁剪(柏宝书踩过同款坑),
+ * 本组件用在 Collapsible(overflow:hidden)里,就地定位会被裁剪(角色记忆插件踩过同款坑),
  * 故与 BbiSelect 同方案 —— 视口级 fixed,由输入框 getBoundingClientRect 推算,
  * 下方空间不足时向上翻。
  *

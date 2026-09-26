@@ -153,7 +153,7 @@ export async function applyMessageText(
   beforeRefresh?.(canRefresh);
   if (!canRefresh) return 'saved';
   await emitMessageEvent(context, context.eventTypes.MESSAGE_EDITED, floor).catch(error => {
-    console.warn('[柏宝绘] tag 已保存，但 MESSAGE_EDITED 事件发送失败', error);
+    console.warn('[长夜的绘图器] tag 已保存，但 MESSAGE_EDITED 事件发送失败', error);
   });
   if (!stillCurrent()) {
     onRefreshInvalidated?.();
@@ -161,14 +161,14 @@ export async function applyMessageText(
   }
   if (!settleActiveEditor(floor, message.mes)) {
     await refreshRenderedMessage(context, message, floor, stillCurrent).catch(error => {
-      console.warn('[柏宝绘] tag 已保存，但楼层刷新失败', error);
+      console.warn('[长夜的绘图器] tag 已保存，但楼层刷新失败', error);
     });
     if (!stillCurrent()) {
       onRefreshInvalidated?.();
       return 'saved';
     }
     await emitMessageEvent(context, context.eventTypes.MESSAGE_UPDATED, floor).catch(error => {
-      console.warn('[柏宝绘] tag 已保存，但 MESSAGE_UPDATED 事件发送失败', error);
+      console.warn('[长夜的绘图器] tag 已保存，但 MESSAGE_UPDATED 事件发送失败', error);
     });
     if (!stillCurrent()) onRefreshInvalidated?.();
   }

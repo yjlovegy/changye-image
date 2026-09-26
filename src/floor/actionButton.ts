@@ -45,12 +45,12 @@ async function onActivate(button: HTMLElement): Promise<void> {
   const message = Number.isInteger(floor) ? context?.chat?.[floor] : undefined;
   // 点了必须有下文:静默 return 在用户那里就是「按钮点了没反应」,连日志都没有
   if (!context || !message) {
-    console.warn('[柏宝绘] 楼层按钮找不到对应消息', { mesid: button.closest('.mes')?.getAttribute('mesid') });
-    toastr.warning('找不到这一楼的消息，请刷新页面后重试', '柏宝绘');
+    console.warn('[长夜的绘图器] 楼层按钮找不到对应消息', { mesid: button.closest('.mes')?.getAttribute('mesid') });
+    toastr.warning('找不到这一楼的消息，请刷新页面后重试', '长夜的绘图器');
     return;
   }
   if (!settings.enabled) {
-    toastr.warning('柏宝绘已停用，请先在插件设置里开启', '柏宝绘');
+    toastr.warning('长夜的绘图器已停用，请先在插件设置里开启', '长夜的绘图器');
     return;
   }
 
@@ -103,7 +103,7 @@ function syncButtons(): void {
   const chat = getContext()?.chat;
   // 上下文还没就绪:什么都别做——此时「谁该有」无从判断,照着空 chat 对账会把按钮全撤掉
   if (!chat) return;
-  // 排除角色:该聊天整条自动 tag 链路停用(与柏宝书同名单),手动按钮一并撤掉
+  // 排除角色:该聊天整条自动 tag 链路停用(与角色记忆插件同名单),手动按钮一并撤掉
   const excluded = isCurrentChatExcluded();
   for (const mesEl of document.querySelectorAll<HTMLElement>('#chat .mes')) {
     const extra = mesEl.querySelector('.extraMesButtons');

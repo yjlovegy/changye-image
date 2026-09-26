@@ -36,7 +36,7 @@ import { computed, onUnmounted, ref } from 'vue';
 /**
  * 角色管理 —— 两层固定外貌库:
  * - 全局库:跨所有聊天生效的只读模板,AI 永不修改,仅手动维护(适合玩家角色等固定形象)。
- * - 本聊天库:仅当前聊天,柏宝书自动建档、AI 随剧情变更;同名时优先于全局。
+ * - 本聊天库:仅当前聊天,角色记忆插件自动建档、AI 随剧情变更;同名时优先于全局。
  * 外貌按字段记录(sex/hair/eyes/...),拼接结果即最终 tag;生成 tag 时 AI 照抄库中字段,
  * 残留的 @角色名 占位符由插件兜底替换 —— 外貌稳定不漂移。
  */
@@ -197,7 +197,7 @@ function addEntry(scope: Scope = 'chat') {
   historyOpen.value = false;
 }
 
-/* —— 分区折叠(参照柏宝书「计划/悬念」)——
+/* —— 分区折叠(参照角色记忆插件「计划/悬念」)——
  * 标题行兼作折叠开关;折叠态是本机视图偏好,走 localStorage、不进设置(跨设备同步没意义)。 */
 const COLLAPSE_KEYS: Record<Scope, string> = {
   global: 'bbi.ui.charGlobalCollapsed.v1',
@@ -256,7 +256,7 @@ function guardDraftContext(): boolean {
   completionController?.abort();
   completionController = null;
   regenerating.value = false;
-  toastr.warning('角色卡或聊天已切换，本次操作未执行。请切回原上下文继续，或关闭后重新打开角色。', '柏宝绘');
+  toastr.warning('角色卡或聊天已切换，本次操作未执行。请切回原上下文继续，或关闭后重新打开角色。', '长夜的绘图器');
   return false;
 }
 
@@ -275,11 +275,11 @@ function confirmEntry() {
   if (!d || !guardDraftContext()) return;
   const name = d.name.trim();
   if (!name) {
-    toastr.warning('角色名不能为空', '柏宝绘');
+    toastr.warning('角色名不能为空', '长夜的绘图器');
     return;
   }
   if (!previewTag.value) {
-    toastr.warning('至少填一个外貌字段(或整串 tag)', '柏宝绘');
+    toastr.warning('至少填一个外貌字段(或整串 tag)', '长夜的绘图器');
     return;
   }
   if (draftHasInactiveRaw.value && !draftStartedWithFields.value && confirmedFieldPreview.value !== previewTag.value) {
@@ -333,7 +333,7 @@ function confirmPromote() {
   confirmPromoteOpen.value = false;
   if (!editingName.value || !guardDraftContext()) return;
   if (promoteCharTagToGlobal(editingName.value)) {
-    toastr.success(`「${editingName.value}」已提升为全局角色,所有聊天生效`, '柏宝绘');
+    toastr.success(`「${editingName.value}」已提升为全局角色,所有聊天生效`, '长夜的绘图器');
   }
   closeEntry();
 }
@@ -342,23 +342,23 @@ function copyToChat() {
   if (!editingName.value || !guardDraftContext()) return;
   const name = editingName.value;
   if (copyGlobalCharTagToChat(name)) {
-    toastr.success(`已把「${name}」复制到本聊天,之后本聊天以副本为准`, '柏宝绘');
+    toastr.success(`已把「${name}」复制到本聊天,之后本聊天以副本为准`, '长夜的绘图器');
   }
   closeEntry();
 }
 
-/* —— 显式资料补全:复用角色卡/人设/世界书/柏宝书/最近正文,仅填空字段,结果仍由用户保存 —— */
+/* —— 显式资料补全:复用角色卡/人设/世界书/角色记忆插件/最近正文,仅填空字段,结果仍由用户保存 —— */
 async function completeFromReferences() {
   const d = draft.value;
   if (!d || !guardDraftContext()) return;
   const name = d.name.trim();
   if (!name) {
-    toastr.warning('先填写角色名', '柏宝绘');
+    toastr.warning('先填写角色名', '长夜的绘图器');
     return;
   }
   const ctx = getContext();
   if (!ctx) {
-    toastr.info('当前酒馆上下文不可用,请打开角色后重试', '柏宝绘');
+    toastr.info('当前酒馆上下文不可用,请打开角色后重试', '长夜的绘图器');
     return;
   }
   const contextKey = appearanceContextKey(ctx);
@@ -373,7 +373,7 @@ async function completeFromReferences() {
     if (draft.value !== d || controller.signal.aborted || d.name.trim() !== name) return;
     const currentContext = getContext();
     if (!currentContext || appearanceContextKey(currentContext) !== contextKey) {
-      toastr.info('角色卡或聊天已切换,本次外貌补全未应用', '柏宝绘');
+      toastr.info('角色卡或聊天已切换,本次外貌补全未应用', '长夜的绘图器');
       return;
     }
     const added: CharTagField[] = [];
@@ -394,10 +394,10 @@ async function completeFromReferences() {
         : result.status === 'no-missing'
           ? '固定外貌字段已填满,无需补全,未调用模型。'
           : '本次资料没有提供可核验的缺失特征,未改动已有字段;无依据的项目继续留空。';
-    if (added.length) toastr.success(`已按资料补全 ${added.length} 项外貌,请检查后保存`, '柏宝绘');
-    else toastr.info(completionSummary.value, '柏宝绘');
+    if (added.length) toastr.success(`已按资料补全 ${added.length} 项外貌,请检查后保存`, '长夜的绘图器');
+    else toastr.info(completionSummary.value, '长夜的绘图器');
   } catch (error) {
-    if (draft.value === d && !controller.signal.aborted) toastr.error(error instanceof Error ? error.message : String(error), '柏宝绘');
+    if (draft.value === d && !controller.signal.aborted) toastr.error(error instanceof Error ? error.message : String(error), '长夜的绘图器');
   } finally {
     if (completionController === controller) {
       completionController = null;
@@ -426,14 +426,14 @@ function confirmRollback() {
   pendingRollback.value = null;
   if (!p || !guardDraftContext()) return;
   if (rollbackCharTag(p.name, p.record)) {
-    toastr.success(`已回滚「${p.name}」的${fieldLabel(p.record.field)}变更`, '柏宝绘');
+    toastr.success(`已回滚「${p.name}」的${fieldLabel(p.record.field)}变更`, '长夜的绘图器');
   } else {
-    toastr.warning('回滚失败:条目可能已删除', '柏宝绘');
+    toastr.warning('回滚失败:条目可能已删除', '长夜的绘图器');
   }
 }
 
 function sourceLabel(entry: CharTagEntry): string {
-  return entry.source === 'book' ? '柏宝书' : entry.source === 'ai' ? 'AI 维护' : '手动';
+  return entry.source === 'book' ? '角色记忆插件' : entry.source === 'ai' ? 'AI 维护' : '手动';
 }
 </script>
 
@@ -526,7 +526,7 @@ function sourceLabel(entry: CharTagEntry): string {
       <div class="bbi-fold-wrap" :class="{ 'is-collapsed': !chatShown }">
         <div class="bbi-fold-inner">
           <p class="bbi-field-hint">
-            仅当前聊天生效:柏宝书角色自动建档,AI 随剧情报告永久变化;可查看历史并回滚。
+            仅当前聊天生效:角色记忆插件角色自动建档,AI 随剧情报告永久变化;可查看历史并回滚。
           </p>
           <ul v-if="chatEntries.length" class="bbi-char-grid">
           <li v-for="entry in chatEntries" :key="entry.name" class="bbi-char-card">
@@ -562,7 +562,7 @@ function sourceLabel(entry: CharTagEntry): string {
           </li>
           </ul>
           <p v-else class="bbi-char-empty">
-            本聊天还没有角色。生成 tag 时柏宝书角色会自动建档,也可点右上角「+」手动补。
+            本聊天还没有角色。生成 tag 时角色记忆插件角色会自动建档,也可点右上角「+」手动补。
           </p>
         </div>
       </div>
@@ -609,9 +609,9 @@ function sourceLabel(entry: CharTagEntry): string {
 
         <label class="bbi-modal-field">
           <span class="bbi-modal-label">角色名</span>
-          <input v-model="draft.name" class="bbi-input" placeholder="与正文/柏宝书中的名字一致" @input="markManual" />
+          <input v-model="draft.name" class="bbi-input" placeholder="与正文/角色记忆插件中的名字一致" @input="markManual" />
         </label>
-        <span class="bbi-field-hint">按这个名字去正文和柏宝书角色参考里匹配;AI 引用时也用它(@角色名)。改名不会自动跟随。</span>
+        <span class="bbi-field-hint">按这个名字去正文和角色记忆插件角色参考里匹配;AI 引用时也用它(@角色名)。改名不会自动跟随。</span>
 
         <div class="bbi-modal-field">
           <span class="bbi-modal-label">固定外貌</span>
@@ -752,7 +752,7 @@ function sourceLabel(entry: CharTagEntry): string {
           <button
             class="bbi-btn"
             type="button"
-            title="读取角色卡、人设、世界书、柏宝书与最近剧情,只补有明确依据的空字段;点击后调用当前提示词渠道"
+            title="读取角色卡、人设、世界书、角色记忆插件与最近剧情,只补有明确依据的空字段;点击后调用当前提示词渠道"
             :disabled="regenerating"
             @click="completeFromReferences"
           >
@@ -847,7 +847,7 @@ function sourceLabel(entry: CharTagEntry): string {
   gap: 12px;
 }
 
-/* —— 折叠开关(参照柏宝书「计划/悬念」)——
+/* —— 折叠开关(参照角色记忆插件「计划/悬念」)——
  * 标题行整体可点:左箭头 + 标题 + 计数标。无框透明,折叠是辅助操作,标题仍是主体。 */
 .bbi-fold-head {
   flex: 1 1 auto;
@@ -981,7 +981,7 @@ function sourceLabel(entry: CharTagEntry): string {
   gap: 6px;
 }
 
-/* —— 徽标药丸:全局=实心强调;柏宝书/AI=强调浅底;手动=弱化;覆盖=警示色 —— */
+/* —— 徽标药丸:全局=实心强调;角色记忆插件/AI=强调浅底;手动=弱化;覆盖=警示色 —— */
 .bbi-char-pill {
   font-size: 11px;
   font-weight: 600;

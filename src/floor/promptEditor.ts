@@ -123,28 +123,28 @@ async function writeBack(
   }
   const context = getContext();
   if (!context) {
-    toastr.error('SillyTavern 上下文不可用', '柏宝绘');
+    toastr.error('SillyTavern 上下文不可用', '长夜的绘图器');
     return false;
   }
   const message = context.chat?.[at.messageId];
   if (!message) {
-    toastr.error('楼层已不存在,提示词未保存', '柏宝绘');
+    toastr.error('楼层已不存在,提示词未保存', '长夜的绘图器');
     return false;
   }
   if (regenerate && !backendStatus().configured) {
-    toastr.warning('绘图后端尚未配置完成，请先完成配置', '柏宝绘');
+    toastr.warning('绘图后端尚未配置完成，请先完成配置', '长夜的绘图器');
     return false;
   }
   if (isGenerationFloorLocked(at.chatId, at.messageId)
     || !matchesImageTagLayout(message.mes, at.tagLayout)) {
-    toastr.warning('本楼图片位置已变化或正在调整，草稿已保留，请重新打开对应图片编辑', '柏宝绘');
+    toastr.warning('本楼图片位置已变化或正在调整，草稿已保留，请重新打开对应图片编辑', '长夜的绘图器');
     return false;
   }
 
   const nextTag = serializeImageTag(content);
   let release = revision ? lockGenerationFloor(at.chatId, at.messageId) : null;
   if (revision && !release) {
-    toastr.warning('本楼有图片正在处理，请完成后再确认；草稿已保留', '柏宝绘');
+    toastr.warning('本楼有图片正在处理，请完成后再确认；草稿已保留', '长夜的绘图器');
     return false;
   }
   let marked = false;
@@ -185,7 +185,7 @@ async function writeBack(
   } catch (error) {
     // 撤销标记:只取回自己这一枚,不能用 clearAutoGenerateForFloor(会连累同楼兄弟槽位)
     revokeMark();
-    toastr.error(error instanceof Error ? error.message : String(error), '柏宝绘');
+    toastr.error(error instanceof Error ? error.message : String(error), '长夜的绘图器');
     return false;
   } finally {
     release?.();
@@ -193,12 +193,12 @@ async function writeBack(
 
   if (result !== 'saved') {
     revokeMark();
-    toastr.warning(failureReason(result), '柏宝绘');
+    toastr.warning(failureReason(result), '长夜的绘图器');
     return false;
   }
   if (revision && !revision.canGenerate()) revokeMark();
   if (regenerate && !marked) {
-    toastr.warning('提示词已保存，但目标或绘图配置已变化，本次未启动生图', '柏宝绘');
+    toastr.warning('提示词已保存，但目标或绘图配置已变化，本次未启动生图', '长夜的绘图器');
     return true;
   }
 
@@ -342,7 +342,7 @@ export function openPromptEditor(options: PromptEditorOptions): void {
           if (revisionUsed) {
             try { checkRevisionTarget(); }
             catch (error) {
-              toastr.warning(error instanceof Error ? error.message : String(error), '柏宝绘');
+              toastr.warning(error instanceof Error ? error.message : String(error), '长夜的绘图器');
               return;
             }
           }

@@ -224,10 +224,10 @@ const barText = computed(() => {
 /** 无图且后端未就绪时,占位区中央的配置引导。 */
 const pendingHint = computed(() => {
   if (!comfyActive.value && !naiActive.value)
-    return '出图后端未选择,请到柏宝绘「渠道」页选择出图渠道';
+    return '出图后端未选择,请到长夜的绘图器「渠道」页选择出图渠道';
   return naiActive.value
-    ? '未配置 NAI,请到柏宝绘「渠道」页填写 API Key'
-    : '未配置 ComfyUI,请到柏宝绘「渠道」页填写工作流';
+    ? '未配置 NAI,请到长夜的绘图器「渠道」页填写 API Key'
+    : '未配置 ComfyUI,请到长夜的绘图器「渠道」页填写工作流';
 });
 
 async function generate(): Promise<void> {
@@ -235,12 +235,12 @@ async function generate(): Promise<void> {
   const context = getContext();
   const message = context?.chat[props.messageId];
   if (isGenerationFloorLocked(props.chatId, props.messageId)) {
-    toastr.info('正在调整本楼图片位置，请稍后重试', '柏宝绘');
+    toastr.info('正在调整本楼图片位置，请稍后重试', '长夜的绘图器');
     return;
   }
   if (!message || context?.getCurrentChatId() !== props.chatId || (message.swipe_id ?? 0) !== props.swipeId
     || !matchesImageTagLayout(message.mes, props.tagLayout)) {
-    toastr.info('本楼图片位置已变化，请等待刷新后重试', '柏宝绘');
+    toastr.info('本楼图片位置已变化，请等待刷新后重试', '长夜的绘图器');
     return;
   }
   const slot = key.value;
@@ -406,7 +406,7 @@ async function removeEntry(
     target.generationId,
   );
   if (!removed) {
-    toastr.error('删除失败,聊天记录未能保存', '柏宝绘');
+    toastr.error('删除失败,聊天记录未能保存', '长夜的绘图器');
     return;
   }
   const ctx = getContext();
@@ -530,7 +530,7 @@ onMounted(() => {
             class="bbi-fab"
             type="button"
             :disabled="!configured"
-            :title="configured ? '重绘' : '请先在柏宝绘「渠道」页完成配置'"
+            :title="configured ? '重绘' : '请先在长夜的绘图器「工作流」页完成配置'"
             @click="menuOpen = false; generate()"
           >
             <Icon name="refresh" :size="15" />

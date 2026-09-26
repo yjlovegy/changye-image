@@ -223,7 +223,7 @@ describe('prompt editor revision controller', () => {
     expect(state.context!.saveChat).not.toHaveBeenCalled();
     expect(markForAutoGenerate).not.toHaveBeenCalled();
     expect(editor().closing).toBe(false);
-    expect(toastr.warning).toHaveBeenCalledWith(expect.stringContaining('已变化'), '柏宝绘');
+    expect(toastr.warning).toHaveBeenCalledWith(expect.stringContaining('已变化'), '长夜的绘图器');
   });
 
   it.each(['cancel', 'close'])('aborts on %s and rejects a response even if the request ignores cancellation', async action => {
@@ -269,7 +269,7 @@ describe('prompt editor revision controller', () => {
     expect(editor().busy).toBe(false);
     expect(editor().closing).toBe(false);
     expect(isGenerationFloorLocked('chat-a', 0)).toBe(false);
-    expect(toastr.error).toHaveBeenCalledWith('save failed', '柏宝绘');
+    expect(toastr.error).toHaveBeenCalledWith('save failed', '长夜的绘图器');
   });
 
   it.each<Change>(['chat', 'text', 'swipe', 'message', 'workflow'])('does not mark generation when %s changes while saving', async change => {
@@ -283,7 +283,7 @@ describe('prompt editor revision controller', () => {
     expect(markForAutoGenerate).not.toHaveBeenCalled();
     expect(hydrateMessage).not.toHaveBeenCalled();
     expect(isGenerationFloorLocked('chat-a', 0)).toBe(false);
-    expect(toastr.warning).toHaveBeenCalledWith(expect.stringContaining('本次未启动生图'), '柏宝绘');
+    expect(toastr.warning).toHaveBeenCalledWith(expect.stringContaining('本次未启动生图'), '长夜的绘图器');
   });
 
 
@@ -302,7 +302,7 @@ describe('prompt editor revision controller', () => {
     await flush();
     expect(consumeAutoGenerate).toHaveBeenCalledExactlyOnceWith('chat-a', 0, 0, 1);
     expect(hydrateMessage).not.toHaveBeenCalled();
-    expect(toastr.warning).toHaveBeenCalledWith(expect.stringContaining('本次未启动生图'), '柏宝绘');
+    expect(toastr.warning).toHaveBeenCalledWith(expect.stringContaining('本次未启动生图'), '长夜的绘图器');
   });
 
   it('revokes its unconsumed generation mark if a refresh listener changes the chat', async () => {

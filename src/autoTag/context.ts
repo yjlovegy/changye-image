@@ -6,19 +6,19 @@ import { settings } from '@/state/settings';
 
 /**
  * 独立请求的上下文装配:世界书 / 角色卡描述 / user 人设。
- * 逻辑与柏宝书(src/memory/engine.ts 的 fetchWorldInfo / fetchCharCard / fetchUserPersona)
- * 保持一致——柏宝书已在生产环境踩过坑,副 API 侧直接复用同款口径:
+ * 逻辑与角色记忆插件(src/memory/engine.ts 的 fetchWorldInfo / fetchCharCard / fetchUserPersona)
+ * 保持一致——角色记忆插件已在生产环境踩过坑,副 API 侧直接复用同款口径:
  *   - 世界书:checkWorldInfo 拿条目对象 → 逐条展宏(+ST-Prompt-Template 执行 EJS) → 独立 system 消息;
  *   - 角色卡:characters[characterId] 的 description/personality/scenario;
  *   - 人设:{{persona}} 宏。
  * 任一块取不到 → 返回空串,不影响主流程。
  */
 
-/* ============ 扫描文本清洗(对齐柏宝书 clampToTimeTags 的核心行为) ============ */
+/* ============ 扫描文本清洗(对齐角色记忆插件 clampToTimeTags 的核心行为) ============ */
 
 const RE_THINK_BLOCK = /<think(?:ing)?\b[\s\S]*?<\/think(?:ing)?>/gi;
 
-/** 删柏宝书托管的尾部旁注块(bbs_items/bbs_vars,开/闭标签独占行配对)。 */
+/** 删角色记忆插件托管的尾部旁注块(bbs_items/bbs_vars,开/闭标签独占行配对)。 */
 function stripManagedBlock(s: string, tag: string): string {
   const openRe = new RegExp(`^[ \\t]*<${tag}\\b[^>]*>[ \\t]*$`, 'm');
   const closeRe = new RegExp(`^[ \\t]*</${tag}>[ \\t]*$`, 'm');
@@ -45,14 +45,14 @@ function stripManagedTags(s: string): string {
 
 /**
  * 世界书扫描文本清洗:整块删噪声标签,再裁剪到 <bbs_start>…</bbs_end> 正文段。
- * 与柏宝书 clampToTimeTags 同口径(含其用户自定义标签配置,名单走共享存储)。
+ * 与角色记忆插件 clampToTimeTags 同口径(含其用户自定义标签配置,名单走共享存储)。
  */
 function cleanScanText(mes: string): string {
   let s = String(mes ?? '')
     .replace(RE_THINK_BLOCK, '') // 思维链
     .replace(/<!--[\s\S]+?-->/g, '') // HTML 注释
     .replace(/<horae[\s\S]*?>[\s\S]*?<\/horae[\s\S]*?>/gi, ''); // 旧 horae 格式
-  s = stripCustomTags(s, settings.excludes.customStripTags); // 用户自定义标签(与柏宝书同名单)
+  s = stripCustomTags(s, settings.excludes.customStripTags); // 用户自定义标签(与角色记忆插件同名单)
   s = stripManagedTags(s);
 
   // 最后一个 <bbs_start> 的位置:全局扫一遍取末次
@@ -74,7 +74,7 @@ function cleanScanText(mes: string): string {
 
 /* ============ 世界书 ============ */
 
-/** 把去空后的分段去重、join。世界书激活各来源统一收口于此(与柏宝书一致)。 */
+/** 把去空后的分段去重、join。世界书激活各来源统一收口于此(与角色记忆插件一致)。 */
 function joinWorldInfoChunks(chunks: string[]): string {
   const seen = new Set<string>();
   const out: string[] = [];
@@ -90,7 +90,7 @@ function joinWorldInfoChunks(chunks: string[]): string {
 
 /**
  * 本轮待扫描文本:各楼正文清洗后,带人名前缀帮助关键词命中角色名。
- * 与柏宝书 buildScanText 同构。
+ * 与角色记忆插件 buildScanText 同构。
  */
 function buildScanText(chat: STMessage[], targets: number[], name1: string, name2: string): string[] {
   return targets
@@ -111,7 +111,7 @@ const HUGE_WI_CONTEXT = 1_000_000_000;
  * 渲染世界书条目内容,让副 API 拿到「执行后」的成品而非原文:
  *   ① substituteParams 展开 {{宏}};
  *   ② 若装了 ST-Prompt-Template(提示词模板)且文本含 <% %>,调其执行器跑 EJS。
- * 复刻柏宝书 renderWorldInfoContent 的顺序(先宏后 EJS)。
+ * 复刻角色记忆插件 renderWorldInfoContent 的顺序(先宏后 EJS)。
  */
 async function renderWorldInfoContent(
   content: string,
@@ -131,7 +131,7 @@ async function renderWorldInfoContent(
     const out = await ejs.evalTemplate(text, env);
     if (typeof out === 'string') text = out;
   } catch (e) {
-    console.log('[柏宝绘] 世界书 EJS 渲染失败(退回未执行文本):', e);
+    console.log('[长夜的绘图器] 世界书 EJS 渲染失败(退回未执行文本):', e);
   }
   return text;
 }
@@ -165,7 +165,7 @@ async function fetchWorldInfoViaPrompt(
 /**
  * 按本轮待扫描文本激活世界书条目(关键词触发 + constant 蓝灯),返回设定文本。
  * 优先走 checkWorldInfo:返回**条目对象**,可逐条渲染成品(展宏 + EJS),
- * 并据此按「整本排除」+「条目名规则」(共享存储名单,与柏宝书同口径)过滤掉不需要的条目。
+ * 并据此按「整本排除」+「条目名规则」(共享存储名单,与角色记忆插件同口径)过滤掉不需要的条目。
  * checkWorldInfo 取不到(旧版/路径变动)→ 降级到 getWorldInfoPrompt(不过滤,但至少带书,不崩)。
  * 无激活条目 / 角色卡无世界书 / 出错 → 返回空串(不影响主流程)。
  */
@@ -188,7 +188,7 @@ export async function fetchWorldInfo(
     const activated = res?.allActivatedEntries;
     if (!activated) return '';
     // allActivatedEntries 可能是 Set<entry> 或 Map<key,entry>,统一取 values;
-    // 再排成 ST 主提示词同款顺序(扫描命中序不含排序,与柏宝书同口径),
+    // 再排成 ST 主提示词同款顺序(扫描命中序不含排序,与角色记忆插件同口径),
     // 然后按共享排除名单过滤(整本/条目名),最后逐条渲染(展宏 + 执行 EJS)。
     const entries = sortWorldInfoEntriesLikeST(
       activated instanceof Map ? [...activated.values()] : [...activated],
@@ -200,19 +200,19 @@ export async function fetchWorldInfo(
     );
     return joinWorldInfoChunks(chunks);
   } catch (e) {
-    console.log('[柏宝绘] 世界书激活失败(降级为不带设定):', e);
+    console.log('[长夜的绘图器] 世界书激活失败(降级为不带设定):', e);
     return '';
   }
 }
 
-/* ============ 角色卡描述 + user 人设(与柏宝书 fetchCharCard / fetchUserPersona 一致) ============ */
+/* ============ 角色卡描述 + user 人设(与角色记忆插件 fetchCharCard / fetchUserPersona 一致) ============ */
 
 /**
  * 取当前角色卡的人设字段(description / personality / scenario)。
  * 有些卡把人设写在角色描述而非世界书里,tag 生成也需据此理解角色长相与言行。
  *   - 三个字段都尝试,空的自动跳过;
  *   - 字段里可能含 {{char}}/{{user}} 宏,用 substituteParams 展开;
- *   - 群聊(characterId 为空)暂不带——多成员合并逻辑复杂,与柏宝书一致。
+ *   - 群聊(characterId 为空)暂不带——多成员合并逻辑复杂,与角色记忆插件一致。
  * 取不到角色 / 全空 → 返回空串(降级,不影响主流程)。
  */
 export function fetchCharCard(context: STContext): string {
@@ -248,7 +248,7 @@ export function fetchUserPersona(context: STContext): string {
   return context.substituteParams('{{persona}}').trim();
 }
 
-/* ============ 系统消息包装(与柏宝书 prompts.ts 的 build*System 文案一致) ============ */
+/* ============ 系统消息包装(与角色记忆插件 prompts.ts 的 build*System 文案一致) ============ */
 
 /** 把世界书设定包成独立 system 消息的内容(空设定时调用方应跳过) */
 export function buildWorldInfoSystem(worldInfo: string): string {

@@ -23,11 +23,11 @@ import {
 } from './types';
 
 /**
- * 公开接口的注册与事件面(与柏宝书 src/public/register.ts 同款,第三方学一套就够)。
+ * 公开接口的注册与事件面(与角色记忆插件 src/public/register.ts 同款,第三方学一套就够)。
  *
  * 第三方怎么拿到接口——**两条路都得给**,因为插件加载顺序不确定:
- * - 它比柏宝绘晚加载:直接读 globalThis.STBaiBaiImage 就有;
- * - 它比柏宝绘早加载:读到 undefined,只能等 window 的 'st-baibai-image:ready'。
+ * - 它比长夜的绘图器晚加载:直接读 globalThis.STBaiBaiImage 就有;
+ * - 它比长夜的绘图器早加载:读到 undefined,只能等 window 的 'st-baibai-image:ready'。
  * 只给其中一条,另一半场合的第三方就得写轮询——那是我们的锅,不是它的。
  */
 
@@ -73,7 +73,7 @@ function emitNotice(type: PublicChangeNotice['type']): void {
     try {
       listener(clonePublic(detail));
     } catch (error) {
-      console.warn('[柏宝绘] 公共接口订阅回调异常', error);
+      console.warn('[长夜的绘图器] 公共接口订阅回调异常', error);
     }
   }
   const eventName = type === 'ready' ? PUBLIC_READY_EVENT : PUBLIC_CHANGED_EVENT;
@@ -129,10 +129,10 @@ export function registerPublicInterface(): void {
   (globalThis as typeof globalThis & { STBaiBaiImage?: STBaiBaiImageApi }).STBaiBaiImage = api;
 
   // 角色库是响应式派生结果,一律 watch 它本身,不去逐个订阅那些**导致**它变的事件
-  // (CHAT_CHANGED / 删楼 / 滑动 / 用户手动编辑 / 柏宝书同步……漏一个就少一次通知)。
+  // (CHAT_CHANGED / 删楼 / 滑动 / 用户手动编辑 / 角色记忆插件同步……漏一个就少一次通知)。
   watch(() => charTagLib.entries, queueChangedNotice, { deep: true });
 
   ready = true;
   emitNotice('ready');
-  console.log('[柏宝绘] 公共接口已就绪', clonePublic(capabilities));
+  console.log('[长夜的绘图器] 公共接口已就绪', clonePublic(capabilities));
 }

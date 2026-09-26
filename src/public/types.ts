@@ -3,9 +3,9 @@ import type { BackendId } from '@/state/settings';
 import type { CharPreferenceField, CharTagField } from '@/state/charTags';
 
 /**
- * 柏宝绘公开接口的数据结构(DTO)。**第三方插件的契约面。**
+ * 长夜的绘图器公开接口的数据结构(DTO)。**第三方插件的契约面。**
  *
- * 纪律(与柏宝书 src/public/types.ts 同款,第三方作者学一套就够):
+ * 纪律(与角色记忆插件 src/public/types.ts 同款,第三方作者学一套就够):
  * - apiVersion 独立于 pluginVersion:前者是**本文件这些结构**的版本,插件版本天天涨,
  *   它不涨。第三方按 apiVersion 判兼容,不该去解析 pluginVersion 的语义。
  * - 只增不改不删:加可选字段是安全的;改字段含义 / 删字段一律要升 apiVersion。
@@ -24,13 +24,13 @@ export interface PublicCapabilities {
   characterLibrary: true;
   /** 能调生图(generate)。 */
   generate: true;
-  /** 生成的图能落盘进柏宝绘图库(generate 的 save 选项)。 */
+  /** 生成的图能落盘进长夜的绘图器图库(generate 的 save 选项)。 */
   saveToGallery: true;
   /** ready/changed 事件可用。 */
   events: true;
 }
 
-/** 一个角色的外貌字段。键与柏宝绘设置页的「角色库」逐项对应。 */
+/** 一个角色的外貌字段。键与长夜的绘图器设置页的「角色库」逐项对应。 */
 type LegacyPublicCharacterField = 'fandom' | 'sex' | 'hair' | 'eyes' | 'skin' | 'body' | 'extra' | 'outfit';
 export type PublicCharacterFields = Record<LegacyPublicCharacterField, string>
   & Partial<Record<Exclude<CharTagField, LegacyPublicCharacterField>, string>>;
@@ -54,7 +54,7 @@ export interface PublicCharacter {
    * 这条档案从哪来:
    * - 'manual' 用户手写 / 手动编辑过
    * - 'ai'     AI 在剧情里建的档或改过
-   * - 'book'   从柏宝书的角色记忆同步来
+   * - 'book'   从角色记忆插件的角色记忆同步来
    */
   source: 'book' | 'manual' | 'ai';
   /**
@@ -137,10 +137,10 @@ export interface GenerateRequest {
   /** 指定种子(正整数)。省略 = 按用户设置决定(NAI 面板固定种子,否则随机)。 */
   seed?: number;
   /**
-   * 落盘进柏宝绘图库,**默认 true**。
+   * 落盘进长夜的绘图器图库,**默认 true**。
    *
    * true:图存进 user/images/柏宝绘_<character>/ 并写侧写 json,于是
-   *       用户能在柏宝绘图库页里按角色分组看到它、连提示词一起。
+   *       用户能在长夜的绘图器图库页里按角色分组看到它、连提示词一起。
    * false:只返回 dataUrl,不碰磁盘——适合「预览一下就丢」的用法。
    *
    * ⚠ 落盘**不写聊天记录**:图不会出现在任何楼层的正文里,也不占楼层卡片。
@@ -163,7 +163,7 @@ export interface GenerateOptions {
 
 export interface PublicGenerateProgress {
   /**
-   * - 'queued'     在柏宝绘的 NAI 并发闸门里排队(等别的请求让出槽位)
+   * - 'queued'     在长夜的绘图器的 NAI 并发闸门里排队(等别的请求让出槽位)
    * - 'generating' 请求已发出,后端正在画
    * - 'queued-remote' 在 ComfyUI **服务端**队列里(ahead 为前面还有几个)
    * - 'retrying'   被限流了,正在退避重试(attempt/max)
@@ -203,7 +203,7 @@ export interface GenerateResult {
   /**
    * characters 是否真的发给了后端。
    * 你传了 characters 但这里是 false = 被丢弃了(通常是用户在用 ComfyUI)。
-   * 柏宝绘**刻意不降级把角色拼进 prompt**:那会画出多份躯干重叠的图。
+   * 长夜的绘图器**刻意不降级把角色拼进 prompt**:那会画出多份躯干重叠的图。
    */
   charactersApplied: boolean;
 }
@@ -219,7 +219,7 @@ export type PublicErrorCode =
   | 'not_configured'
   /** 入参不合法(prompt 空、seed 不是数字之类)。 */
   | 'invalid_args'
-  /** 被后端限流,且柏宝绘的自动退避重试已用尽。 */
+  /** 被后端限流,且长夜的绘图器的自动退避重试已用尽。 */
   | 'rate_limited'
   /** 后端报错(网络不通、工作流有问题、API Key 失效……)。 */
   | 'backend_error';
@@ -243,14 +243,14 @@ export type PublicChangeListener = (notice: PublicChangeNotice) => void;
 export interface STBaiBaiImageApi {
   /** 本接口数据结构的版本。第三方按它判兼容(当前恒为 1)。 */
   readonly apiVersion: typeof PUBLIC_API_VERSION;
-  /** 柏宝绘插件版本(仅供展示/排查,别解析它做兼容判断)。 */
+  /** 长夜的绘图器插件版本(仅供展示/排查,别解析它做兼容判断)。 */
   readonly pluginVersion: string;
   readonly capabilities: PublicCapabilities;
-  /** 取柏宝绘已记录的角色列表(含可直接出图的 tag)。返回深拷贝,改它不影响柏宝绘。 */
+  /** 取长夜的绘图器已记录的角色列表(含可直接出图的 tag)。返回深拷贝,改它不影响长夜的绘图器。 */
   getCharacters(options?: GetCharactersOptions): PublicCharacterList;
   /** 出图前先问问:后端配好了吗、支不支持多角色。 */
   getBackendStatus(): PublicBackendStatus;
-  /** 调柏宝绘生图。图返回给你,显示在哪由你决定。 */
+  /** 调长夜的绘图器生图。图返回给你,显示在哪由你决定。 */
   generate(request: GenerateRequest, options?: GenerateOptions): Promise<GenerateResult>;
   /** 订阅角色库变更;返回取消订阅的函数。 */
   subscribe(listener: PublicChangeListener): () => void;

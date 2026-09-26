@@ -74,7 +74,7 @@ const orbShapeSel = computed<string>({
 
 
 /* —— 渠道:列表只读展示,编辑/新建都在弹窗里进行,避免一长列表平铺误触。
-   渠道列表与柏宝书共享(见 state/settings.ts 的共享存储),任一端改动自动同步。 —— */
+   渠道列表与角色记忆插件共享(见 state/settings.ts 的共享存储),任一端改动自动同步。 —— */
 // editingId:正在编辑的「已有渠道」id;新建时为 null。仅用于「完成」时定位写回目标。
 const editingId = ref<string | null>(null);
 // 编辑用「草稿副本」:v-model 全改在草稿上,只有点「完成」才写回 settings(避免每敲一字就触发存盘)。
@@ -100,7 +100,7 @@ function normalizeAutoTagNumbers(changed?: 'minImages' | 'maxImages' | Event) {
   settings.autoTag.retryCount = Math.min(5, Math.max(0, Math.floor(Number(settings.autoTag.retryCount) || 0)));
 }
 
-/* —— 自定义提示词(UI 照搬柏宝书):列表只读展示,编辑在弹窗里进行。
+/* —— 自定义提示词(UI 照搬角色记忆插件):列表只读展示,编辑在弹窗里进行。
    空串 = 回落内置默认;是否已自定义按 trim 非空判定。 —— */
 interface TagPromptMeta {
   key: keyof AutoTagPrompts;
@@ -121,7 +121,7 @@ const TAG_PROMPT_METAS: TagPromptMeta[] = [
   {
     key: 'jailbreak',
     label: '破限词',
-    hint: '作为置顶 system 附加在自动 tag 请求里，降低副 API 拒答率。留空则用内置默认（与柏宝书同款文本）。全后端通用。',
+    hint: '作为置顶 system 附加在自动 tag 请求里，降低副 API 拒答率。留空则用内置默认。全后端通用。',
     builtin: DEFAULT_JAILBREAK_PROMPT,
     macros: [],
   },
@@ -293,7 +293,7 @@ async function pullModels(ch: ApiChannel) {
 }
 
 /* —— 排除角色:勾选的角色名(含重名卡)的聊天里,自动 tag 全流程停用。
-   名单与柏宝书共享(见 state/settings.ts 的共享存储),任一端改动自动同步。
+   名单与角色记忆插件共享(见 state/settings.ts 的共享存储),任一端改动自动同步。
    按「名字」排除,同名卡是一批一起排除。列表很长时易卡,故:① 仅在弹窗打开时取/去重角色名;
    ② 带搜索框过滤;③ 用 v-show + 子串匹配,渲染量随搜索收敛。 —— */
 const excludeOpen = ref(false);
@@ -407,7 +407,7 @@ function removeWiPattern(pat: string) {
 }
 
 /* —— 自定义清洗标签:用户填标签名(如 snow),清洗正文时把 <snow>…</snow> 整块删掉。
-   与柏宝书同名单共享(柏宝书配的清洗标签,绘里同样生效)。 —— */
+   与角色记忆插件同名单共享(角色记忆插件配的清洗标签,绘里同样生效)。 —— */
 const stripTagDraft = ref('');
 function addStripTag() {
   const tag = sanitizeTagName(stripTagDraft.value);
@@ -441,9 +441,9 @@ async function confirmUpdate() {
   const toastr = (globalThis as Record<string, any>).toastr;
   try {
     await performUpdate();
-    toastr?.success?.('更新成功,正在刷新页面…', '柏宝绘');
+    toastr?.success?.('更新成功,正在刷新页面…', '长夜的绘图器');
   } catch (error) {
-    toastr?.error?.(`更新失败:${error instanceof Error ? error.message : String(error)}`, '柏宝绘');
+    toastr?.error?.(`更新失败:${error instanceof Error ? error.message : String(error)}`, '长夜的绘图器');
   }
 }
 </script>
@@ -534,13 +534,13 @@ async function confirmUpdate() {
           <span class="bbi-field-label">在 ST 顶栏显示按钮</span>
           <input v-model="ui.showTopBar" type="checkbox" class="bbi-checkbox" />
         </label>
-        <p class="bbi-field-hint">在酒馆顶部导航栏加一个快速打开柏宝绘的按钮。左下角魔杖入口照旧保留。</p>
+        <p class="bbi-field-hint">在酒馆顶部导航栏加一个快速打开长夜的绘图器的按钮。左下角魔杖入口照旧保留。</p>
 
         <label class="bbi-switch-row">
           <span class="bbi-field-label">显示屏幕悬浮球</span>
           <input v-model="ui.showOrb" type="checkbox" class="bbi-checkbox" />
         </label>
-        <p class="bbi-field-hint">在屏幕边缘挂一枚可拖动的悬浮球,点击即开柏宝绘。拖到中间可常驻悬浮,拖近左右边缘则吸附贴边。</p>
+        <p class="bbi-field-hint">在屏幕边缘挂一枚可拖动的悬浮球,点击即开长夜的绘图器。拖到中间可常驻悬浮,拖近左右边缘则吸附贴边。</p>
 
         <!-- 悬浮球外观:配置项多,开启后才收进小分组 -->
         <Collapsible v-if="ui.showOrb" title="悬浮球外观" :open="false">
@@ -643,9 +643,9 @@ async function confirmUpdate() {
         <p class="bbi-field-hint">副 API 请求失败或返回无法解析时自动重试；0 = 不重试，最多 5 次。</p>
       </Collapsible>
 
-      <!-- 排除角色:名单与柏宝书共享(见 state/settings.ts 的共享存储),任一端改动自动同步 -->
+      <!-- 排除角色:名单与角色记忆插件共享(见 state/settings.ts 的共享存储),任一端改动自动同步 -->
       <Collapsible title="排除角色" :open="false">
-        <p class="bbi-field-hint">名单内角色的聊天里不自动生成生图 tag。名单与柏宝书共享,任一端改动自动同步。</p>
+        <p class="bbi-field-hint">名单内角色的聊天里不自动生成生图 tag。名单与角色记忆插件共享,任一端改动自动同步。</p>
         <div class="bbi-channel-bar">
           <span class="bbi-field-label">已排除 {{ settings.excludes.excludedChars.length }} 个</span>
           <button class="bbi-btn bbi-btn-primary bbi-btn-sm" type="button" @click="openExclude">
@@ -663,10 +663,10 @@ async function confirmUpdate() {
         <p v-else class="bbi-field-hint">名单为空,所有角色都启用自动 tag。</p>
       </Collapsible>
 
-      <!-- 排除世界书内容:与柏宝书同名单共享 -->
+      <!-- 排除世界书内容:与角色记忆插件同名单共享 -->
       <Collapsible title="排除世界书内容" :open="false">
         <p class="bbi-field-hint">
-          从生成 tag 参考的世界书里剔除对画面无用的条目,省 token 也避免干扰。名单与柏宝书共享;仅影响副 API。
+          从生成 tag 参考的世界书里剔除对画面无用的条目,省 token 也避免干扰。名单与角色记忆插件共享;仅影响副 API。
         </p>
 
         <!-- 整本排除:复刻排除角色的搜索+勾选弹窗 -->
@@ -719,10 +719,10 @@ async function confirmUpdate() {
         <p v-else class="bbi-field-hint">暂无条目名规则。</p>
       </Collapsible>
 
-      <!-- 自定义清洗标签:与柏宝书同名单共享 -->
+      <!-- 自定义清洗标签:与角色记忆插件同名单共享 -->
       <Collapsible title="自定义清洗标签" :open="false">
         <p class="bbi-field-hint">
-          填入标签名(如 <code>snow</code>),正文与世界书扫描时会把 <code>&lt;snow&gt;…&lt;/snow&gt;</code> 整块删掉。名单与柏宝书共享。
+          填入标签名(如 <code>snow</code>),正文与世界书扫描时会把 <code>&lt;snow&gt;…&lt;/snow&gt;</code> 整块删掉。名单与角色记忆插件共享。
         </p>
         <div class="bbi-striptag-bar">
           <input
@@ -747,7 +747,7 @@ async function confirmUpdate() {
         <p v-else class="bbi-field-hint">暂无自定义标签。仅内置清洗(思维链、注释、物品旁注等)生效。</p>
       </Collapsible>
 
-      <!-- 自定义提示词(与柏宝书同款入口,独立成区) -->
+      <!-- 自定义提示词(与角色记忆插件同款入口,独立成区) -->
       <Collapsible title="自定义提示词" :open="false">
         <ul class="bbi-prompt-list">
           <li v-for="m in commonPromptMetas" :key="m.key" class="bbi-prompt-item">
@@ -775,7 +775,7 @@ async function confirmUpdate() {
         </ul>
       </Collapsible>
 
-      <!-- 副 API:生成画图 tag 用的模型渠道(与柏宝书共享渠道列表) -->
+      <!-- 副 API:生成画图 tag 用的模型渠道(与角色记忆插件共享渠道列表) -->
       <Collapsible title="副 API" :open="false">
         <!-- 任务指派:只有一个任务——生成 tag -->
         <div class="bbi-field bbi-assign">
@@ -784,7 +784,7 @@ async function confirmUpdate() {
             <BbiSelect v-model="settings.assignments.tagGen" style="width:100%" aria-label="生成 tag 使用" :options="[{ value: '', label: '跟随主 API' }, ...settings.channels.map(c => ({ value: c.id, label: c.name }))]" />
           </div>
         </div>
-        <p class="bbi-field-hint">不指派渠道时跟随主 API:直接借用你主界面当前正在用的 API(聊天补全/文本补全)来生成画图 tag,无需额外配置。想用不同模型再在下方建副渠道指派。渠道列表与柏宝书共享,任一端改动都会自动同步到另一端。</p>
+        <p class="bbi-field-hint">不指派渠道时跟随主 API:直接借用你主界面当前正在用的 API(聊天补全/文本补全)来生成画图 tag,无需额外配置。想用不同模型再在下方建副渠道指派。渠道列表与角色记忆插件共享,任一端改动都会自动同步到另一端。</p>
 
         <hr class="bbi-rule" />
 
@@ -1011,7 +1011,7 @@ async function confirmUpdate() {
       </div>
     </ModalMask>
 
-    <!-- ===== 自定义提示词编辑弹窗(UI 照搬柏宝书) ===== -->
+    <!-- ===== 自定义提示词编辑弹窗(UI 照搬角色记忆插件) ===== -->
     <ModalMask :open="!!editingTagPrompt" @close="closeTagPrompt">
       <div
         v-if="editingTagPrompt"
@@ -1180,7 +1180,7 @@ async function confirmUpdate() {
   transform: translateX(20px);
 }
 
-/* ============ 副 API:渠道(与柏宝书同款) ============ */
+/* ============ 副 API:渠道(与角色记忆插件同款) ============ */
 
 /* 任务指派 */
 .bbi-assign {
@@ -1190,7 +1190,7 @@ async function confirmUpdate() {
 }
 .bbi-assign-row { display: grid; grid-template-columns: minmax(0,1fr); gap: 8px; min-width: 0; }
 .bbi-assign-row > * { width: 100%; min-width: 0; }
-/* 指派下拉:比全局 bbi-select 更窄小一号,与右侧对齐、不撑满半行(柏宝书同款) */
+/* 指派下拉:比全局 bbi-select 更窄小一号,与右侧对齐、不撑满半行(角色记忆插件同款) */
 .bbi-assign-row .bbi-select {
   max-width: 100%;
   font-size: 12px;
@@ -1343,7 +1343,7 @@ async function confirmUpdate() {
   display: none;
 }
 
-/* —— 自定义提示词列表(UI 照搬柏宝书) —— */
+/* —— 自定义提示词列表(UI 照搬角色记忆插件) —— */
 .bbi-prompt-list {
   list-style: none;
   margin: 0;
@@ -1429,7 +1429,7 @@ async function confirmUpdate() {
   tab-size: 2;
 }
 
-/* ============ 排除名单(chips + 弹窗列表):与柏宝书同款交互,类名换 bbi 前缀 ============ */
+/* ============ 排除名单(chips + 弹窗列表):与角色记忆插件同款交互,类名换 bbi 前缀 ============ */
 .bbi-exclude-chips {
   list-style: none;
   margin: 10px 0 0;

@@ -602,14 +602,14 @@ export async function generateNaiImage(
             },
       );
     } catch (error) {
-      console.warn(`[柏宝绘] 读取 vibe「${vibe.name}」失败:`, error);
+      console.warn(`[长夜的绘图器] 读取 vibe「${vibe.name}」失败:`, error);
     }
   }
   const skipped = applyVibes(params, nai, loaded);
   if (skipped.length) {
     const reason = naiSupportsVibes(nai.model) ? '缺当前模型编码' : '当前模型不支持 Vibe Transfer';
-    console.warn(`[柏宝绘] 以下 vibe 因${reason}被跳过:`, skipped);
-    toastr.warning(`vibe「${skipped.join('、')}」${reason},已跳过`, '柏宝绘');
+    console.warn(`[长夜的绘图器] 以下 vibe 因${reason}被跳过:`, skipped);
+    toastr.warning(`vibe「${skipped.join('、')}」${reason},已跳过`, '长夜的绘图器');
   }
 
   const body = {

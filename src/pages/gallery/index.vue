@@ -180,7 +180,7 @@ async function load(): Promise<void> {
     settled.forEach((result, i) => {
       if (result.status !== 'fulfilled') {
         partialFailed.value++;
-        console.warn('[柏宝绘] 读取图库目录失败', folders[i], result.reason);
+        console.warn('[长夜的绘图器] 读取图库目录失败', folders[i], result.reason);
         return;
       }
       const { folder, files } = result.value;
@@ -452,7 +452,7 @@ async function deleteSelected(): Promise<void> {
         await deleteImageFileOnly(image.key);
         return { key: image.key, ok: true };
       } catch (e) {
-        console.warn('[柏宝绘] 删除图片失败', image.key, e);
+        console.warn('[长夜的绘图器] 删除图片失败', image.key, e);
         return { key: image.key, ok: false };
       }
     });
@@ -475,8 +475,8 @@ async function deleteSelected(): Promise<void> {
     selected.value = new Set([...selected.value].filter(key => !done.has(key)));
     if (!selected.value.size) selecting.value = false;
 
-    if (failed) toastr.error(`${failed} 张删除失败，详情见控制台`, '柏宝绘');
-    else toastr.success(`已删除 ${done.size} 张图片`, '柏宝绘');
+    if (failed) toastr.error(`${failed} 张删除失败，详情见控制台`, '长夜的绘图器');
+    else toastr.success(`已删除 ${done.size} 张图片`, '长夜的绘图器');
   } finally {
     deleting.value = false;
   }

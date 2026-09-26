@@ -1,23 +1,23 @@
-# 柏宝绘公开接口（API v1）
+# 长夜的绘图器公开接口（API v1）
 
-本文面向 SillyTavern 插件、脚本和预设作者。柏宝绘把两件事开放给外部调用：
+本文面向 SillyTavern 插件、脚本和预设作者。长夜的绘图器把两件事开放给外部调用：
 
-1. **读角色库** —— 拿到柏宝绘已记录的角色和可直接出图的 tag
-2. **调生图** —— 让柏宝绘出一张图，**图显示在哪里由你决定**
+1. **读角色库** —— 拿到长夜的绘图器已记录的角色和可直接出图的 tag
+2. **调生图** —— 让长夜的绘图器出一张图，**图显示在哪里由你决定**
 
 入口只有一个 JavaScript 全局对象：`globalThis.STBaiBaiImage`。
 
 ## 这个接口解决什么
 
-柏宝绘自己的图是画在**楼层正文**里的（消息下方的卡片）。有些插件不想要这种呈现——想画在侧边栏、画在自己的弹窗里、画完直接当立绘用。这个接口给的就是这个：柏宝绘负责出图（后端配置、并发闸门、限流退避、落盘归档全都复用），你负责显示。
+长夜的绘图器自己的图是画在**楼层正文**里的（消息下方的卡片）。有些插件不想要这种呈现——想画在侧边栏、画在自己的弹窗里、画完直接当立绘用。这个接口给的就是这个：长夜的绘图器负责出图（后端配置、并发闸门、限流退避、落盘归档全都复用），你负责显示。
 
-**生成的图不会进入任何聊天记录。** 它不出现在楼层正文里，不占楼层卡片，也不写 `message.extra`。默认只会存进柏宝绘图库（见 `save`）。
+**生成的图不会进入任何聊天记录。** 它不出现在楼层正文里，不占楼层卡片，也不写 `message.extra`。默认只会存进长夜的绘图器图库（见 `save`）。
 
 ## 兼容约定
 
 - `apiVersion` 当前固定为 `1`。它是**公开数据结构**的版本，与插件自身的 `pluginVersion` 分开——后者天天涨，前者不涨。请按 `apiVersion` 判兼容，不要去解析 `pluginVersion` 的语义。
 - 结构只增不改不删：新增可选字段是安全的；改字段含义或删字段一律会升 `apiVersion`。
-- 所有返回值都是**普通可克隆对象**的深拷贝：不含函数、不含 Vue 响应式代理、不含类实例。你怎么改返回值都不会影响柏宝绘。
+- 所有返回值都是**普通可克隆对象**的深拷贝：不含函数、不含 Vue 响应式代理、不含类实例。你怎么改返回值都不会影响长夜的绘图器。
 - 楼层编号统一使用 SillyTavern 的零基 `mesid`。
 - **错误请按 `error.code` 分支判断**，不要匹配 `message` 文案（中文、会随版本改），也不要用 `instanceof`（跨插件 bundle 边界一律失效）。
 
@@ -45,7 +45,7 @@ function useBaiBaiImage(callback) {
 const api = globalThis.STBaiBaiImage;
 
 console.log(api.apiVersion);     // 1
-console.log(api.pluginVersion);  // 柏宝绘插件版本
+console.log(api.pluginVersion);  // 长夜的绘图器插件版本
 console.log(api.capabilities);
 // { globalApi: true, characterLibrary: true, generate: true, saveToGallery: true, events: true }
 ```
@@ -85,7 +85,7 @@ for (const character of list.characters) {
         outfit: "black coat",
       },
       nl: "a girl with short silver hair",  // 自然语言外貌（可空）
-      source: "ai",        // 'manual' 用户手写 | 'ai' AI 在剧情里建的档 | 'book' 从柏宝书同步
+      source: "ai",        // 'manual' 用户手写 | 'ai' AI 在剧情里建的档 | 'book' 从角色记忆插件同步
       scope: "chat",       // 'chat' 本聊天档案 | 'global' 全局角色库（跨聊天）
       desc: "银色短发",     // 建档时那句「为什么长这样」（多为空串）
     },
@@ -93,7 +93,7 @@ for (const character of list.characters) {
 }
 ```
 
-`tag` 是按固定顺序（同人身份→性别→头发→眼睛→肤色→体型→标志特征→着装）拼好的，与柏宝绘自己出图用的串**完全一致**。不建议自己从 `fields` 拼——老条目可能只有整串原文，那条回落逻辑在 `tag` 里已经处理过了。
+`tag` 是按固定顺序（同人身份→性别→头发→眼睛→肤色→体型→标志特征→着装）拼好的，与长夜的绘图器自己出图用的串**完全一致**。不建议自己从 `fields` 拼——老条目可能只有整串原文，那条回落逻辑在 `tag` 里已经处理过了。
 
 ### 读历史某一楼的角色档案
 
@@ -157,7 +157,7 @@ myPanel.querySelector('img').src = result.dataUrl;   // 想显示在哪就显示
 | `characters` | `PublicCharacterPrompt[]?` | 多角色提示，见下 |
 | `size` | `'portrait' \| 'landscape'?` | 画幅方向，缺省 `'portrait'`。具体像素取用户在渠道页配的尺寸 |
 | `seed` | `number?` | 指定种子（正整数）。省略 = 按用户设置决定 |
-| `save` | `boolean?` | 落盘进柏宝绘图库，**默认 `true`** |
+| `save` | `boolean?` | 落盘进长夜的绘图器图库，**默认 `true`** |
 | `character` | `string?` | 落盘归到哪个角色名下（图库分组名）。省略 = 当前聊天的角色名 |
 
 ### 返回值
@@ -179,7 +179,7 @@ myPanel.querySelector('img').src = result.dataUrl;   // 想显示在哪就显示
 
 ### 关于 `save`
 
-- `true`（默认）：图存进 `user/images/柏宝绘_<character>/`，并写一份同名侧写 json 记下提示词和种子。于是用户能在**柏宝绘图库页**里按角色分组看到它、连提示词一起。
+- `true`（默认）：图存进 `user/images/柏宝绘_<character>/`，并写一份同名侧写 json 记下提示词和种子。于是用户能在**长夜的绘图器图库页**里按角色分组看到它、连提示词一起。
 - `false`：只返回 `dataUrl`，不碰磁盘。适合「预览一下就丢」。
 
 落盘**失败不会抛错**——图已经在 `dataUrl` 里了，不能因为存不进图库就让你连图都拿不到。这种情况 `path` 是 `null`。
@@ -202,7 +202,7 @@ if (!result.charactersApplied) {
 }
 ```
 
-`charactersApplied` 明说这次到底用上了没有。柏宝绘**刻意不降级**把角色拼进 `prompt`——那会画出多份躯干重叠的图。要画多角色，请先看 `supportsCharacters`。
+`charactersApplied` 明说这次到底用上了没有。长夜的绘图器**刻意不降级**把角色拼进 `prompt`——那会画出多份躯干重叠的图。要画多角色，请先看 `supportsCharacters`。
 
 ### 进度与取消
 
@@ -214,7 +214,7 @@ const result = await api.generate(
   {
     signal: controller.signal,
     onProgress: p => {
-      // 'queued' 在柏宝绘的 NAI 并发闸门里排队
+      // 'queued' 在长夜的绘图器的 NAI 并发闸门里排队
       // 'generating' 请求已发出，后端正在画
       // 'queued-remote' 在 ComfyUI 服务端队列里（p.ahead 为前面还有几个）
       // 'retrying' 被限流了，正在退避重试（p.attempt / p.max）
@@ -246,11 +246,11 @@ try {
 }
 ```
 
-`rate_limited` 与 `backend_error` 分开，是因为处置方式不同：前者该等一会儿再来（柏宝绘的自动退避重试已经用尽了），后者是配置/网络问题，立刻重来也是同样的错。
+`rate_limited` 与 `backend_error` 分开，是因为处置方式不同：前者该等一会儿再来（长夜的绘图器的自动退避重试已经用尽了），后者是配置/网络问题，立刻重来也是同样的错。
 
 ### 不要绕过这个接口
 
-柏宝绘内部的 NAI 请求全部走一道**并发闸门 + 全局节奏**（429 冷却、相邻请求最小间隔、指数退避重试）。这个接口把闸门包在里面了。如果你绕过它直接打 NAI 的 `generate-image`，用户的账号会吃一串密集 429——而用户只会认为是柏宝绘坏了。
+长夜的绘图器内部的 NAI 请求全部走一道**并发闸门 + 全局节奏**（429 冷却、相邻请求最小间隔、指数退避重试）。这个接口把闸门包在里面了。如果你绕过它直接打 NAI 的 `generate-image`，用户的账号会吃一串密集 429——而用户只会认为是长夜的绘图器坏了。
 
 ## 订阅角色库变更
 
@@ -286,13 +286,13 @@ function useBaiBaiImage(callback) {
 
 useBaiBaiImage(async api => {
   if (api.apiVersion !== 1) {
-    console.warn('柏宝绘接口版本不匹配', api.apiVersion);
+    console.warn('长夜的绘图器接口版本不匹配', api.apiVersion);
     return;
   }
 
   const status = api.getBackendStatus();
   if (!status.configured) {
-    toastr.warning(`柏宝绘未就绪：${status.reason}`);
+    toastr.warning(`长夜的绘图器未就绪：${status.reason}`);
     return;
   }
 

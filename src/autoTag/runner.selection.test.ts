@@ -233,14 +233,14 @@ describe('manual selection image request', () => {
     await requestSelectionImage(0, '她翻开书。', snapshotAt());
     expect(requestViaMainApi).toHaveBeenCalledTimes(1);
     expect(applyMessageText).not.toHaveBeenCalled();
-    expect(toastr.error).toHaveBeenCalledWith(error.message, '柏宝绘选段生图失败');
+    expect(toastr.error).toHaveBeenCalledWith(error.message, '长夜的绘图器选段生图失败');
     vi.mocked(requestViaMainApi).mockClear();
     vi.mocked(toastr.error).mockClear();
     state.context!.chat[0].is_user = false;
     await requestFloorTags(0, { replace: true });
     expect(requestViaMainApi).toHaveBeenCalledTimes(1);
     expect(applyMessageText).not.toHaveBeenCalled();
-    expect(toastr.error).toHaveBeenCalledWith(error.message, '柏宝绘自动 tag 失败');
+    expect(toastr.error).toHaveBeenCalledWith(error.message, '长夜的绘图器自动 tag 失败');
   });
 
   it('keeps configured retries for ordinary malformed output and reports the actual count', async () => {
@@ -250,7 +250,7 @@ describe('manual selection image request', () => {
     await requestFloorTags(0, { replace: true });
     expect(requestViaMainApi).toHaveBeenCalledTimes(3);
     expect(applyMessageText).not.toHaveBeenCalled();
-    expect(toastr.error).toHaveBeenCalledWith('malformed JSON(已自动重试 2 次)', '柏宝绘自动 tag 失败');
+    expect(toastr.error).toHaveBeenCalledWith('malformed JSON(已自动重试 2 次)', '长夜的绘图器自动 tag 失败');
     expect(vi.mocked(requestViaMainApi).mock.calls.every(([messages]) => messages.every(message => message.content !== SCENE_NEGATIVE_RETRY_INSTRUCTION))).toBe(true);
   });
 
@@ -262,7 +262,7 @@ describe('manual selection image request', () => {
     });
     await requestSelectionImage(0, '她翻开书。', snapshotAt());
     expect(applyMessageText).not.toHaveBeenCalled();
-    expect(toastr.error).toHaveBeenCalledWith(expect.stringContaining('完整英文自然语言'), '柏宝绘选段生图失败');
+    expect(toastr.error).toHaveBeenCalledWith(expect.stringContaining('完整英文自然语言'), '长夜的绘图器选段生图失败');
   });
 
   it('removes only the selection marker if an awaited refresh invalidates the target', async () => {
@@ -370,7 +370,7 @@ describe('manual selection image request', () => {
     await requestSelectionImage(0, '她翻开书。', snapshotAt());
     expect(requestViaMainApi).not.toHaveBeenCalled();
     expect(applyMessageText).not.toHaveBeenCalled();
-    expect(toastr.warning).toHaveBeenCalledWith(expect.stringContaining('未正确闭合'), '柏宝绘');
+    expect(toastr.warning).toHaveBeenCalledWith(expect.stringContaining('未正确闭合'), '长夜的绘图器');
   });
 
   it('rejects @ references for a character changed within this floor instead of applying a late profile', async () => {
@@ -385,7 +385,7 @@ describe('manual selection image request', () => {
     });
     await requestSelectionImage(0, '她翻开书。', snapshotAt());
     expect(applyMessageText).not.toHaveBeenCalled();
-    expect(toastr.error).toHaveBeenCalledWith(expect.stringContaining('不能使用 @角色名'), '柏宝绘选段生图失败');
+    expect(toastr.error).toHaveBeenCalledWith(expect.stringContaining('不能使用 @角色名'), '长夜的绘图器选段生图失败');
   });
 
   it('does not insert if the text changes during generation', async () => {
@@ -563,7 +563,7 @@ describe('selection character completion transaction', () => {
     expect(context.chat[0].extra).toBe(extra);
     expect(context.chat[0].extra!.bbiCharChanges).toBe(record);
     expect(consumeAutoGenerate('chat-a', 0, 0, 0)).toBeNull();
-    expect(toastr.error).toHaveBeenCalledWith('本楼角色记录格式无法安全合并，本次未保存', '柏宝绘选段生图失败');
+    expect(toastr.error).toHaveBeenCalledWith('本楼角色记录格式无法安全合并，本次未保存', '长夜的绘图器选段生图失败');
   });
 
   it('rolls back message, character delta and image history together if save fails', async () => {
@@ -581,7 +581,7 @@ describe('selection character completion transaction', () => {
     expect(JSON.stringify(charTagLib.entries)).toBe(originalLibrary);
     expect(consumeAutoGenerate('chat-a', 0, 0, 0)).toBeNull();
     expect(isGenerationFloorLocked('chat-a', 0)).toBe(false);
-    expect(toastr.error).toHaveBeenCalledWith('save failed', '柏宝绘选段生图失败');
+    expect(toastr.error).toHaveBeenCalledWith('save failed', '长夜的绘图器选段生图失败');
   });
 
 
@@ -612,6 +612,6 @@ describe('selection character completion transaction', () => {
     await requestSelectionImage(0, '她翻开书。', snapshotAt());
     expect(applyMessageText).not.toHaveBeenCalled();
     expect(readCharTagFloorDelta(context.chat[0])!.ops.at(-1)).toMatchObject({ field: 'mouth', value: 'thin lips' });
-    expect(toastr.warning).toHaveBeenCalledWith(expect.stringContaining('角色档案已变化'), '柏宝绘');
+    expect(toastr.warning).toHaveBeenCalledWith(expect.stringContaining('角色档案已变化'), '长夜的绘图器');
   });
 });

@@ -2,17 +2,17 @@ import type { WorldInfoEntry } from '@/st/context';
 import type { ExcludesSettings } from '@/state/settings';
 
 /**
- * 世界书条目过滤与排序(与柏宝书 engine.ts 完全同口径,改动需双端同步):
+ * 世界书条目过滤与排序(与角色记忆插件 engine.ts 完全同口径,改动需双端同步):
  *   - isWorldInfoEntryExcluded:整本排除(world 命中名单)+ 按条目名(comment)命中任一规则;
  *   - sortWorldInfoEntriesLikeST:把激活条目排成 ST 主提示词同款顺序。
- * 名单来自共享存储(settings.excludes),与柏宝书同一份。
+ * 名单来自共享存储(settings.excludes),与角色记忆插件同一份。
  */
 
 /**
  * 判断某条条目是否应被排除:① 整本排除(world 命中名单);② 条目名(comment)命中任一规则。
  * 规则按正则编译、**大小写不敏感**(填 mvu 命中 [MVU]);普通名字天然=包含匹配。
  * 编译失败降级为字面子串包含(大小写不敏感)——用户填了带元字符的普通名字(如「(临时)」)
- * 也不会误伤,只是退化成子串比对。与柏宝书 engine.ts 的 isWorldInfoEntryExcluded 同逻辑。
+ * 也不会误伤,只是退化成子串比对。与角色记忆插件 engine.ts 的 isWorldInfoEntryExcluded 同逻辑。
  */
 export function isWorldInfoEntryExcluded(entry: WorldInfoEntry, excludes: ExcludesSettings): boolean {
   const world = entry.world?.trim();
@@ -64,7 +64,7 @@ const WI_DEFAULT_DEPTH = 4;
  * 桶间顺序按它们进入主提示词的先后(角色前 → 角色后 → 作者注前/后 → @深度 → EM);
  * @深度桶内再按 depth 降序(深度大的在提示词里更早出现)后按 order 升序。
  * position/order/depth 缺失时用 ST 默认值(0/100/4)兑底;未知 position 归入「其他」排末尾。
- * 与柏宝书 engine.ts 的 sortWorldInfoEntriesLikeST 同逻辑。
+ * 与角色记忆插件 engine.ts 的 sortWorldInfoEntriesLikeST 同逻辑。
  */
 export function sortWorldInfoEntriesLikeST(entries: WorldInfoEntry[]): WorldInfoEntry[] {
   return [...entries].sort((a, b) => {

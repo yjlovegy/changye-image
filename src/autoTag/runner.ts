@@ -109,7 +109,7 @@ function abort(
   payload: Record<string, unknown> = {},
 ): void {
   diagnostic('runForFloor:skip', { floor, reason, ...payload });
-  if (manual) toastr.warning(hint, '柏宝绘');
+  if (manual) toastr.warning(hint, '长夜的绘图器');
 }
 
 function activeSwipeId(message: STMessage): number | null {
@@ -211,14 +211,14 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
     return;
   }
   if (!settings.enabled) {
-    abort(floor, 'extension-disabled', opts.manual, '柏宝绘已停用，请先在插件设置里开启');
+    abort(floor, 'extension-disabled', opts.manual, '长夜的绘图器已停用，请先在插件设置里开启');
     return;
   }
   if (!opts.manual && !settings.autoTag.enabled) {
     diagnostic('runForFloor:skip', { floor, reason: 'auto-tag-disabled' });
     return;
   }
-  // 排除角色闸门(与柏宝书同名单):该角色名所在聊天的自动 tag 全流程停用,
+  // 排除角色闸门(与角色记忆插件同名单):该角色名所在聊天的自动 tag 全流程停用,
   // 手动按钮也在 actionButton 层撤掉,这里做兜底(手动触发时给反馈)。
   if (isCurrentChatExcluded()) {
     abort(floor, 'chat-excluded', opts.manual, '该角色已被排除，不生成生图 tag');
@@ -250,7 +250,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
       opts.manual,
       '本楼已有生图 tag，没有确认重新生成，本次未改动',
     );
-    if (!opts.manual) console.debug(`[柏宝绘] 第 ${floor} 楼已经含有 bbi_image tag，跳过自动分析`);
+    if (!opts.manual) console.debug(`[长夜的绘图器] 第 ${floor} 楼已经含有 bbi_image tag，跳过自动分析`);
     return;
   }
   // replace:分析和注入都基于剔除旧 tag 后的正文;写回时旧 tag 随之消失
@@ -393,7 +393,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
         lastError = error instanceof Error ? error.message : String(error);
         if (error instanceof Error && 'retryable' in error && error.retryable === false) break;
         if (attempt < retries) addPromptValidationRetryHint(messages, error);
-        console.warn(`[柏宝绘] 第 ${floor} 楼第 ${attempt + 1}/${retries + 1} 次生成 tag 失败`, error);
+        console.warn(`[长夜的绘图器] 第 ${floor} 楼第 ${attempt + 1}/${retries + 1} 次生成 tag 失败`, error);
       }
     }
     if (!plan) {
@@ -401,7 +401,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
       processed.delete(identity);
       toastr.error(
         `${lastError}${attempted > 1 ? `(已自动重试 ${attempted - 1} 次)` : ''}`,
-        '柏宝绘自动 tag 失败',
+        '长夜的绘图器自动 tag 失败',
       );
       return;
     }
@@ -469,14 +469,14 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
       // 模型认为这是角色、却没给它建档 —— 该角色在图里将完全没有外貌。
       // 这是漏建档唯一的确定性信号,藏进控制台等于没有,必须让用户看见。
       const names = [...unknownNames].join('、');
-      console.warn('[柏宝绘] AI 引用了库里没有的角色占位符,已剥除:', names);
-      toastr.warning(`角色「${names}」没有建档，本次画面中缺少其外貌`, '柏宝绘');
+      console.warn('[长夜的绘图器] AI 引用了库里没有的角色占位符,已剥除:', names);
+      toastr.warning(`角色「${names}」没有建档，本次画面中缺少其外貌`, '长夜的绘图器');
     }
 
     // 没有图片、没有角色变化、也没有旧楼层变化要清理时,保持原来的无写入早退。
     if (!plan.images.length && !floorOps.length && !previousDelta) {
-      if (opts.manual) toastr.info('模型认为本楼没有值得插图的画面', '柏宝绘');
-      else console.debug(`[柏宝绘] 第 ${floor} 楼无需插图`);
+      if (opts.manual) toastr.info('模型认为本楼没有值得插图的画面', '长夜的绘图器');
+      else console.debug(`[长夜的绘图器] 第 ${floor} 楼无需插图`);
       return;
     }
 
@@ -520,19 +520,19 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
     );
     if (result === 'saved') {
       recomputeCharTags();
-      if (rebaseNote) console.info(`[柏宝绘] 第 ${floor} 楼 tag 位置重定位:${rebaseNote}`);
+      if (rebaseNote) console.info(`[长夜的绘图器] 第 ${floor} 楼 tag 位置重定位:${rebaseNote}`);
       if (plan.images.length) {
-        toastr.success(`已在第 ${floor} 楼插入 ${plan.images.length} 个生图 tag`, '柏宝绘');
+        toastr.success(`已在第 ${floor} 楼插入 ${plan.images.length} 个生图 tag`, '长夜的绘图器');
       } else if (opts.manual) {
-        toastr.info('模型认为本楼没有值得插图的画面', '柏宝绘');
+        toastr.info('模型认为本楼没有值得插图的画面', '长夜的绘图器');
       } else {
-        console.debug(`[柏宝绘] 第 ${floor} 楼无需插图`);
+        console.debug(`[长夜的绘图器] 第 ${floor} 楼无需插图`);
       }
       return;
     }
     if (marked) clearAutoGenerateForFloor(chatId, floor);
-    console.info(`[柏宝绘] 第 ${floor} 楼放弃写入生图 tag：${result}`);
-    toastr.warning(ABANDON_REASON[result] ?? '本次没有写入生图 tag', '柏宝绘');
+    console.info(`[长夜的绘图器] 第 ${floor} 楼放弃写入生图 tag：${result}`);
+    toastr.warning(ABANDON_REASON[result] ?? '本次没有写入生图 tag', '长夜的绘图器');
   } catch (error) {
     // 请求失败或被切换聊天取消时允许同一正文在后续重新渲染后重试。
     processed.delete(identity);
@@ -540,8 +540,8 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
     clearAutoGenerateForFloor(chatId, floor);
     if (controller.signal.aborted) return;
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`[柏宝绘] 第 ${floor} 楼自动生成 tag 失败`, error);
-    toastr.error(message, '柏宝绘自动 tag 失败');
+    console.error(`[长夜的绘图器] 第 ${floor} 楼自动生成 tag 失败`, error);
+    toastr.error(message, '长夜的绘图器自动 tag 失败');
   } finally {
     if (running.get(slot) === controller) running.delete(slot);
   }
@@ -597,40 +597,40 @@ export async function requestSelectionImage(
 ): Promise<void> {
   const context = getContext();
   if (!Number.isInteger(floor) || floor < 0 || !selectionSnapshotMatches(context, floor, snapshot)) {
-    toastr.warning('选区对应的聊天、楼层或正文已经变化，请重新选择文字', '柏宝绘');
+    toastr.warning('选区对应的聊天、楼层或正文已经变化，请重新选择文字', '长夜的绘图器');
     return;
   }
   if (!context || !isStoryMessage(context.chat[floor])) return;
   if (!settings.enabled || isCurrentChatExcluded()) {
-    toastr.warning('柏宝绘已停用或当前角色在排除名单中，请先调整插件设置', '柏宝绘');
+    toastr.warning('长夜的绘图器已停用或当前角色在排除名单中，请先调整插件设置', '长夜的绘图器');
     return;
   }
   const status = backendStatus();
   if (!status.configured) {
-    toastr.warning(status.reason || '请先配置生图后端', '柏宝绘');
+    toastr.warning(status.reason || '请先配置生图后端', '长夜的绘图器');
     return;
   }
   if (!canInsertSelectionImage(snapshot.source, snapshot.insertionOffset)) {
-    toastr.warning('选区位置无法可靠定位或生图标签未正确闭合，请重新选择正文或修复标签', '柏宝绘');
+    toastr.warning('选区位置无法可靠定位或生图标签未正确闭合，请重新选择正文或修复标签', '长夜的绘图器');
     return;
   }
   const slot = `${snapshot.chatId}\u0000${floor}`;
   if (running.has(slot)) {
-    toastr.info('这一楼正在生成提示词，请等当前任务完成后再选择文字', '柏宝绘');
+    toastr.info('这一楼正在生成提示词，请等当前任务完成后再选择文字', '长夜的绘图器');
     return;
   }
   const floorBusy = () => hasActiveGenerationForFloor(snapshot.chatId, floor)
     || hasPendingAutoGenerateForFloor(snapshot.chatId, floor)
     || isGenerationFloorLocked(snapshot.chatId, floor);
   if (floorBusy()) {
-    toastr.info('这一楼还有图片正在排队、生成或保存，请完成后再插入选段图片', '柏宝绘');
+    toastr.info('这一楼还有图片正在排队、生成或保存，请完成后再插入选段图片', '长夜的绘图器');
     return;
   }
   let prepared: ReturnType<typeof prepareSelectionImageText>;
   try {
     prepared = prepareSelectionImageText(selectedText, settings.excludes.customStripTags);
   } catch (error) {
-    toastr.warning(error instanceof Error ? error.message : String(error), '柏宝绘');
+    toastr.warning(error instanceof Error ? error.message : String(error), '长夜的绘图器');
     return;
   }
   const controller = new AbortController();
@@ -712,11 +712,11 @@ export async function requestSelectionImage(
     if (!plan) throw lastError ?? new Error('模型没有返回可用的选段图片提示词');
     if (controller.signal.aborted) return;
     if (!selectionSnapshotMatches(getContext(), floor, snapshot)) {
-      toastr.warning('生成提示词期间正文或聊天已变化，本次未插图，请重新选择', '柏宝绘');
+      toastr.warning('生成提示词期间正文或聊天已变化，本次未插图，请重新选择', '长夜的绘图器');
       return;
     }
     if (characterStateKey() !== initialCharacterState) {
-      toastr.warning('生成提示词期间角色档案已变化，本次未保存，请重新选择文字', '柏宝绘');
+      toastr.warning('生成提示词期间角色档案已变化，本次未保存，请重新选择文字', '长夜的绘图器');
       return;
     }
     const selectionOps = filterSelectionCharacterOps(planChangeOps(plan), selectionState.entries, locked, selectionState.changedNames);
@@ -740,7 +740,7 @@ export async function requestSelectionImage(
       throw new Error('选段提示词包含无法匹配的角色，请补充角色外貌后重试');
     }
     if (floorBusy()) {
-      toastr.info('本楼有图片开始排队或生成，本次暂不移动图片位置，请完成后重试', '柏宝绘');
+      toastr.info('本楼有图片开始排队或生成，本次暂不移动图片位置，请完成后重试', '长夜的绘图器');
       return;
     }
     const insertion = insertSelectionImage(snapshot.source, snapshot.source, image, snapshot.insertionOffset);
@@ -783,11 +783,11 @@ export async function requestSelectionImage(
       },
     );
     saved = result === 'saved';
-    if (saved && markedSeq !== null && !controller.signal.aborted) toastr.success('已在选中文字下方添加图片，正在交给生图后端生成', '柏宝绘');
+    if (saved && markedSeq !== null && !controller.signal.aborted) toastr.success('已在选中文字下方添加图片，正在交给生图后端生成', '长夜的绘图器');
     else if (saved) return;
-    else toastr.warning(ABANDON_REASON[result] ?? '选区对应的正文已变化，本次未插图', '柏宝绘');
+    else toastr.warning(ABANDON_REASON[result] ?? '选区对应的正文已变化，本次未插图', '长夜的绘图器');
   } catch (error) {
-    if (!controller.signal.aborted) toastr.error(error instanceof Error ? error.message : String(error), '柏宝绘选段生图失败');
+    if (!controller.signal.aborted) toastr.error(error instanceof Error ? error.message : String(error), '长夜的绘图器选段生图失败');
   } finally {
     releaseCommitLock?.();
     if (!saved && markedSeq !== null) consumeAutoGenerate(snapshot.chatId, floor, snapshot.swipeId ?? 0, markedSeq);

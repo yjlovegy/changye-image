@@ -1,5 +1,5 @@
 /**
- * 正文清洗工具(与柏宝书 timeTag.ts 的 stripCustomTags 完全同口径,改动需双端同步)。
+ * 正文清洗工具(与角色记忆插件 timeTag.ts 的 stripCustomTags 完全同口径,改动需双端同步)。
  * 名单来自共享存储(settings.excludes.customStripTags),输入时已由 sanitizeTagName 消毒,
  * 这里只负责按标签名生成「整块删除」正则并执行。
  */
@@ -35,7 +35,7 @@ export function stripCustomTags(s: string, tags: string[]): string {
   return replaceCustomTags(s, tags, '');
 }
 
-/** 删柏宝书托管的尾部旁注块(bbs_items/bbs_vars,开/闭标签独占行配对)。 */
+/** 删角色记忆插件托管的尾部旁注块(bbs_items/bbs_vars,开/闭标签独占行配对)。 */
 function stripManagedBlock(s: string, tag: string): string {
   const openRe = new RegExp(`^[ \\t]*<${tag}\\b[^>]*>[ \\t]*$`, 'm');
   const closeRe = new RegExp(`^[ \\t]*</${tag}>[ \\t]*$`, 'm');
@@ -88,7 +88,7 @@ function clampToStoryBody(
     .trim();
 }
 
-/** 历史楼层与柏宝书 cleanBody 同口径；本插件的 bbi_image 必须保留供角色外貌续接。 */
+/** 历史楼层与角色记忆插件 cleanBody 同口径；本插件的 bbi_image 必须保留供角色外貌续接。 */
 export function cleanHistoryText(mes: string, tags: string[]): string {
   return clampToStoryBody(mes, tags, true)
     .replace(RE_START, (_, value) => `(起始时间:${String(value).trim()})`)

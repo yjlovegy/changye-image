@@ -1,9 +1,9 @@
 /**
- * 柏宝书角色状态读取与格式化。
+ * 角色记忆插件角色状态读取与格式化。
  *
  * 画图场景只关心「角色特征对不对」,不关心剧情上下文:快照不再整个塞进提示词,
- * 只解析成**角色参考块**——主角档案 + 重要角色(常驻,与柏宝书注入端同款全量档)。
- * 其余角色用名字去目标正文里查:正文中出现才发送(柏宝书在场判定可能有滞后,
+ * 只解析成**角色参考块**——主角档案 + 重要角色(常驻,与角色记忆插件注入端同款全量档)。
+ * 其余角色用名字去目标正文里查:正文中出现才发送(角色记忆插件在场判定可能有滞后,
  * 角色已到场但记录未更新,以正文为准),同样发全量——因为它可能实际就在场。
  * 历史剧情、时间地点、物品、计划等与画面无关,一律不注入。
  */
@@ -34,9 +34,9 @@ interface BookApi {
 
 /** 参考块中涉及的单个角色(结构化),供角色固定外貌 tag 库做锚定匹配。 */
 export interface BookRole {
-  /** 角色名:NPC 为柏宝书 name;主角为调用方给的名字(缺省「主角」)。 */
+  /** 角色名:NPC 为角色记忆插件 name;主角为调用方给的名字(缺省「主角」)。 */
   name: string;
-  /** 柏宝书记录的固定外貌原文(主角 appearance / NPC desc);未记录为空串。 */
+  /** 角色记忆插件记录的固定外貌原文(主角 appearance / NPC desc);未记录为空串。 */
   desc: string;
   isProtagonist: boolean;
 }
@@ -79,8 +79,8 @@ function fmtProtagonist(protagonist: unknown): string {
 }
 
 /**
- * NPC 全量行,对齐柏宝书注入端在场档的字段;画图场景额外带固定外貌 desc
- * (柏宝书对主要角色从简外貌是因为主模型卡里已有,画图对颜值敏感,外貌必须给)。
+ * NPC 全量行,对齐角色记忆插件注入端在场档的字段;画图场景额外带固定外貌 desc
+ * (角色记忆插件对主要角色从简外貌是因为主模型卡里已有,画图对颜值敏感,外貌必须给)。
  */
 function fmtNpc(n: Record<string, unknown>): string {
   const name = oneLine(n.name);
@@ -140,7 +140,7 @@ function formatSnapshotRoles(
 
 /* ============ 文本包装 ============ */
 
-const ROLE_NOTE = '【角色参考(柏宝书同步的最新状态,只读参考)】\n';
+const ROLE_NOTE = '【角色参考(角色记忆插件同步的最新状态,只读参考)】\n';
 
 function buildMemoryText(roles: string): string {
   return `${ROLE_NOTE}${roles}`;
@@ -149,11 +149,11 @@ function buildMemoryText(roles: string): string {
 /* ============ 读取入口 ============ */
 
 /**
- * 读取柏宝书角色状态并解析成角色参考文本。
+ * 读取角色记忆插件角色状态并解析成角色参考文本。
  * @param floor 目标楼
  * @param bodyText 目标楼正文原文(用于判定不在场角色是否实际参与本楼)
  * @param protagonistName 主角显示名(一般传 user 名;缺省「主角」,仅作角色 tag 库的匹配键)
- * 柏宝书不可用 / 无角色信息 / 读取失败 → 返回 null(调用方降级为仅发送正文)。
+ * 角色记忆插件不可用 / 无角色信息 / 读取失败 → 返回 null(调用方降级为仅发送正文)。
  */
 export function readBookMemory(
   floor: number,
@@ -167,7 +167,7 @@ export function readBookMemory(
     let timing: BookMemoryContext['timing'] = 'before_latest';
 
     if (typeof api.getContextAtFloor === 'function') {
-      // 优先走 getContextAtFloor:前后快照由柏宝书一次性对齐 revision,内部已保证一致。
+      // 优先走 getContextAtFloor:前后快照由角色记忆插件一次性对齐 revision,内部已保证一致。
       const data = api.getContextAtFloor({ floor });
       const valid = !!data.floorData?.memory?.valid;
       timing = valid ? 'after_latest' : 'before_latest';
@@ -187,7 +187,7 @@ export function readBookMemory(
         }
       }
       if (!snapshot) {
-        console.warn('[柏宝绘] 柏宝书在读取期间持续变化，本次不附带角色参考');
+        console.warn('[长夜的绘图器] 角色记忆插件在读取期间持续变化，本次不附带角色参考');
         return null;
       }
     }
@@ -197,7 +197,7 @@ export function readBookMemory(
     if (!text) return null;
     return { timing, text: buildMemoryText(text), roles };
   } catch (error) {
-    console.warn('[柏宝绘] 读取柏宝书角色状态失败，本次仅使用最近正文', error);
+    console.warn('[长夜的绘图器] 读取角色记忆插件角色状态失败，本次仅使用最近正文', error);
     return null;
   }
 }
