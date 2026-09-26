@@ -1,4 +1,5 @@
 import type { PromptMode } from '@/promptMode';
+import { muteWorkflowNegative } from './comfyNegativePolicy';
 import { preparePose, type ComfyPose } from '@/backends/comfyPose';
 import { composeComfyNegative, composeComfyPositive, normalizeComfyFixedPrompts, type ComfyFixedPrompts } from '@/backends/comfyFixedPrompts';
 import { buildSimpleWorkflow } from '@/backends/comfyTemplates';
@@ -11,6 +12,7 @@ type JsonObject = Record<string, unknown>;
 export type ComfyWorkflow = Record<string, JsonObject>;
 
 export interface ComfyTemplateValues {
+  negativeEnabled?: boolean;
   promptMode?: PromptMode;
   prompt: string;
   pose?: ComfyPose;
@@ -182,6 +184,7 @@ function replacePlaceholders(
 export function renderWorkflowTemplate(template: string, values: ComfyTemplateValues, fixed?: ComfyFixedPrompts): ComfyWorkflow {
   const workflow = parseWorkflowTemplate(template);
   const fixedPrompts = normalizeComfyFixedPrompts(fixed);
+  if (values.negativeEnabled === false) fixedPrompts.negative = '';
   const found = new Set<string>();
   collectPlaceholders(workflow, found);
 
@@ -206,14 +209,15 @@ export function renderWorkflowTemplate(template: string, values: ComfyTemplateVa
     if (isObject(value)) return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, prepare(item)]));
     return value;
   };
-  return replacePlaceholders(natural ? prepare(workflow) : workflow, {
+  const rendered = replacePlaceholders(natural ? prepare(workflow) : workflow, {
     prompt: natural ? description : found.has('nl') ? values.prompt : combinePromptParts(values.prompt, values.nl),
-    negative_prompt: values.negative_prompt ?? '',
+    negative_prompt: values.negativeEnabled === false ? '' : values.negative_prompt ?? '',
     nl: natural ? description : found.has('prompt') ? values.nl ?? '' : combinePromptParts(values.prompt, values.nl),
     width: values.width ?? 0,
     height: values.height ?? 0,
     seed,
   }, fixedPrompts) as ComfyWorkflow;
+  return values.negativeEnabled === false ? muteWorkflowNegative(rendered) : rendered;
 }
 
 function endpoint(base: string, path: string): string {
@@ -549,7 +553,7 @@ export async function generateComfyImage(
   hooks?: ComfyProgressHooks,
 ): Promise<ComfyImageResult> {
   if (!conn.url.trim()) throw new ComfyUIError('请先填写 ComfyUI 服务地址');
-  values = { ...values, promptMode: values.promptMode ?? conn.promptMode };
+  values = { ...values, promptMode: values.promptMode ?? conn.promptMode, negativeEnabled: conn.negativeEnabled !== false };
   if (!(values.promptMode === 'krea2' ? values.nl?.trim() || values.prompt.trim() : values.prompt.trim())) throw new ComfyUIError('正向提示词不能为空');
   // 按方向取渠道配置里的尺寸;解析不出就传空,由 renderWorkflowTemplate 决定是报错还是无视
   // (工作流没用 %width%/%height% 时,尺寸配错了也不该妨碍出图)
@@ -564,11 +568,12 @@ export async function generateComfyImage(
       workflow = buildSimpleWorkflow(conn.simple, {
         prompt: values.promptMode === 'krea2' ? values.nl?.trim() || values.prompt : values.prompt,
         nl: values.promptMode === 'krea2' ? '' : values.nl,
-        negative: values.negative_prompt,
+        negative: conn.negativeEnabled === false ? '' : values.negative_prompt,
         seed: values.seed ?? randomSeed(),
         width: size?.width ?? 0,
         height: size?.height ?? 0,
-      }, conn.fixedPrompts);
+      }, conn.negativeEnabled === false ? { ...normalizeComfyFixedPrompts(conn.fixedPrompts), negative: '' } : conn.fixedPrompts);
+      if (conn.negativeEnabled === false) workflow = muteWorkflowNegative(workflow);
     } catch (error) {
       throw new ComfyUIError(error instanceof Error ? error.message : String(error));
     }

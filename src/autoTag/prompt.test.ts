@@ -57,6 +57,17 @@ function context(): STContext {
 }
 
 describe('auto tag prompt', () => {
+  it.each(['anima','krea2'] as const)('omits negative generation in %s when the workflow switch is off', async mode => {
+    const previousBackend=settings.defaultBackend, previous=activeComfyPreset().generateNegative, previousWorkflow=activeComfyPreset().workflow;
+    try {
+      settings.defaultBackend='comfyui';activeComfyPreset().generateNegative=false;
+      activeComfyPreset().workflow=JSON.stringify({n:{class_type:'CLIPTextEncode',inputs:{text:'%negative_prompt%'}}});
+      const messages=await buildAutoTagMessages(context(),1,{...settings.autoTag,prompts:prompts()},null,undefined,null,undefined,mode);
+      const task=messages.find(m=>m.content.includes('你是严谨的剧情画面规划'))!.content;
+      expect(task).toContain('本次不生成 negative');
+      expect(JSON.parse(task.split('\n').find(line=>line.startsWith('{"images":'))!).images[0]).not.toHaveProperty('negative');
+    } finally {settings.defaultBackend=previousBackend;activeComfyPreset().generateNegative=previous;activeComfyPreset().workflow=previousWorkflow;}
+  });
   it.each([true, false])('prioritizes posture in both channels after old custom instructions (scene negative=%s)', async negativeRequired => {
     const previousBackend = settings.defaultBackend;
     try {

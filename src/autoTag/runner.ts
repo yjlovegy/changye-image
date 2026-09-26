@@ -367,6 +367,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
           }
           candidate.images.forEach((image, index) => assertExplicitAppearance(image, `图片 ${index + 1} `));
           if (negativeRequired) candidate.images.forEach((image, index) => assertSceneNegative(image.negative, `图片 ${index + 1} `));
+          else candidate.images.forEach(image => { image.negative = ''; });
           if (
             settings.defaultBackend === 'nai' &&
             naiSupportsCharacterPrompts(settings.nai.model) &&
@@ -696,6 +697,7 @@ export async function requestSelectionImage(
             candidate.images.forEach(image => assertMixedPrompt(image));
           }
           if (negativeRequired) candidate.images.forEach((image, index) => assertSceneNegative(image.negative, `图片 ${index + 1} `));
+          else candidate.images.forEach(image => { image.negative = ''; });
           const texts = candidate.images.flatMap(image => [
             image.tag, image.nl, ...image.characters.flatMap(character => [character.tag, character.nl]),
           ]);

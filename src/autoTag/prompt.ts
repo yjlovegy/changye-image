@@ -183,7 +183,7 @@ export async function buildAutoTagMessages(
     : '4. tag 只能是该画面的正面内容提示词；不得包含质量词、负面词、JSON 以外的说明或 <bbi_image> 标签。';
   const negativeRule = negativeOn
     ? '\n   negative 是本画面专用的英文负面短 tag，每张图必须填写非空内容：针对本图人数与身份一致性、动作归属、构图或场景中特别容易误生成的内容选择少量排除项；不得省略 negative、留空、只填分隔符或 none/null 等占位，也不能每张机械复制同一串；禁止输出通用质量、画质、审美或技术性负面词，包括但不限于 worst quality、low quality、blurry、lowres、bad anatomy、bad hands、jpeg artifacts；不要写希望出现的内容，不得使用 @角色占位符。\n   negative 里绝不能出现正文已明确成立的事实，也不能否定你自己刚写进本图 tag/nl 的任何东西：正文写了在下雨、或你自己的 nl 写了 drizzle，就绝不许在 negative 写 rain；写了角色戴眼镜就不许写 glasses——那是在抹掉画面本该有的东西。写完 negative 按完整含义核对本图的 tag 与 nl：删除会否定真实画面事实的排除项，不按单词重叠机械删词。画面有手，不妨碍排除 extra fingers；画面有人，不妨碍排除 duplicate character，但人群确实入镜时不能用 crowd 排除整个人群。不确定的排除项要删除，并重新从本图已确定的人物数量、身份、姿势或构图中选择有针对性且不冲突的排除项；不能因此把 negative 留空，也不能否定镜头内本来存在的人群、配饰、天气或动作。'
-    : '';
+    : '\n   本次不生成 negative：省略该字段或返回空字符串，不添加场景负面词，也不要将负面词混入 tag/nl。此项覆盖自定义规范中要求填写 negative 的旧规则。';
 
   // 设置层已维护 0 ≤ min ≤ max；这里仍做一次局部归一,让直接调用/测试传入脏对象也不会
   // 生成自相矛盾的数量协议。上限至少 1,下限 0 表示保留「本楼无需插图」的质量优先口径。

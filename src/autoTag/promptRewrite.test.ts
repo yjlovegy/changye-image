@@ -4,7 +4,7 @@ import { requestCompletion, requestViaMainApi } from '@/api/client';
 import { buildAutoTagMessages } from './prompt';
 import type { STContext } from '@/st/context';
 import type { ImageTagContent } from '@/st/imageTagRegex';
-const state=vi.hoisted(()=>({preset:{promptMode:'krea2',mode:'custom',workflow:'{}'},channel:null as any}));
+const state=vi.hoisted(()=>({preset:{promptMode:'krea2',mode:'custom',workflow:'{}',generateNegative:true},channel:null as any}));
 vi.mock('@/state/settings',()=>({settings:{defaultBackend:'comfyui',autoTag:{},excludes:{customStripTags:[]}},activeComfyPreset:()=>state.preset,getTagGenChannel:()=>state.channel}));
 vi.mock('@/api/client',()=>({requestCompletion:vi.fn(),requestViaMainApi:vi.fn()}));
 vi.mock('./prompt',()=>({buildAutoTagMessages:vi.fn(async (_c,_f,_o,_m,p)=>[{role:'system',content:'rules'},{role:'user',content:p.promptText}])}));
@@ -16,6 +16,7 @@ const image={position:'P1',tag:'adult artist, blue shirt, studio',nl:'An adult a
 const context={chat:[{mes:'她先开门，然后翻书。',swipe_id:0}],name1:'user',saveChat:vi.fn()} as unknown as STContext;
 beforeEach(()=>{
   vi.clearAllMocks(); state.channel=null; state.preset.promptMode='krea2';
+  state.preset.generateNegative=true;state.preset.workflow='{}';
   vi.mocked(requestViaMainApi).mockImplementation(async (_m,o)=>{const raw=JSON.stringify({images:[image],changes:[]});o?.validate?.(raw);return raw;});
 });
 it('uses the original selection and current workflow mode, returning only a detached draft',async()=>{
@@ -28,6 +29,13 @@ it('uses the original selection and current workflow mode, returning only a deta
   expect(args[7]).toBe('krea2');
   expect(JSON.stringify({original,chat:context.chat})).toBe(before);
   expect(context.saveChat).not.toHaveBeenCalled();
+});
+it('keeps the old negative instead of accepting AI additions with generation off',async()=>{
+  state.preset.workflow=JSON.stringify({n:{class_type:'CLIPTextEncode',inputs:{text:'%negative_prompt%'}}});
+  state.preset.generateNegative=false;
+  const next=await rewriteImagePrompt(context,0,{text:'她翻书。',kind:'selection'},original,new AbortController().signal);
+  expect(next.negative).toBe(original.negative);
+  expect(vi.mocked(buildAutoTagMessages).mock.calls[0][6]).toBe(false);
 });
 it('uses the selected auxiliary channel and validates Anima output',async()=>{
   state.channel={id:'test'};state.preset.promptMode='anima';

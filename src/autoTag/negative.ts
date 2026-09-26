@@ -5,9 +5,10 @@ import type { ComfyWorkflowPreset } from '@/state/settings';
 /** 提示词协议和响应验收共用的能力判断；调用方在请求开始时保存结果。 */
 export function supportsSceneNegative(
   backend: string,
-  preset?: Pick<ComfyWorkflowPreset, 'mode' | 'simple' | 'workflow'> | null,
+  preset?: Pick<ComfyWorkflowPreset, 'mode' | 'simple' | 'workflow' | 'negativeEnabled' | 'generateNegative'> | null,
 ): boolean {
   if (backend !== 'comfyui' || !preset) return false;
+  if (preset.generateNegative === false) return false;
   if (preset.mode === 'simple') return templateSupportsNegative(preset.simple.template);
   if (!preset.workflow.trim()) return false;
   try {

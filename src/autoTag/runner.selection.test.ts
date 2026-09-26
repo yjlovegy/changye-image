@@ -20,7 +20,7 @@ import { charTagLib, createCharTagNewOp, createCharTagSetOp, emptyCharFields, hy
 
 const state = vi.hoisted(() => ({
   context: null as STContext | null,
-  preset: { mode: 'custom', promptMode: 'anima', workflow: '', simple: { template: 'checkpoint' } },
+  preset: { mode: 'custom', promptMode: 'anima', workflow: '', generateNegative: true, simple: { template: 'checkpoint' } },
 }));
 vi.mock('@/st/context', () => ({
   getContext: () => state.context,
@@ -88,6 +88,7 @@ beforeEach(() => {
   state.preset.mode = 'custom';
   state.preset.promptMode = 'anima';
   state.preset.workflow = '';
+  state.preset.generateNegative = true;
   state.preset.simple.template = 'checkpoint';
   settings.autoTag.retryCount = 0;
   const message: STMessage = {
@@ -164,6 +165,20 @@ describe('manual selection image request', () => {
     expect(promptFailures[0]?.reason).toEqual(expect.stringContaining('@角色名'));
   });
 
+  it.each(['selection', 'automatic'])('ignores unsolicited AI negatives when generation is disabled: %s', async mode => {
+    settings.defaultBackend='comfyui';state.preset.generateNegative=false;
+    state.preset.workflow=JSON.stringify({n:{class_type:'CLIPTextEncode',inputs:{text:'%negative_prompt%'}}});
+    vi.mocked(requestViaMainApi).mockImplementation(async (_messages,options)=>{
+      const raw=JSON.stringify({images:[{position:'P1',tag:'1girl, reading',nl:'The woman reads an open book beside a window.',negative:'UNWANTED_AI_NEGATIVE'}],changes:[]});
+      options?.validate?.(raw);return raw;
+    });
+    if(mode==='automatic'){state.context!.chat[0].is_user=false;await requestFloorTags(0,{replace:true});}
+    else await requestSelectionImage(0,'她翻开书。',snapshotAt());
+    expect(requestViaMainApi).toHaveBeenCalledTimes(1);
+    expect(applyMessageText).toHaveBeenCalledTimes(1);
+    expect(state.context!.chat[0].mes).not.toContain('UNWANTED_AI_NEGATIVE');
+    expect(vi.mocked(buildAutoTagMessages).mock.calls[0][6]).toBe(false);
+  });
   it.each(['selection', 'automatic'])('requires a real scene negative and retries with a targeted correction before saving %s', async mode => {
     settings.defaultBackend = 'comfyui';
     state.preset.workflow = JSON.stringify({ '1': { class_type: 'CLIPTextEncode', inputs: { text: '%negative_prompt%' } } });

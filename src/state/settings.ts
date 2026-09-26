@@ -67,6 +67,9 @@ export interface BackendConn {
  * url 反过来仍是渠道级(一台 ComfyUI 服务器跑所有工作流)。
  */
 export interface ComfyWorkflowPreset extends SizePair {
+  /** Missing legacy values preserve the existing behavior. */
+  negativeEnabled?: boolean;
+  generateNegative?: boolean;
   autoRepair?: AutoRepairSettings;
   promptMode?: PromptMode;
   /** 本工作流示例图的酒馆本地路径；图片不写入工作流 JSON 或生成请求。 */
@@ -103,6 +106,7 @@ export interface ComfyWorkflowPreset extends SizePair {
  * 后端层拿到的应该是「这一次出图用什么」,而不是「用户存了几套工作流」。
  */
 export interface ComfyRunConn extends SizePair {
+  negativeEnabled?: boolean;
   autoRepair?: AutoRepairSettings;
   workflowId?: string;
   promptMode?: PromptMode;
@@ -964,6 +968,8 @@ export function newComfyWorkflow(name = DEFAULT_WORKFLOW_NAME): ComfyWorkflowPre
     workflow: '',
     loraWorkflowBackup: '',
     fixedPrompts: normalizeComfyFixedPrompts(),
+    negativeEnabled: true,
+    generateNegative: true,
     simple: simpleDefaults(),
     naturalLanguage: false,
     promptMode: 'anima',
@@ -1168,6 +1174,7 @@ export function effectiveComfyConn(preset = activeComfyPreset()): ComfyRunConn {
     autoRepair: normalizeAutoRepair(preset.autoRepair),
     promptMode: normalizePromptMode(preset.promptMode),
     fixedPrompts: normalizeComfyFixedPrompts(preset.fixedPrompts),
+    negativeEnabled: preset.negativeEnabled !== false,
     mode: preset.mode,
     simple: preset.simple,
     portraitSize: preset.portraitSize,
@@ -1246,6 +1253,8 @@ function normalizeWorkflowPreset(raw: unknown, seq: number): ComfyWorkflowPreset
     exampleImage: normalizeWorkflowExample(o.exampleImage),
     autoRepair: normalizeAutoRepair(o.autoRepair),
     promptMode: normalizePromptMode(o.promptMode),
+    negativeEnabled: o.negativeEnabled !== false,
+    generateNegative: o.generateNegative !== false,
     id: typeof o.id === 'string' && o.id ? o.id : `wf_${Date.now()}_${seq}`,
     name: typeof o.name === 'string' && o.name ? o.name : DEFAULT_WORKFLOW_NAME,
     // 简易编辑器已移除；旧参数一次性迁为动态 API 模板，原 JSON 留作恢复。

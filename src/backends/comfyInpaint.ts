@@ -2,6 +2,7 @@ import { buildDetectionGraph, buildInpaintGraph, normalizeAutoRepair, inspectInp
 import { composeComfyNegative, composeComfyPositive, normalizeComfyFixedPrompts } from './comfyFixedPrompts';
 import { parseWorkflowTemplate, runComfyWorkflow, type ComfyImageResult, type ComfyWorkflow, type ComfyProgressHooks } from './comfyui';
 import type { ComfyRunConn } from '@/state/settings';
+import { muteWorkflowNegative } from './comfyNegativePolicy';
 
 const endpoint=(url:string,path:string)=>`${url.trim().replace(/\/+$/,'')}/${path}`;
 async function request(url:string, init?:RequestInit):Promise<Response>{
@@ -49,8 +50,8 @@ export async function inpaintImage(conn:ComfyRunConn,input:InpaintRequest,signal
   const [image,mask]=await Promise.all([uploadInpaintImage(conn.url,source,signal),uploadInpaintImage(conn.url,input.mask,signal)]);
   const fixed=normalizeComfyFixedPrompts(conn.fixedPrompts);
   const graph=buildInpaintGraph(parseWorkflowTemplate(conn.workflow),{image,mask,seed:input.seed,context:input.context,
-    positive:composeComfyPositive(input.instruction,fixed),negative:composeComfyNegative(input.negative??'',fixed)});
-  const result=await runComfyWorkflow(conn,graph,signal,hooks);result.workflowId=conn.workflowId;return result;
+    positive:composeComfyPositive(input.instruction,fixed),negative:conn.negativeEnabled === false ? '' : composeComfyNegative(input.negative??'',fixed)});
+  const result=await runComfyWorkflow(conn,conn.negativeEnabled === false ? muteWorkflowNegative(graph) : graph,signal,hooks);result.workflowId=conn.workflowId;return result;
 }
 
 /** Best-effort post processing. The successful base image remains available when detection/repair fails. */
@@ -67,8 +68,8 @@ export async function autoRepairImage(conn:ComfyRunConn,source:ComfyWorkflow,ori
     const mask=await uploadInpaintImage(conn.url,maskBlob,signal);
     const fixed=normalizeComfyFixedPrompts(conn.fixedPrompts);
     const seed=Math.floor(Math.random()*2**48);
-    const graph=buildInpaintGraph(source,{image,mask,positive:composeComfyPositive(`Anatomically correct ${[repair.hands?'hands with five distinct fingers':'',repair.feet?'feet with natural toes':''].filter(Boolean).join(' and ')}. Preserve the original pose, clothing, colors, lighting and illustration style. ${scene}`,fixed),negative:composeComfyNegative('extra fingers, fused fingers, extra limbs, deformed hands, deformed feet',fixed),seed});
-    const result=await runComfyWorkflow(conn,graph,signal,hooks);
+    const graph=buildInpaintGraph(source,{image,mask,positive:composeComfyPositive(`Anatomically correct ${[repair.hands?'hands with five distinct fingers':'',repair.feet?'feet with natural toes':''].filter(Boolean).join(' and ')}. Preserve the original pose, clothing, colors, lighting and illustration style. ${scene}`,fixed),negative:conn.negativeEnabled === false ? '' : composeComfyNegative('extra fingers, fused fingers, extra limbs, deformed hands, deformed feet',fixed),seed});
+    const result=await runComfyWorkflow(conn,conn.negativeEnabled === false ? muteWorkflowNegative(graph) : graph,signal,hooks);
     const revoke=result.revoke;result.original=original;result.workflowId=conn.workflowId;result.seed=seed;
     result.revoke=()=>{revoke();original.revoke();};return result;
   }catch(e){

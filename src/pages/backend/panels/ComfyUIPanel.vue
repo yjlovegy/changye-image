@@ -207,6 +207,7 @@ async function confirmRemoveWorkflow() {
 }
 
 const fixedNegativeIssue = computed(() => {
+  if (active.value.negativeEnabled === false) return '';
   if (!active.value.workflow.trim()) return '';
   try { return getWorkflowPlaceholders(active.value.workflow).includes('negative_prompt') ? '' : '此工作流没有 %negative_prompt% 输入。填写固定负面后需先配置该占位符，才能生效。'; }
   catch { return ''; }
@@ -405,9 +406,17 @@ function applyAssist() {
           <div class="wf-prompts">
             <div class="wf-fixed-field"><span class="bbi-field-label">固定正面 · 最前面</span><BbiTextarea v-model="active.fixedPrompts.positivePrefix" :rows="2" :max-rows="8" aria-label="固定正面最前面" placeholder="例如 illustration, soft lighting" /></div>
             <div class="wf-fixed-field"><span class="bbi-field-label">固定正面 · 最后面</span><BbiTextarea v-model="active.fixedPrompts.positiveSuffix" :rows="2" :max-rows="8" aria-label="固定正面最后面" placeholder="放在本次画面描述之后的固定内容" /></div>
-            <div class="wf-fixed-field"><span class="bbi-field-label">固定负面</span><BbiTextarea v-model="active.fixedPrompts.negative" :rows="2" :max-rows="8" aria-label="固定负面" placeholder="例如 blurry, watermark" /></div>
+            <div class="wf-fixed-field">
+              <div class="wf-negative-controls">
+                <div class="wf-negative-row"><span class="bbi-field-label">出图时使用负面词</span><button type="button" class="wf-negative-toggle" role="switch" aria-label="出图时使用负面词" :aria-checked="active.negativeEnabled !== false" :class="{'is-on': active.negativeEnabled !== false}" @click="active.negativeEnabled = active.negativeEnabled === false" /></div>
+                <p class="bbi-field-hint">关闭后，本次出图不使用负面词；已填写的内容保留。局部重绘与自动修复也遵循此开关。</p>
+                <div class="wf-negative-row"><span class="bbi-field-label">AI 自动生成负面词</span><button type="button" class="wf-negative-toggle" role="switch" aria-label="AI 自动生成负面词" :aria-checked="active.generateNegative !== false" :class="{'is-on': active.generateNegative !== false}" @click="active.generateNegative = active.generateNegative === false" /></div>
+                <p class="bbi-field-hint">控制生成、重写和按意见修改时是否编写场景负面词；关闭后仍可手动填写。</p>
+              </div>
+              <span class="bbi-field-label">固定负面{{active.negativeEnabled === false ? '（当前不使用）' : ''}}</span><BbiTextarea v-model="active.fixedPrompts.negative" :rows="2" :max-rows="8" aria-label="固定负面" placeholder="例如 blurry, watermark" />
+            </div>
           </div>
-          <p class="bbi-field-hint">顺序：固定正面最前面 → 本次提示词和英文描述 → 固定正面最后面。固定负面与本次负面内容合并。</p>
+          <p class="bbi-field-hint">顺序：固定正面最前面 → 本次提示词和英文描述 → 固定正面最后面。启用负面词时，固定负面与本次负面内容合并。</p>
           <p v-if="fixedNegativeIssue" class="wf-fixed-warning">{{ fixedNegativeIssue }}</p>
         </section>
 
@@ -493,6 +502,14 @@ function applyAssist() {
 </template>
 
 <style scoped>
+.wf-negative-controls{border:1px solid var(--bbi-line);border-radius:12px;padding:14px;margin-bottom:14px}
+.wf-negative-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.wf-negative-row:not(:first-child){margin-top:16px}
+.wf-negative-toggle{flex:0 0 44px;width:44px;height:25px;border:1px solid var(--bbi-line-strong);border-radius:20px;background:var(--bbi-surface-2);padding:3px;cursor:pointer;display:flex;align-items:center}
+.wf-negative-toggle::after{content:'';width:17px;height:17px;border-radius:50%;background:var(--bbi-ink-soft);transition:transform .15s}
+.wf-negative-toggle.is-on{background:var(--bbi-accent);border-color:var(--bbi-accent)}
+.wf-negative-toggle.is-on::after{background:white;transform:translateX(18px)}
+.wf-negative-toggle:focus-visible{outline:2px solid var(--bbi-accent);outline-offset:3px}
 .wf-edit-fieldset{border:0;padding:0;margin:0;min-width:0}.wf-save-row{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin:10px 0}.wf-save-row>span{margin-right:auto;font-size:13px;color:var(--bbi-ink-muted)}.wf-save-row>span.wf-unsaved{color:var(--bbi-accent)}.wf-save-row .bbi-btn,.wf-leave-actions .bbi-btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;line-height:1.4}.wf-leave-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:20px}
 .wf-sizes { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:18px 0; }
 .wf-size-field { display:grid;gap:8px;min-width:0; }

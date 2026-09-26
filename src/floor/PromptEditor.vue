@@ -393,8 +393,9 @@ onBeforeUnmount(() => {
         <p class="bbi-editor-note">
           {{ sceneNegativeOn
             ? '与当前工作流的固定负面词叠加；固定词不在此重复显示。旧图不会自动补写。'
-            : '当前渠道或工作流未接入本画面负面词。' }}
+            : activeComfyPreset().generateNegative === false ? 'AI 自动生成负面词已关闭；可以手动填写，旧内容保留。' : '当前渠道或工作流未接入本画面负面词。' }}
         </p>
+        <p v-if="comfySize && activeComfyPreset().negativeEnabled === false" class="bbi-editor-note">当前工作流已关闭“出图时使用负面词”，此处内容保留但不用于出图。</p>
       </div>
 
       <div v-if="comfySize" class="bbi-modal-field">

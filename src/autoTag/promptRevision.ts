@@ -61,12 +61,13 @@ export async function reviseImagePrompt(
 只返回一个最终 JSON 对象，不展示推理过程、解释或 Markdown。对象只能包含 images，images 必须恰好有一个对象，position 固定 P1。该对象必须完整返回 tag、nl、negative、characters 和 size；所有文本字段都是字符串；size 只能是 portrait 或 landscape，除非意见明确要求，否则保留原画幅。
 ${krea2 ? 'tag 为空字符串；nl 用连贯完整英文描述修改后的单一瞬间，不生成重复标签串。' : mixed ? 'tag 与 nl 必须同时非空。tag 先写主体与核心姿势、支撑和物体位置，再保留具体外貌；nl 用完整、详细且连贯的英文句子，首句先明确当前姿势、支撑及关键空间关系，再展开可见脸型五官、神态视线、外貌、穿着、动作和背景光线。只描写镜头可见的细节，保持人物归属、接触关系与姿势明确；tag/nl 必须一致。' : '当前后端采用 tag 提示词；tag 必须非空，使用英文视觉短标签。nl 保留原内容，不添加当前模型未支持的自然语言结构。'}
 ${characterPrompts ? '当前 NAI 模型支持角色提示词：Base tag/nl 只写全局人数、场景、构图、光线与共有关系；每个具体入镜角色使用 characters 中独立的 name/tag/nl。name 保留原语言与身份，tag/nl 对该角色详细描述并与 Base 一致，nl 为完整英文句子。不得因遗漏而删除原有角色；只有修改意见明确要求时才增删人物。确实没有具体入镜角色时 characters 返回 []。' : 'characters 是当前后端未使用的存量字段，必须原样保留；需要修改的人物细节写入 tag/nl，不删除这些存量数据。'}
-${negativeRequired ? 'negative 必须重新核对并填写非空的本画面英文负面短词，不能省略、留空、只填标点或 none/null。保留仍适用的原排除项，删去已不适用的项，补足修改后人数、人物一致性、动作归属或构图易错处。不要机械复制通用质量词，不要把希望出现的内容写入负面，更不能否定最终 tag/nl 中已成立的事实。' : '当前后端不接收本画面 negative；必须原样保留该字段，不生成新的无效负面词，也不要把负面词混进正面。'}
+${negativeRequired ? 'negative 必须重新核对并填写非空的本画面英文负面短词，不能省略、留空、只填标点或 none/null。保留仍适用的原排除项，删去已不适用的项，补足修改后人数、人物一致性、动作归属或构图易错处。不要机械复制通用质量词，不要把希望出现的内容写入负面，更不能否定最终 tag/nl 中已成立的事实。' : '本次不启用 AI 生成 negative；原字段可保留或省略，不编写新负面词，也不要把负面词混进正面。'}
 ${krea2 ? KREA2_VISUAL_CONTRACT : facialDetailContract({ mixed, characterPrompts, allowDesign: true })}
 若前面的自定义规范要求省略可见五官、只在 nl 描写五官或只写漂亮等泛称，以本次脸部表达规则为准。五官补全只用于这一张图片的待确认草稿，不写入角色库、不返回 changes，也不能声称这些设计细节原本来自角色设定。非人物画面不添加人物；背影、遮挡或远景看不清的部位不强加五官，不为补全改变姿势或镜头。
 ${krea2 ? (settings.autoTag.prompts.krea2Thinking?.trim() || DEFAULT_KREA2_THINKING) : poseSpatialContract({ mixed, characterPrompts, negativeRequired })}
-按意见修改姿势时，将姿势、支撑、接触点和构图作为一组同步改写：删除与新姿势不兼容的旧姿态词、旧支撑点、旧接触关系及旧镜头要求，不要把新动作附加在仍然保留的旧姿势后面。先在各自实际生图字段明确新的身体朝向、承重位置、参与动作的手脚与物体相对位置，再保留意见没有变更的身份、五官与衣着；没有必要时不改变镜头，确需调整时以完整呈现新动作及支撑为准。画幅 size 仍遵守用户明确选择，不为套示例更改。${negativeRequired ? '本次改姿势后必须重新核对本画面 negative：移除会否定新姿势、支撑或接触关系的旧排除项，再针对新画面的姿态与位置易错处补充不冲突的排除项。' : '当前后端没有本画面负面入口，不为姿势改写编造无效 negative；保留原字段，靠正面明确新姿势与关系。'}
-所有内容字段中禁止 bbi_image、tag、nl、negative、size 等 XML 标签，不返回 changes，不更新角色档案。工作流固定正负面词会在生成时统一追加，不需要在此重复。
+按意见修改姿势时，将姿势、支撑、接触点和构图作为一组同步改写：删除与新姿势不兼容的旧姿态词、旧支撑点、旧接触关系及旧镜头要求，不要把新动作附加在仍然保留的旧姿势后面。先在各自实际生图字段明确新的身体朝向、承重位置、参与动作的手脚与物体相对位置，再保留意见没有变更的身份、五官与衣着；没有必要时不改变镜头，确需调整时以完整呈现新动作及支撑为准。画幅 size 仍遵守用户明确选择，不为套示例更改。${negativeRequired ? '本次改姿势后必须重新核对本画面 negative：移除会否定新姿势、支撑或接触关系的旧排除项，再针对新画面的姿态与位置易错处补充不冲突的排除项。' : '本次不生成 negative，不为姿势改写编写负面词；保留原字段，靠正面明确新姿势与关系。'}
+所有内容字段中禁止 bbi_image、tag、nl、negative、size 等 XML 标签，不返回 changes，不更新角色档案。工作流固定词由出图设置管理，不需要在此重复。
+${!negativeRequired ? '本次未启用 AI 生成负面词：不编写或修改 negative，不因缺少 negative 而补写。可省略该字段，原负面内容由插件保留。此项覆盖自定义规范中的旧要求。' : ''}
 输出形状示例：${JSON.stringify({ images: [{ position: 'P1', ...example }] })}`;
   const messages: ChatMsg[] = [
     { role: 'system', content: [spec, contract].filter(Boolean).join('\n\n') },
@@ -86,6 +87,7 @@ ${krea2 ? (settings.autoTag.prompts.krea2Thinking?.trim() || DEFAULT_KREA2_THINK
       if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new Error('AI 修改返回的图片提示词必须是对象');
       const fields = entry as Record<string, unknown>;
       for (const field of ['tag', 'nl', 'negative', 'size']) {
+        if (field === 'negative' && !negativeRequired) continue;
         if (typeof fields[field] !== 'string') throw new Error(`AI 修改返回的 ${field} 必须是字符串，不能省略`);
       }
       if (fields.size !== 'portrait' && fields.size !== 'landscape') throw new Error('AI 修改返回的 size 必须是 portrait 或 landscape');

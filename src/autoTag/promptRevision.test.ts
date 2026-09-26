@@ -39,6 +39,17 @@ beforeEach(() => {
 afterEach(() => Object.assign(settings, previous));
 
 describe('reviseImagePrompt', () => {
+  it.each([undefined, 'AI should not overwrite this'])('preserves existing negative when AI generation is off (%s)', async negative => {
+    activeComfyPreset().generateNegative = false;
+    request.mockImplementation(async (_channel, _messages, options) => {
+      const raw = response({negative}); options?.validate?.(raw); return raw;
+    });
+    const original = source();
+    const revised = await reviseImagePrompt(original, 'Change the shirt.');
+    expect(revised.negative).toBe(original.negative);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request.mock.calls[0][1][0].content).toContain('本次未启用 AI 生成负面词');
+  });
   it('keeps a Krea2 image in natural-language mode even after switching workflows, preserving its resolution', async () => {
     activeComfyPreset().promptMode = 'anima';
     const content: ImageTagContent = { ...source(), tag: '', promptMode: 'krea2', resolution: { width: 1024, height: 1536 } };
@@ -192,7 +203,7 @@ describe('reviseImagePrompt', () => {
     const result = await reviseImagePrompt(original, '改成坐椅子拿画笔');
     const system = request.mock.calls[0][1][0].content;
     expect(system).toContain(poseSpatialContract({ mixed: mode === 'no-negative-comfy', characterPrompts: false, negativeRequired: false }));
-    expect(system).toContain('当前后端没有本画面负面入口，不为姿势改写编造无效 negative');
+    expect(system).toContain('本次不生成 negative，不为姿势改写编写负面词');
     expect(system).not.toContain('本次改姿势后必须重新核对本画面 negative');
     expect(result.negative).toBe(original.negative);
     if (mode === 'old-nai') expect(result.nl).toBe(original.nl);
@@ -304,7 +315,7 @@ describe('reviseImagePrompt', () => {
     expect(result.negative).toBe(content.negative);
     expect(result.characters).toEqual(content.characters);
     expect(result.characters[0]).not.toBe(content.characters[0]);
-    expect(request.mock.calls[0][1][0].content).toContain('当前后端不接收本画面 negative');
+    expect(request.mock.calls[0][1][0].content).toContain('本次不启用 AI 生成 negative');
   });
 
   it('retains NAI character prompts while requiring complete per-character descriptions', async () => {

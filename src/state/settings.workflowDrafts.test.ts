@@ -7,9 +7,11 @@ afterEach(()=>vi.unstubAllGlobals());
 describe('workflow draft persistence boundary',()=>{
   it('uses drafts for generation but never leaks them into unrelated autosaves',async()=>{
     const m=await import('./settings');await m.hydrateSettings();const saved=m.savedComfyPreset();const before=JSON.parse(JSON.stringify(saved));
-    const draft=m.comfyWorkflowDrafts.edit(saved);draft.workflow='{"2":{"class_type":"CLIPTextEncode","inputs":{"text":"%nl%"}}}';draft.fixedPrompts.negative='trial';draft.defaultSize='768×1024';draft.autoRepair={enabled:true,hands:true,feet:false};
+    expect(saved.negativeEnabled).toBe(true);expect(saved.generateNegative).toBe(true);
+    const draft=m.comfyWorkflowDrafts.edit(saved);draft.workflow='{"2":{"class_type":"CLIPTextEncode","inputs":{"text":"%nl%"}}}';draft.fixedPrompts.negative='trial';draft.defaultSize='768×1024';draft.autoRepair={enabled:true,hands:true,feet:false};draft.negativeEnabled=false;draft.generateNegative=false;
     m.settings.ui.orbSize++;await nextTick();
     expect(m.effectiveComfyConn().workflow).toBe(draft.workflow);expect(m.effectiveComfyConn(saved).workflow).toBe(draft.workflow);
+    expect(m.effectiveComfyConn().negativeEnabled).toBe(false);
     expect(m.savedComfyPreset()).toEqual(before);expect(host.context.extensionSettings.baibai_image.comfyui.workflows[0]).toEqual(before);
     m.saveComfyWorkflow('a');await nextTick();expect(host.context.extensionSettings.baibai_image.comfyui.workflows[0]).toEqual(JSON.parse(JSON.stringify(draft)));
     draft.fixedPrompts.negative='second trial';m.comfyWorkflowDrafts.discard('a');expect(m.activeComfyPreset().fixedPrompts.negative).toBe('trial');
