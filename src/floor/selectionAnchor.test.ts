@@ -26,6 +26,25 @@ describe('selection source anchor', () => {
     const source = '<content class="story">\n第一段。\n\n第二段。\n\n第三段。\n</content>';
     expect(locateSelectionSourceEnd(source, '第一段。第二段。第三段。', '第一段。', '第二段。')).toEqual({ offset: source.indexOf('第二段。') + 4 });
   });
+  it.each(['game', 'GAME'])('keeps two selected paragraphs inside a <%s> narrative with rewritten panels and existing images', (wrapper) => {
+    // The host removes the narrative delimiter and renders its Markdown as sibling
+    // paragraphs. Other rolecard panels are rewritten independently of the story.
+    const p1 = '她走到书架旁边，取下一本蓝色封面的画册。';
+    const p2 = '窗外的阳光落在书页上，她仔细看着画册中的风景。';
+    const old = '<bbi_image>existing<size>portrait</size></bbi_image>';
+    const source = `<think_nya~>private panel</think_nya~>\n<${wrapper}>\n开头。\n${old}\n\n${p1}\n\n${p2}\n\n后续正文。\n${old}\n结尾。\n</${wrapper}>\n<UpdateVariable>state</UpdateVariable>`;
+    const visible = `显示前端代码块开头。${p1}${p2}后续正文。结尾。当前变量状态监控`;
+    const anchor = locateSelectionSourceEnd(source, visible, '显示前端代码块开头。', p1 + p2, [], [
+      { text: p1 + p2, beforeSelection: '' },
+    ]);
+    const offset = source.indexOf(p2) + p2.length;
+    expect(anchor).toEqual({ offset });
+    const inserted = insertSelectionImage(source, source, { tag: 'new', nl: '', negative: '', characters: [], size: 'portrait' }, anchor.offset)!;
+    expect(inserted.seq).toBe(1);
+    expect(inserted.text).toContain(`${p2}\n<bbi_image>new`);
+    expect(inserted.text.endsWith(source.slice(offset))).toBe(true);
+    expect(inserted.text.split(old)).toHaveLength(3);
+  });
   it.each([
     ['<p><strong>她微笑。后文</strong>段尾。</p>', '她微笑。后文段尾。'],
     ['[她微笑。后文](https://example.com)', '她微笑。后文'],

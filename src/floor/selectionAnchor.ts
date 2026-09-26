@@ -28,7 +28,9 @@ export function locateSelectionSourceEnd(
   const containers: Array<{ start: number; end: number; flow?: boolean }> = [];
   // These wrappers can contain paragraph siblings and image blocks. Do not escape
   // them when finishing a paragraph (a story wrapper may contain the entire reply).
-  const flowTags = new Set(['div', 'section', 'article', 'main', 'aside', 'header', 'footer', 'nav', 'blockquote', 'details', 'content', 'story', 'narrative']);
+  // <game> is also a rolecard narrative delimiter: the host may strip it and
+  // render its body as sibling paragraphs. Escaping it moves an image to reply end.
+  const flowTags = new Set(['div', 'section', 'article', 'main', 'aside', 'header', 'footer', 'nav', 'blockquote', 'details', 'content', 'story', 'narrative', 'game']);
   const markdownBlocks: Array<{ start: number; end: number; multilineList: boolean }> = [];
   const hide = (start: number, end: number) => hidden.fill(1, start, end);
   const matches = (pattern: RegExp, visit: (match: RegExpMatchArray, start: number) => void) => {
