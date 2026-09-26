@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
-import type { ComfyPose } from '@/backends/comfyPose';
-import PoseControl from '@/floor/PoseControl.vue';
 import type { ImageCharacterPrompt } from '@/autoTag/protocol';
 import { assertSceneNegative, supportsSceneNegative } from '@/autoTag/negative';
 import { naiSupportsCharacterPrompts } from '@/backends/nai';
@@ -44,6 +42,9 @@ const props = defineProps<{
   revisionMode?: boolean;
   /** 仅返回修改草稿；调用方负责副 API 配置及消息/工作流身份检查。 */
   revise?: (content: ImageTagContent, instruction: string, signal: AbortSignal) => Promise<ImageTagContent>;
+  rewrite?: (content: ImageTagContent, signal: AbortSignal) => Promise<ImageTagContent>;
+  sourceText?: string;
+  sourceNotice?: string;
   /**
    * 调用方要求关闭:置 true 后本组件播离场动画。
    * **不能反过来用 ref 拿组件实例**——本组件是 render(h(...)) 命令式挂载的,
@@ -74,16 +75,16 @@ const revising = ref(false);
 const revisionError = ref('');
 const revisionNotice = ref('');
 const revised = ref(false);
-const editingLocked = computed(() => Boolean(props.busy || revising.value || poseBusy.value));
+const editingLocked = computed(() => Boolean(props.busy || revising.value));
+const draftAction = ref<'revision' | 'rewrite'>('revision');
+const showErrorDetails = ref(false);
 const needsRevisionValidation = computed(() => Boolean(props.revisionMode || revised.value));
 let revisionController: AbortController | null = null;
 let revisionRun = 0;
 let disposed = false;
 
-const pose = ref<ComfyPose | undefined>(props.content.pose ? { ...props.content.pose } : undefined);
-const poseBusy = ref(false);
-const promptMode = props.content.promptMode ?? normalizePromptMode(activeComfyPreset().promptMode);
-const naturalOnly = promptMode === 'krea2';
+const promptMode = ref(props.content.promptMode ?? normalizePromptMode(activeComfyPreset().promptMode));
+const naturalOnly = computed(() => promptMode.value === 'krea2');
 const showLegacyTags = ref(false);
 const tag = ref(props.content.tag);
 const nl = ref(props.content.nl);
@@ -110,7 +111,7 @@ function oneLine(text: string): string {
 
 /** 草稿归一后的结果 —— 保存与「有没有改」都以它为准,两处不能各算一次。 */
 const draft = computed<ImageTagContent>(() => ({
-  ...(naturalOnly || props.content.promptMode ? { promptMode } : {}),
+  ...(naturalOnly.value || props.content.promptMode ? { promptMode:promptMode.value } : {}),
   tag: oneLine(tag.value),
   nl: oneLine(nl.value),
   negative: oneLine(negative.value),
@@ -124,7 +125,6 @@ const draft = computed<ImageTagContent>(() => ({
     .filter(character => character.name && character.tag),
   size: size.value,
   ...(resolution.value ? { resolution: { ...resolution.value } } : {}),
-  ...(pose.value ? { pose: { ...pose.value } } : {}),
 }));
 
 function sameCharacters(a: ImageCharacterPrompt[], b: ImageCharacterPrompt[]): boolean {
@@ -150,7 +150,7 @@ const dirty = computed(() => {
     next.negative !== props.content.negative ||
     next.size !== props.content.size ||
     JSON.stringify(next.resolution) !== JSON.stringify(props.content.resolution) ||
-    JSON.stringify(next.pose) !== JSON.stringify(props.content.pose) ||
+    next.promptMode !== props.content.promptMode ||
     !sameCharacters(next.characters, props.content.characters)
   );
 });
@@ -158,7 +158,7 @@ const dirty = computed(() => {
 /** 校验:tag 必填 + 全字段禁含子标签字面量(口径与 AI 侧同一份)。 */
 function validateContent(next: ImageTagContent, strict: boolean): string {
   if (next.resolution && !validResolution(next.resolution)) return '宽度和高度必须是 64–4096 范围内的整数';
-  if (naturalOnly ? !next.nl : !next.tag) return naturalOnly ? '画面描述不能为空' : '画面 TAG 不能为空';
+  if (naturalOnly.value ? !next.nl : !next.tag) return naturalOnly.value ? '画面描述不能为空' : '画面 TAG 不能为空';
   const fields: Array<[string, string]> = [
     ['画面 TAG', next.tag],
     ['自然语言', next.nl],
@@ -176,7 +176,7 @@ function validateContent(next: ImageTagContent, strict: boolean): string {
     const comfy = settings.defaultBackend === 'comfyui';
     const mixed = comfy || (settings.defaultBackend === 'nai' && naiSupportsCharacterPrompts(settings.nai.model));
     try {
-      if (naturalOnly) assertNaturalPrompt(next);
+      if (naturalOnly.value) assertNaturalPrompt(next);
       else if (mixed) assertMixedPrompt(comfy ? { ...next, characters: [] } : next, '修改草稿');
       if (sceneNegativeOn.value) assertSceneNegative(next.negative, '修改草稿');
     } catch (failure) {
@@ -196,12 +196,14 @@ function cancelRevision(showNotice = true): void {
   revisionController?.abort();
   revisionController = null;
   revising.value = false;
-  if (showNotice) revisionNotice.value = '已取消生成，现有草稿和修改意见已保留。';
+  if (showNotice) revisionNotice.value = '已停止生成，现有草稿和修改意见已保留。';
 }
 
-async function generateRevision(): Promise<void> {
-  if (editingLocked.value || !instruction.value.trim() || !(naturalOnly ? draft.value.nl : draft.value.tag)) return;
-  if (!props.revise) {
+async function generateRevision(kind: 'revision' | 'rewrite' = 'revision'): Promise<void> {
+  if (editingLocked.value) return;
+  if (kind === 'revision' && (!instruction.value.trim() || !(naturalOnly.value ? draft.value.nl : draft.value.tag))) return;
+  draftAction.value = kind;
+  if (kind === 'rewrite' ? !props.rewrite : !props.revise) {
     revisionError.value = '当前无法调用修改服务，请重新打开此窗口';
     return;
   }
@@ -214,9 +216,12 @@ async function generateRevision(): Promise<void> {
   revisionNotice.value = '';
   revising.value = true;
   try {
-    const next = await props.revise(source, request, controller.signal);
+    const next = kind === 'rewrite' ? await props.rewrite!(source, controller.signal) : await props.revise!(source, request, controller.signal);
     if (disposed || props.closing || controller.signal.aborted || run !== revisionRun) return;
+    const previousMode = promptMode.value;
+    promptMode.value = next.promptMode ?? previousMode;
     const invalid = validateContent(next, true);
+    if (invalid) promptMode.value = previousMode;
     if (invalid) throw new Error(invalid);
     tag.value = next.tag;
     nl.value = next.nl;
@@ -224,10 +229,11 @@ async function generateRevision(): Promise<void> {
     size.value = next.size;
     characters.value = next.characters.map(character => ({ ...character }));
     revised.value = true;
-    revisionNotice.value = '修改草稿已生成。请检查下方内容，确认后再重新生图。';
+    revisionNotice.value = kind === 'rewrite' ? '已按原正文或选段生成新草稿，确认后应用。' : '修改草稿已生成，确认后应用。';
   } catch (failure) {
     if (disposed || props.closing || controller.signal.aborted || run !== revisionRun) return;
-    revisionError.value = failure instanceof Error ? failure.message : String(failure);
+    if (failure instanceof Error && failure.name === 'AbortError') revisionNotice.value = '已停止生成，现有草稿和修改意见已保留。';
+    else revisionError.value = failure instanceof Error ? failure.message : String(failure);
   } finally {
     if (run === revisionRun) {
       revisionController = null;
@@ -239,7 +245,6 @@ async function generateRevision(): Promise<void> {
 
 function apply(regenerate: boolean): void {
   if (!canApply.value) return;
-  if (needsRevisionValidation.value && !regenerate) return;
   if (regenerate && !props.configured) return;
   emit('apply', draft.value, regenerate);
 }
@@ -292,17 +297,17 @@ onBeforeUnmount(() => {
       class="bbi-modal bbi-modal-wide"
       role="dialog"
       aria-modal="true"
-      :aria-label="revisionMode ? '按意见修改图片' : '编辑提示词'"
+      aria-label="编辑提示词"
     >
       <header class="bbi-modal-head">
-        <span class="bbi-modal-title">{{ revisionMode ? '按意见修改图片' : '编辑提示词' }}</span>
+        <span class="bbi-modal-title">编辑提示词</span>
         <button class="bbi-icon-mini" type="button" title="关闭" @click="requestClose">
           <Icon name="close" />
         </button>
       </header>
 
       <section class="bbi-revision-panel" aria-label="按意见修改提示词">
-        <button
+        <div class="bbi-editor-tools"><button
           class="bbi-btn bbi-revision-toggle"
           type="button"
           :aria-expanded="revisionOpen"
@@ -312,6 +317,8 @@ onBeforeUnmount(() => {
           <Icon name="prompt" /> 按意见修改
           <Icon name="chevron" :style="revisionOpen ? 'transform: rotate(180deg)' : undefined" />
         </button>
+        <button class="bbi-btn" type="button" :disabled="editingLocked || !sourceText" @click="generateRevision('rewrite')"><Icon name="refresh" />重写提示词</button></div>
+        <p class="bbi-editor-note">{{ sourceNotice }}</p>
         <div v-if="revisionOpen" class="bbi-revision-body">
           <p class="bbi-editor-note">
             点击「生成修改草稿」会调用副 API，只发送当前提示词和修改意见，不读取图片像素。
@@ -332,19 +339,19 @@ onBeforeUnmount(() => {
               class="bbi-btn bbi-btn-primary"
               type="button"
               :disabled="editingLocked || !instruction.trim() || !(naturalOnly ? draft.nl : draft.tag)"
-              @click="generateRevision"
+              @click="generateRevision('revision')"
             >
               <Icon name="prompt" /> {{ revising ? '正在生成修改草稿…' : '生成修改草稿' }}
             </button>
-            <button v-if="revising" class="bbi-btn" type="button" @click="cancelRevision()">取消请求</button>
+
           </div>
-          <p v-if="revisionError" class="bbi-editor-error" role="alert">{{ revisionError }}；现有草稿与修改意见已保留。</p>
-          <p v-if="revisionNotice" class="bbi-editor-note" role="status">{{ revisionNotice }}</p>
+
         </div>
       </section>
 
-      <p v-if="content.poseInvalid" class="bbi-editor-error">旧姿态设置无法读取，请重新上传参考图；直接应用将清除损坏的设置。</p>
-      <PoseControl v-model="pose" :disabled="Boolean(busy || revising)" @busy="poseBusy = $event" />
+      <div v-if="revising" class="bbi-editor-progress" role="status"><span>{{ draftAction === 'rewrite' ? '正在根据原文重写提示词…' : '正在生成修改草稿…' }}</span><button class="bbi-btn bbi-btn-sm" type="button" @click="cancelRevision()">停止</button></div>
+      <div v-if="revisionError" class="bbi-editor-error" role="alert"><strong>提示词生成失败</strong><p>{{ revisionError }}</p><p>现有草稿与修改意见已保留。</p><div class="bbi-editor-tools"><button class="bbi-btn bbi-btn-sm" type="button" :disabled="editingLocked" @click="generateRevision(draftAction)">重试</button><button class="bbi-btn bbi-btn-sm" type="button" @click="showErrorDetails = !showErrorDetails">查看详情</button></div><pre v-if="showErrorDetails" class="bbi-error-detail">{{ revisionError }}</pre></div>
+      <p v-if="revisionNotice" class="bbi-editor-note" role="status">{{ revisionNotice }}</p>
 
       <fieldset class="bbi-editor-fields" :disabled="editingLocked" aria-label="提示词草稿">
       <button v-if="naturalOnly && tag" type="button" class="bbi-btn bbi-btn-sm" @click="showLegacyTags = !showLegacyTags">{{ showLegacyTags ? '收起旧标签' : '查看旧标签' }}</button>
@@ -421,6 +428,7 @@ onBeforeUnmount(() => {
       </div>
 
 
+      <details v-if="sourceText" class="bbi-editor-note"><summary>本图原正文或选段</summary><pre class="bbi-error-detail">{{ sourceText }}</pre></details>
       </fieldset>
 
       <!-- 改提示词会换 promptHash 桶,而 stale 态只显示最新一张、翻页器不出现。
@@ -435,7 +443,7 @@ onBeforeUnmount(() => {
       <footer class="bbi-modal-foot">
         <span class="bbi-modal-foot-spacer"></span>
         <button class="bbi-btn" type="button" :disabled="busy" @click="requestClose">取消</button>
-        <button v-if="!needsRevisionValidation" class="bbi-btn" type="button" :disabled="!canApply" @click="apply(false)">
+        <button class="bbi-btn" type="button" :disabled="!canApply" @click="apply(false)">
           应用
         </button>
         <button
@@ -445,7 +453,7 @@ onBeforeUnmount(() => {
           :title="revisionRequired ? '先生成修改草稿，再确认生图' : configured ? '保存提示词并立即出图' : '请先在「工作流」页完成配置'"
           @click="apply(true)"
         >
-          <Icon name="palette" /> {{ needsRevisionValidation ? '确认并重新生图' : '应用并重新生成' }}
+          <Icon name="palette" /> 应用并重新生成
         </button>
       </footer>
     </div>
@@ -453,6 +461,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.bbi-editor-tools,.bbi-editor-progress{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.bbi-editor-progress{justify-content:space-between;margin:12px 0}.bbi-error-detail{white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto;font:inherit}
 .resolution-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}.resolution-heading .bbi-modal-label{margin:0}
 /* —— 以下四条在 base.css 里不是全局的,scoped 过不了组件边界,各处各抄一份
       (同 ConfirmDialog.vue 的做法) —— */

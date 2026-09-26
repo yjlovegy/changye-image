@@ -304,6 +304,24 @@ describe('validate:历史「成功」= 调用方验收通过', () => {
   });
 });
 
+it('cancels the main API wait without validating or recording its late reply', async () => {
+  vi.clearAllMocks();
+  let resolve!: (s:string)=>void;
+  h.generateRaw.mockImplementation(() => new Promise<string>(r => { resolve=r; }));
+  const controller=new AbortController();
+  const validate=vi.fn();
+  const pending=requestViaMainApi(messages,{signal:controller.signal,validate});
+  await vi.waitFor(()=>expect(h.generateRaw).toHaveBeenCalledTimes(1));
+  controller.abort('user-stop');
+  await expect(pending).rejects.toMatchObject({name:'AbortError'});
+  expect(h.failLlm).toHaveBeenCalledWith(1,expect.any(String),true);
+  resolve('late reply');
+  await Promise.resolve();
+  expect(validate).not.toHaveBeenCalled();
+  expect(h.finishLlm).not.toHaveBeenCalled();
+  expect(h.patchLlmResponse).not.toHaveBeenCalled();
+});
+
 describe('completion diagnostics and explicit upstream failures', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 

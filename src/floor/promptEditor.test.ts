@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openPromptEditor, type PromptEditorOptions } from '@/floor/promptEditor';
 import { reviseImagePrompt } from '@/autoTag/promptRevision';
+import { rewriteImagePrompt } from '@/autoTag/promptRewrite';
+import { PROMPT_SOURCES_KEY, rememberPromptSources } from '@/floor/promptSource';
+import { activePromptTasks, stopPromptTasks } from '@/state/promptTasks';
 import { markForAutoGenerate, consumeAutoGenerate } from '@/floor/autoGenerate';
 import { hydrateMessage } from '@/floor/hydrate';
 import { clearAllGen, isGenerationFloorLocked } from '@/floor/genState';
@@ -12,6 +15,9 @@ interface EditorProps {
   busy: boolean;
   closing: boolean;
   revise(content: ImageTagContent, instruction: string, signal: AbortSignal): Promise<ImageTagContent>;
+  rewrite(content: ImageTagContent, signal: AbortSignal): Promise<ImageTagContent>;
+  sourceText: string;
+  sourceNotice: string;
   onApply(content: ImageTagContent, regenerate: boolean): void;
   onClose(): void;
   onDirty(dirty: boolean): void;
@@ -38,6 +44,7 @@ vi.mock('vue', async importOriginal => {
   };
 });
 vi.mock('@/floor/PromptEditor.vue', () => ({ default: {} }));
+vi.mock('@/autoTag/promptRewrite', () => ({ rewriteImagePrompt: vi.fn() }));
 vi.mock('@/autoTag/promptRevision', () => ({ reviseImagePrompt: vi.fn() }));
 vi.mock('@/st/context', () => ({ getContext: () => state.context }));
 vi.mock('@/floor/hydrate', () => ({ hydrateMessage: vi.fn() }));
@@ -142,6 +149,33 @@ afterEach(async () => {
 });
 
 describe('prompt editor revision controller', () => {
+  it('rewrites from the saved selection as a draft and retains its source after confirmation', async () => {
+    const message=state.context!.chat[0];
+    const rawTag=parseImageTags(message.mes)[1];
+    message.extra = {[PROMPT_SOURCES_KEY]:rememberPromptSources(message,0,[{rawTag,text:'她在窗边翻书。',kind:'selection'}])};
+    vi.mocked(rewriteImagePrompt).mockResolvedValue({...revised});
+    const props=open({revisionMode:false});
+    expect(props.sourceText).toBe('她在窗边翻书。');
+    const next=await props.rewrite(original,new AbortController().signal);
+    expect(rewriteImagePrompt).toHaveBeenCalledWith(state.context,0,expect.objectContaining({kind:'selection',text:'她在窗边翻书。'}),original,expect.any(AbortSignal));
+    expect(state.context!.saveChat).not.toHaveBeenCalled();
+    expect(markForAutoGenerate).not.toHaveBeenCalled();
+    props.onApply(next,false); await flush();
+    expect(state.context!.saveChat).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(message.extra![PROMPT_SOURCES_KEY])).toContain('她在窗边翻书。');
+    expect(markForAutoGenerate).not.toHaveBeenCalled();
+  });
+  it('discards a rewrite after the global stop action', async () => {
+    const wait=deferred<ImageTagContent>();
+    vi.mocked(rewriteImagePrompt).mockReturnValue(wait.promise);
+    const props=open({revisionMode:false});
+    expect(props.sourceNotice).toContain('旧图片');
+    const pending=props.rewrite(original,new AbortController().signal);
+    expect(activePromptTasks.value).toBe(1);
+    stopPromptTasks(); wait.resolve(revised);
+    await expect(pending).rejects.toMatchObject({name:'AbortError'});
+    expect(state.context!.saveChat).not.toHaveBeenCalled();
+  });
   it('returns an AI revision as a draft without writing, hydrating, or generating', async () => {
     const source = state.context!.chat[0].mes;
     const props = open();

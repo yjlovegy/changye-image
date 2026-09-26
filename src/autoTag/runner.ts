@@ -1,3 +1,6 @@
+import { trackPromptTask } from '@/state/promptTasks';
+import { reportPromptFailure } from '@/state/promptFailures';
+import { PROMPT_SOURCES_KEY, rememberPromptSources } from '@/floor/promptSource';
 import { requestCompletion, requestViaMainApi } from '@/api/client';
 import { naiSupportsCharacterPrompts } from '@/backends/nai';
 import { readBookMemory } from '@/autoTag/bookMemory';
@@ -46,7 +49,7 @@ import { BBI_IMAGE_EXTRA_KEY, readStore, shiftImageHistoryForInsertion } from '@
 import { backendStatus } from '@/generate';
 import { applyMessageText, type ApplyMessageResult, type MessageExtraUpdate } from '@/st/messageEdit';
 import { getContext, isAiStoryMessage, isStoryMessage, type STMessage } from '@/st/context';
-import { hasImageTagTrace, parseImageTags, stripImageTags } from '@/st/imageTagRegex';
+import { hasImageTagTrace, parseImageTags, stripImageTags, serializeImageTag } from '@/st/imageTagRegex';
 import { activeComfyPreset, getTagGenChannel, isCurrentChatExcluded, settings } from '@/state/settings';
 import { normalizePromptMode, assertNaturalPrompt } from '@/promptMode';
 import { assertMixedPrompt } from '@/promptContent';
@@ -301,7 +304,16 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
   const slot = `${chatId}\u0000${floor}`;
   running.get(slot)?.abort();
   const controller = new AbortController();
+  const releaseTask = trackPromptTask(controller);
   running.set(slot, controller);
+  const retryBackend = JSON.stringify(activeComfyPreset());
+  const retryRequest = async () => {
+    const live = getContext();
+    if (live?.getCurrentChatId() !== chatId || live.chat[floor] !== message || message.mes !== rawSource
+      || activeSwipeId(message) !== swipeId || JSON.stringify(activeComfyPreset()) !== retryBackend)
+      throw new Error('正文、聊天或工作流已变化，请从当前正文重新生成');
+    await runForFloor(floor, { ...opts, manual: true });
+  };
 
   try {
     const memory = readBookMemory(floor, context.chat[floor]?.mes ?? '', context.name1);
@@ -333,7 +345,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
     let attempted = 0;
     for (let attempt = 0; attempt <= retries && !plan; attempt++) {
       if (controller.signal.aborted) {
-        processed.delete(identity);
+        if (controller.signal.reason !== 'user-stop') processed.delete(identity);
         return;
       }
       try {
@@ -381,13 +393,13 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
           });
         }
         if (controller.signal.aborted) {
-          processed.delete(identity);
+          if (controller.signal.reason !== 'user-stop') processed.delete(identity);
           return;
         }
         plan = parsed.plan;
       } catch (error) {
         if (controller.signal.aborted) {
-          processed.delete(identity);
+          if (controller.signal.reason !== 'user-stop') processed.delete(identity);
           return;
         }
         lastError = error instanceof Error ? error.message : String(error);
@@ -398,11 +410,8 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
     }
     if (!plan) {
       // 重试耗尽:允许同一正文在后续重新渲染后再试
-      processed.delete(identity);
-      toastr.error(
-        `${lastError}${attempted > 1 ? `(已自动重试 ${attempted - 1} 次)` : ''}`,
-        '长夜的绘图器自动 TAG 失败',
-      );
+      if (controller.signal.reason !== 'user-stop') processed.delete(identity);
+      reportPromptFailure(`第 ${floor} 楼 · 提示词生成`, `${lastError}${attempted > 1 ? `(已自动重试 ${attempted - 1} 次)` : ''}`, retryRequest);
       return;
     }
 
@@ -486,7 +495,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
     if (marked) {
       const markSwipeId = message.swipe_id ?? 0;
       for (let seq = 0; seq < plan.images.length; seq++) {
-        markForAutoGenerate(chatId, floor, markSwipeId, seq);
+        markForAutoGenerate(chatId, floor, markSwipeId, seq, 'auto', () => !controller.signal.aborted);
       }
     }
     // 正文在 buildNext 里基于「落盘那一刻的真实正文」现算:分析期间别的插件对正文的修改
@@ -495,6 +504,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
     const result = await applyMessageText(
       floor,
       currentText => {
+        if (controller.signal.aborted) return null;
         // replace 路径同样以当前正文为基底剔除旧 tag,不能用旧快照
         const base = opts.replace ? stripImageTags(currentText) : currentText;
         if (!plan.images.length) return base;
@@ -513,10 +523,11 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
       chatId,
       swipeId,
       message,
-      {
-        key: BBI_CHAR_EXTRA_KEY,
-        value: makeCharTagFloorDelta(floorOps, swipeId ?? 0),
-      },
+      [
+        { key: BBI_CHAR_EXTRA_KEY, value: makeCharTagFloorDelta(floorOps, swipeId ?? 0) },
+        { key: PROMPT_SOURCES_KEY, value: rememberPromptSources(message, swipeId ?? 0,
+          plan.images.map(image => ({rawTag:serializeImageTag(image),text:source,kind:'floor'}))) },
+      ],
     );
     if (result === 'saved') {
       recomputeCharTags();
@@ -535,14 +546,15 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
     toastr.warning(ABANDON_REASON[result] ?? '本次没有写入生图 TAG', '长夜的绘图器');
   } catch (error) {
     // 请求失败或被切换聊天取消时允许同一正文在后续重新渲染后重试。
-    processed.delete(identity);
+    if (controller.signal.reason !== 'user-stop') processed.delete(identity);
     // 异常发生在挂标记之后时(如保存失败回滚),撤销本楼标记,不留残留
     clearAutoGenerateForFloor(chatId, floor);
     if (controller.signal.aborted) return;
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[长夜的绘图器] 第 ${floor} 楼自动生成 TAG 失败`, error);
-    toastr.error(message, '长夜的绘图器自动 TAG 失败');
+    reportPromptFailure(`第 ${floor} 楼 · 提示词生成`, message, retryRequest);
   } finally {
+    releaseTask();
     if (running.get(slot) === controller) running.delete(slot);
   }
 }
@@ -634,6 +646,7 @@ export async function requestSelectionImage(
     return;
   }
   const controller = new AbortController();
+  const releaseTask = trackPromptTask(controller);
   running.set(slot, controller);
   selectionRunning.add(slot);
   let markedSeq: number | null = null;
@@ -748,7 +761,9 @@ export async function requestSelectionImage(
     releaseCommitLock = lockGenerationFloor(snapshot.chatId, floor);
     if (!releaseCommitLock) throw new Error('本楼图片正在处理，请稍后重试');
     const currentStore = readStore(getContext()!.chat[floor]);
-    const extraUpdates: MessageExtraUpdate[] = [];
+    const extraUpdates: MessageExtraUpdate[] = [{key:PROMPT_SOURCES_KEY,
+      value:rememberPromptSources(snapshot.message, snapshot.swipeId ?? 0,
+        [{rawTag:serializeImageTag(image),text:selectedText,kind:'selection'}])}];
     if (currentStore) extraUpdates.push({
       key: BBI_IMAGE_EXTRA_KEY,
       value: shiftImageHistoryForInsertion(currentStore, snapshot.swipeId ?? 0, insertion.seq),
@@ -757,7 +772,7 @@ export async function requestSelectionImage(
     const result = await applyMessageText(
       floor,
       currentText => {
-        if (hasActiveGenerationForFloor(snapshot.chatId, floor) || hasPendingAutoGenerateForFloor(snapshot.chatId, floor)
+        if (controller.signal.aborted || hasActiveGenerationForFloor(snapshot.chatId, floor) || hasPendingAutoGenerateForFloor(snapshot.chatId, floor)
           || characterStateKey() !== initialCharacterState) return null;
         return insertSelectionImage(currentText, snapshot.source, image, snapshot.insertionOffset)?.text ?? null;
       },
@@ -787,10 +802,14 @@ export async function requestSelectionImage(
     else if (saved) return;
     else toastr.warning(ABANDON_REASON[result] ?? '选区对应的正文已变化，本次未插图', '长夜的绘图器');
   } catch (error) {
-    if (!controller.signal.aborted) toastr.error(error instanceof Error ? error.message : String(error), '长夜的绘图器选段生图失败');
+    if (!controller.signal.aborted) reportPromptFailure(`第 ${floor} 楼 · 选段生成`, error, async () => {
+      if (!selectionSnapshotMatches(getContext(), floor, snapshot)) throw new Error('原选段所在正文已变化，请重新选择文字');
+      await requestSelectionImage(floor, selectedText, snapshot);
+    });
   } finally {
     releaseCommitLock?.();
     if (!saved && markedSeq !== null) consumeAutoGenerate(snapshot.chatId, floor, snapshot.swipeId ?? 0, markedSeq);
+    releaseTask();
     if (running.get(slot) === controller) {
       running.delete(slot);
       selectionRunning.delete(slot);

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PromptFailures from '@/components/PromptFailures.vue';
 import Icon from '@/components/Icon.vue';
 import NavBar from '@/components/NavBar.vue';
 import FloatingOrb from '@/components/FloatingOrb.vue';
@@ -90,6 +91,7 @@ const windowStyle = computed(() => {
     <div ref="modalHost"></div>
     <!-- 悬浮球:留在 shadow 内才能用 --bbi-* 主题变量;自身 position:fixed 贴边,不受 host 影响 -->
     <FloatingOrb v-if="ui.showOrb" />
+    <PromptFailures />
     <Transition name="bbi-fade">
       <div
         v-if="ui.open"

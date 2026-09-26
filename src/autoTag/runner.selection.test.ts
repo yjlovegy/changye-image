@@ -6,6 +6,9 @@ import { applyMessageText } from '@/st/messageEdit';
 import { backendStatus } from '@/generate';
 import { clearAutoGenerateFlags, consumeAutoGenerate, markForAutoGenerate } from '@/floor/autoGenerate';
 import { parseImageTags } from '@/st/imageTagRegex';
+import { promptFailures } from '@/state/promptFailures';
+import { stopPromptTasks, activePromptTasks } from '@/state/promptTasks';
+import { sourceForPrompt } from '@/floor/promptSource';
 import { settings } from '@/state/settings';
 import { SCENE_NEGATIVE_RETRY_INSTRUCTION } from '@/autoTag/negative';
 import { EXPLICIT_APPEARANCE_RETRY_INSTRUCTION } from '@/autoTag/facialDetail';
@@ -52,8 +55,32 @@ function snapshotAt(offset?: number) {
   return captureSelectionImageSnapshot(0, offset ?? state.context!.chat[0].mes.length)!;
 }
 
+it('stops selection generation and discards late output without a retry or write', async () => {
+  let resolve!: (s:string)=>void;
+  vi.mocked(requestViaMainApi).mockImplementation(() => new Promise<string>(r=>{resolve=r;}));
+  settings.autoTag.retryCount=2;
+  const pending=requestSelectionImage(0,'她翻开书。',snapshotAt());
+  await vi.waitFor(()=>expect(requestViaMainApi).toHaveBeenCalledTimes(1));
+  expect(activePromptTasks.value).toBe(1);
+  stopPromptTasks(); resolve(modelOutput);
+  await pending;
+  expect(applyMessageText).not.toHaveBeenCalled();
+  expect(requestViaMainApi).toHaveBeenCalledTimes(1);
+  expect(promptFailures).toHaveLength(0);
+  expect(activePromptTasks.value).toBe(0);
+});
+
+it('saves the exact original selection for later rewrites', async () => {
+  await requestSelectionImage(0,'她翻开书。',snapshotAt());
+  const message=state.context!.chat[0];
+  const tag=parseImageTags(message.mes).at(-1)!;
+  expect(sourceForPrompt(message,tag,0)).toEqual({text:'她翻开书。',kind:'selection',legacy:false});
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
+  promptFailures.splice(0);
+  stopPromptTasks();
   clearAutoGenerateFlags();
   clearAllGen();
   settings.enabled = true;
@@ -134,7 +161,7 @@ describe('manual selection image request', () => {
       await requestFloorTags(0, { replace: true });
     } else await requestSelectionImage(0, '她翻开书。', snapshotAt());
     expect(applyMessageText).not.toHaveBeenCalled();
-    expect(toastr.error).toHaveBeenCalledWith(expect.stringContaining('@角色名'), expect.any(String));
+    expect(promptFailures[0]?.reason).toEqual(expect.stringContaining('@角色名'));
   });
 
   it.each(['selection', 'automatic'])('requires a real scene negative and retries with a targeted correction before saving %s', async mode => {
@@ -200,7 +227,7 @@ describe('manual selection image request', () => {
     expect(correctionCounts).toEqual([0, 1, 1]);
     expect(applyMessageText).not.toHaveBeenCalled();
     expect(consumeAutoGenerate('chat-a', 0, 0, 0)).toBeNull();
-    expect(toastr.error).toHaveBeenCalledWith(expect.stringContaining('缺少本画面负面提示词'), expect.any(String));
+    expect(promptFailures[0]?.reason).toEqual(expect.stringContaining('缺少本画面负面提示词'));
   });
 
   it.each(['nai', 'flux', 'custom-no-negative'])('keeps missing scene negatives compatible with %s', async capability => {
@@ -233,14 +260,14 @@ describe('manual selection image request', () => {
     await requestSelectionImage(0, '她翻开书。', snapshotAt());
     expect(requestViaMainApi).toHaveBeenCalledTimes(1);
     expect(applyMessageText).not.toHaveBeenCalled();
-    expect(toastr.error).toHaveBeenCalledWith(error.message, '长夜的绘图器选段生图失败');
+    expect(promptFailures[0]?.reason).toEqual(error.message);
     vi.mocked(requestViaMainApi).mockClear();
     vi.mocked(toastr.error).mockClear();
     state.context!.chat[0].is_user = false;
     await requestFloorTags(0, { replace: true });
     expect(requestViaMainApi).toHaveBeenCalledTimes(1);
     expect(applyMessageText).not.toHaveBeenCalled();
-    expect(toastr.error).toHaveBeenCalledWith(error.message, '长夜的绘图器自动 TAG 失败');
+    expect(promptFailures[0]?.reason).toEqual(error.message);
   });
 
   it('keeps configured retries for ordinary malformed output and reports the actual count', async () => {
@@ -250,7 +277,7 @@ describe('manual selection image request', () => {
     await requestFloorTags(0, { replace: true });
     expect(requestViaMainApi).toHaveBeenCalledTimes(3);
     expect(applyMessageText).not.toHaveBeenCalled();
-    expect(toastr.error).toHaveBeenCalledWith('malformed JSON(已自动重试 2 次)', '长夜的绘图器自动 TAG 失败');
+    expect(promptFailures[0]?.reason).toEqual('malformed JSON(已自动重试 2 次)');
     expect(vi.mocked(requestViaMainApi).mock.calls.every(([messages]) => messages.every(message => message.content !== SCENE_NEGATIVE_RETRY_INSTRUCTION))).toBe(true);
   });
 
@@ -262,7 +289,7 @@ describe('manual selection image request', () => {
     });
     await requestSelectionImage(0, '她翻开书。', snapshotAt());
     expect(applyMessageText).not.toHaveBeenCalled();
-    expect(toastr.error).toHaveBeenCalledWith(expect.stringContaining('完整英文自然语言'), '长夜的绘图器选段生图失败');
+    expect(promptFailures[0]?.reason).toEqual(expect.stringContaining('完整英文自然语言'));
   });
 
   it('removes only the selection marker if an awaited refresh invalidates the target', async () => {
@@ -385,7 +412,7 @@ describe('manual selection image request', () => {
     });
     await requestSelectionImage(0, '她翻开书。', snapshotAt());
     expect(applyMessageText).not.toHaveBeenCalled();
-    expect(toastr.error).toHaveBeenCalledWith(expect.stringContaining('不能使用 @角色名'), '长夜的绘图器选段生图失败');
+    expect(promptFailures[0]?.reason).toEqual(expect.stringContaining('不能使用 @角色名'));
   });
 
   it('does not insert if the text changes during generation', async () => {
@@ -563,7 +590,7 @@ describe('selection character completion transaction', () => {
     expect(context.chat[0].extra).toBe(extra);
     expect(context.chat[0].extra!.bbiCharChanges).toBe(record);
     expect(consumeAutoGenerate('chat-a', 0, 0, 0)).toBeNull();
-    expect(toastr.error).toHaveBeenCalledWith('本楼角色记录格式无法安全合并，本次未保存', '长夜的绘图器选段生图失败');
+    expect(promptFailures[0]?.reason).toEqual('本楼角色记录格式无法安全合并，本次未保存');
   });
 
   it('rolls back message, character delta and image history together if save fails', async () => {
@@ -581,7 +608,7 @@ describe('selection character completion transaction', () => {
     expect(JSON.stringify(charTagLib.entries)).toBe(originalLibrary);
     expect(consumeAutoGenerate('chat-a', 0, 0, 0)).toBeNull();
     expect(isGenerationFloorLocked('chat-a', 0)).toBe(false);
-    expect(toastr.error).toHaveBeenCalledWith('save failed', '长夜的绘图器选段生图失败');
+    expect(promptFailures[0]?.reason).toEqual('save failed');
   });
 
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { activePromptTasks, stopPromptTasks } from '@/state/promptTasks';
 import { computed, ref } from 'vue';
 
 import Collapsible from '@/components/Collapsible.vue';
@@ -60,7 +61,7 @@ function duration(ms: number | null): string {
 function statusLabel(record: HistoryRecord): string {
   if (record.status === 'running') return '进行中';
   if (record.status === 'ok') return '成功';
-  if (record.status === 'aborted') return '已取消';
+  if (record.status === 'aborted') return '已停止';
   return '失败';
 }
 
@@ -204,6 +205,16 @@ function copyAll(record: HistoryRecord): void {
           </button>
         </div>
       </div>
+      <div class="bbi-history-actions">
+      <button
+        class="bbi-btn bbi-btn-danger bbi-btn-sm"
+        type="button"
+        :disabled="!activePromptTasks"
+        title="停止正在生成的提示词"
+        @click="stopPromptTasks"
+      >
+        <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" /></svg> 停止
+      </button>
       <button
         class="bbi-btn bbi-btn-danger bbi-btn-sm"
         type="button"
@@ -212,6 +223,7 @@ function copyAll(record: HistoryRecord): void {
       >
         <Icon name="trash" /> 清空
       </button>
+      </div>
     </div>
 
     <!-- 一条请求 = 一个折叠区 -->
@@ -305,6 +317,7 @@ function copyAll(record: HistoryRecord): void {
 </template>
 
 <style scoped>
+.bbi-history-actions{display:flex;align-items:center;gap:12px;margin-left:auto;}
 /* —— 计数药丸:与角色页/设置页同款观感 —— */
 .bbi-count {
   border: 0;

@@ -1,3 +1,4 @@
+import { abortable } from '@/state/promptTasks';
 import { getContext } from '@/st/context';
 import type { ApiChannel } from '@/state/settings';
 import {
@@ -509,7 +510,7 @@ export async function requestViaMainApi(messages: ChatMsg[], opts: RequestOption
   );
 
   try {
-    const raw = (await ctx.generateRaw({ prompt: messages, responseLength: MAIN_API_RESPONSE_LENGTH })) ?? '';
+    const raw = (await abortable(() => ctx.generateRaw!({ prompt: messages, responseLength: MAIN_API_RESPONSE_LENGTH }), opts.signal)) ?? '';
     const content = raw.trim();
     // 宿主只提供最终字符串，无法取得 finish_reason/隐藏思考字段；仍先保存可见响应。
     captureResponse(historyId, {

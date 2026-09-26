@@ -1,3 +1,6 @@
+import { trackPromptTask } from '@/state/promptTasks';
+import { rewriteImagePrompt } from '@/autoTag/promptRewrite';
+import { PROMPT_SOURCES_KEY, sourceForPrompt, rememberPromptSources } from './promptSource';
 import { h, render } from 'vue';
 
 import PromptEditor from '@/floor/PromptEditor.vue';
@@ -170,7 +173,8 @@ async function writeBack(
       at.chatId,
       Array.isArray(message.swipes) ? at.swipeId : null,
       revision?.message ?? message,
-      undefined,
+      { key: PROMPT_SOURCES_KEY, value: rememberPromptSources(message, at.swipeId,
+        [{...sourceForPrompt(message, at.rawTag, at.swipeId), rawTag:nextTag}], at.rawTag) },
       stillCurrent => {
         // 保存完成、刷新开始前才挂标记，保存失败或切换聊天不会提前出图。
         if (regenerate && stillCurrent && (!revision || revision.canGenerate())) {
@@ -228,6 +232,7 @@ export function openPromptEditor(options: PromptEditorOptions): void {
 
   const openedMessage = getContext()?.chat[options.at.messageId];
   const openedSource = openedMessage?.mes;
+  const original = openedMessage ? sourceForPrompt(openedMessage, options.at.rawTag, options.at.swipeId) : null;
   const openedIdentity = { name: openedMessage?.name, date: openedMessage?.send_date };
   const openedBackend = revisionBackendKey();
   let revisionUsed = Boolean(options.revisionMode);
@@ -261,21 +266,28 @@ export function openPromptEditor(options: PromptEditorOptions): void {
     }
   };
 
-  const revise = async (content: ImageTagContent, instruction: string, signal: AbortSignal) => {
+  const requestDraft = async (content: ImageTagContent, instruction: string | null, signal: AbortSignal) => {
     if (closing || signal.aborted) throw new DOMException('已取消', 'AbortError');
     checkRevisionTarget();
     revisionUsed = true;
     requestController?.abort();
     const controller = new AbortController();
     requestController = controller;
+    const releaseTask = trackPromptTask(controller);
     const abort = () => controller.abort();
     signal.addEventListener('abort', abort, { once: true });
     try {
-      const result = await reviseImagePrompt(content, instruction, controller.signal);
+      const result = instruction === null
+        ? await rewriteImagePrompt(getContext()!, options.at.messageId, original!, content, controller.signal)
+        : await reviseImagePrompt(content, instruction, controller.signal);
       if (closing || controller.signal.aborted || requestController !== controller) throw new DOMException('已取消', 'AbortError');
       checkRevisionTarget();
       return result;
+    } catch (error) {
+      if (controller.signal.aborted) throw new DOMException('已停止生成', 'AbortError');
+      throw error;
     } finally {
+      releaseTask();
       signal.removeEventListener('abort', abort);
       if (requestController === controller) requestController = null;
     }
@@ -330,7 +342,10 @@ export function openPromptEditor(options: PromptEditorOptions): void {
         historyCount: options.historyCount,
         configured: options.configured,
         revisionMode: options.revisionMode,
-        revise,
+        revise: (content, instruction, signal) => requestDraft(content, instruction, signal),
+        rewrite: (content, signal) => requestDraft(content, null, signal),
+        sourceText: original?.text ?? '',
+        sourceNotice: original?.legacy ? '旧图片未保存原选段，重写将使用该楼正文。' : original?.kind === 'selection' ? '重写将根据本图原选段，按当前工作流重新生成草稿。' : '重写将根据本图原正文，按当前工作流重新生成草稿。',
         busy,
         closing,
         onDirty: (value: boolean) => {

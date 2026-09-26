@@ -562,15 +562,6 @@ onMounted(() => {
             <Icon name="edit" :size="15" />
           </button>
           <button
-            class="bbi-fab"
-            type="button"
-            title="按意见修改"
-            aria-label="按意见修改"
-            @click="menuOpen = false; openEditor(true)"
-          >
-            <Icon name="prompt" :size="15" />
-          </button>
-          <button
             v-if="promptText"
             class="bbi-fab"
             :class="{ 'bbi-fab--on': promptOpen }"
