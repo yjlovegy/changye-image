@@ -388,7 +388,6 @@ function applyAssist() {
           <button type="button" class="bbi-btn" :disabled="!dirty || saving" @click="discardCurrent()">放弃修改</button>
           <button type="button" class="bbi-btn bbi-btn-primary" :disabled="!dirty || saving" @click="saveCurrent">{{saving ? '保存中…' : '保存当前工作流'}}</button>
         </div>
-        <p class="bbi-field-hint">临时修改可用于试图；保存后才覆盖原配置，放弃修改可恢复。收藏库仍单独自动保存。</p>
         <p v-if="saveError" class="wf-fixed-warning" role="alert">{{saveError}}</p>
         <!-- 分界:线以下的开关、尺寸与 JSON 均跟随当前选中的这一套 -->
         <hr class="wf-divider" />

@@ -3,7 +3,7 @@
   "loading_order": 100,
   "requires": [],
   "optional": [],
-  "js": "dist/index.js?ver=1.3.2&build=github1",
+  "js": "dist/index.js?ver=1.3.2&build=github2",
   "author": "柏柏（原作）；长夜（增强版）",
   "version": "1.3.2",
   "homePage": "https://github.com/yjlovegy/changye-image",
