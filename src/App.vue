@@ -133,7 +133,7 @@ const windowStyle = computed(() => {
 
             <NavBar v-if="navPlacement === 'top'" placement="top" :narrow="narrowFlag" />
 
-            <main class="bbi-body">
+            <main class="bbi-body" :class="{'bbi-workflow-body':current.id==='backend'}">
               <Transition name="bbi-page" mode="out-in">
                 <component :is="current.component" :key="current.id" />
               </Transition>

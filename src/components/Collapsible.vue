@@ -13,6 +13,7 @@ const props = withDefaults(
 );
 
 const expanded = ref(props.open);
+defineExpose({ expand: () => { expanded.value = true; } });
 
 // 用 grid-template-rows 0fr<->1fr 做高度过渡,无需测量 scrollHeight,内容自适应。
 </script>

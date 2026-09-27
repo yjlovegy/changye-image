@@ -8,18 +8,18 @@ const props = defineProps<{ preset: ComfyWorkflowPreset }>();
 const draft = ref(workflowResolution(props.preset));
 const saved = ref(false);
 const current = computed(() => workflowResolution(props.preset));
+const stored = computed(() => workflowResolution(settings.comfyui.workflows.find(p => p.id === props.preset.id) ?? props.preset));
 watch(() => [props.preset.id, props.preset.defaultSize], () => { draft.value = {...current.value}; saved.value = false; }, { flush: 'sync' });
 function change(width: number, height: number) { draft.value = {width,height}; saved.value = false; }
-function save() { if (!validResolution(draft.value)) return; props.preset.defaultSize = resolutionText(draft.value); saved.value = true; }
-const dirty = computed(() => resolutionText(draft.value) !== resolutionText(current.value));
+const dirty = computed(() => draft.value.width !== current.value.width || draft.value.height !== current.value.height);
 function prepare() { if (!validResolution(draft.value)) throw new Error('默认尺寸无效，请检查宽高'); return resolutionText(draft.value); }
-defineExpose({ dirty, prepare });
+const draftSignature = computed(() => JSON.stringify(draft.value));
+defineExpose({ dirty, prepare, draftSignature });
 </script>
 <template>
   <section class="workflow-resolution" aria-label="默认生成尺寸">
-    <div class="resolution-head"><h3 class="bbi-field-label">默认生成尺寸</h3><span>当前默认：{{current.width}} × {{current.height}}</span></div>
+    <div class="resolution-head"><h3 class="bbi-field-label">默认生成尺寸</h3><span>当前默认：{{stored.width}} × {{stored.height}}</span></div>
     <ResolutionControls scope="工作流" :width="draft.width" :height="draft.height" :sizes="settings.comfyui.resolutionFavorites" @change="change" @save="saveResolutionFavorite" @remove="removeResolutionFavorite" />
-    <div class="resolution-actions"><span v-if="saved" role="status">✓ 已更新，待保存当前工作流</span><button type="button" class="bbi-btn" :disabled="!validResolution(draft)" @click="save">保存尺寸</button></div>
   </section>
 </template>
 <style scoped>

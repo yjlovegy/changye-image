@@ -12,18 +12,18 @@ const options = computed(() => [{ value: 'custom', label: '自定义尺寸' }, .
 const valid = computed(() => validResolution({width:props.width,height:props.height}));
 function select(value: string) { custom.value = value === 'custom'; if (custom.value) { notice.value = '在下方输入宽度和高度'; return; } const [w,h] = value.split('×').map(Number); emit('change',w,h); notice.value=''; }
 function change(which: 'width'|'height', event: Event) { emit('change',which === 'width' ? Number((event.target as HTMLInputElement).value) : props.width,which === 'height' ? Number((event.target as HTMLInputElement).value) : props.height); notice.value=''; }
-function save() { if (!valid.value) return; const existed = props.sizes.some(s=>s.width===props.width&&s.height===props.height); emit('save',props.width,props.height); custom.value=false; notice.value=existed ? '该尺寸已在收藏中' : '已保存尺寸'; }
+function save() { if (!valid.value) return; const existed = props.sizes.some(s=>s.width===props.width&&s.height===props.height); emit('save',props.width,props.height); custom.value=false; notice.value=existed ? '该尺寸已在收藏中' : '常用尺寸'; }
 function remove() { emit('remove',props.width,props.height); notice.value='已从收藏移除，当前宽高保留'; }
 </script>
 <template>
   <fieldset class="resolution-fields" :disabled="disabled">
-    <div class="preview-field"><span class="bbi-field-label">已保存尺寸</span><div class="size-select-row"><BbiSelect :model-value="selected" :options="options" :aria-label="scope + '已保存尺寸'" @update:model-value="select" /><button type="button" class="bbi-btn" :disabled="selected === 'custom'" @click="remove">删除尺寸</button></div></div>
+    <div class="preview-field"><span class="bbi-field-label">常用尺寸</span><div class="size-select-row"><BbiSelect :model-value="selected" :options="options" :aria-label="scope + '常用尺寸'" @update:model-value="select" /><button type="button" class="bbi-btn" :disabled="selected === 'custom'" @click="remove">移出收藏</button></div></div>
     <div class="dimension-row">
       <div class="preview-field"><span class="bbi-field-label">宽度（px）</span><input class="bbi-input" type="number" min="64" max="4096" step="1" :value="width || ''" :aria-label="scope + '宽度'" @input="change('width',$event)" /></div>
       <span class="times" aria-hidden="true">×</span>
       <div class="preview-field"><span class="bbi-field-label">高度（px）</span><input class="bbi-input" type="number" min="64" max="4096" step="1" :value="height || ''" :aria-label="scope + '高度'" @input="change('height',$event)" /></div>
       <button type="button" class="bbi-btn" @click="emit('change',height,width)">交换宽高</button>
-      <button type="button" class="bbi-btn" :disabled="!valid" @click="save">保存尺寸</button>
+      <button type="button" class="bbi-btn" :disabled="!valid" @click="save">收藏尺寸</button>
     </div>
     <p v-if="!valid" class="feedback error" role="alert">宽度和高度必须是 64–4096 范围内的整数。</p>
     <p v-else-if="notice" class="feedback" role="status">{{ notice }}</p>

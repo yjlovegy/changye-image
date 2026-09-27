@@ -580,3 +580,4 @@
     font-size: 12px;
   }
 }
+.bbi-body.bbi-workflow-body { padding: 0; overflow: hidden; }

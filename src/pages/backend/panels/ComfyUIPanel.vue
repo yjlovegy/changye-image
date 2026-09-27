@@ -19,6 +19,7 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import Icon from '@/components/Icon.vue';
 import ModalMask from '@/components/ModalMask.vue';
 import { confirmDialog } from '@/components/confirm';
+import { prepareWorkflowForm } from '@/state/workflowForm';
 import { registerPanelLeaveGuard, leavePanel } from '@/state/ui';
 import {
   effectiveComfyConn,
@@ -29,7 +30,7 @@ import {
   saveComfyWorkflow,
   comfyExampleOwners,
 } from '@/state/settings';
-import { computed, nextTick, ref, onBeforeUnmount, onMounted } from 'vue';
+import { computed, nextTick, ref, onBeforeUnmount, onMounted, watch } from 'vue';
 
 const testing = ref(false);
 const configuring = ref(false);
@@ -59,6 +60,31 @@ const saving = ref(false), saveStatus = ref(''), saveError = ref('');
 const dirty = computed(() => comfyWorkflowDrafts.dirty(active.value.id) || renaming.value
   || modelEditor.value?.dirty || loraEditor.value?.dirty || jsonEditor.value?.dirty
   || sizeEditor.value?.dirty || repairEditor.value?.dirty);
+function formEditors(){return {json:jsonEditor.value,model:modelEditor.value,lora:loraEditor.value,size:sizeEditor.value,repair:repairEditor.value};}
+watch(() => [modelEditor.value?.draftSignature,loraEditor.value?.draftSignature,sizeEditor.value?.draftSignature,repairEditor.value?.draftSignature], () => {
+  if (saving.value || jsonEditor.value?.dirty) return;
+  if (!modelEditor.value?.dirty && !loraEditor.value?.dirty && !sizeEditor.value?.dirty && !repairEditor.value?.dirty) return;
+  try { const patch=prepareWorkflowForm(active.value,formEditors(),false); Object.assign(active.value,patch); }
+  catch { /* Keep incomplete input in its editor; saving/leave validates it explicitly. */ }
+}, {flush:'post'});
+const panelRoot=ref<HTMLElement>();
+const scrollArea=ref<HTMLElement>();
+const configDisclosure=ref<InstanceType<typeof Collapsible>>();
+const workflowDisclosure=ref<InstanceType<typeof Collapsible>>();
+const activeJump=ref('当前工作流');
+let jumpTimer: ReturnType<typeof setTimeout> | undefined;
+const jumps=[['配置','.wf-connection'],['当前工作流','.wf-row'],['示例图','.workflow-example'],['模型与采样','.model-controls'],['自动修复','.repair'],['尺寸','.workflow-resolution'],['固定提示词','.wf-group'],['LoRA','.lora-controls'],['JSON','.json-editor']];
+async function jumpTo(label:string,selector:string){
+ activeJump.value=label;
+ if(label==='配置')configDisclosure.value?.expand();else workflowDisclosure.value?.expand();
+ if(label==='自动修复')repairEditor.value?.expand();
+ await nextTick();
+ clearTimeout(jumpTimer);
+ jumpTimer=setTimeout(()=>{
+  const el=panelRoot.value?.querySelector<HTMLElement>(selector),scroller=scrollArea.value;
+  if(el&&scroller)scroller.scrollTo({top:scroller.scrollTop+el.getBoundingClientRect().top-scroller.getBoundingClientRect().top-16,behavior:'smooth'});
+ },300);
+}
 const leaveOpen = ref(false);
 let resolveLeave: ((allowed: boolean) => void) | undefined;
 
@@ -67,18 +93,11 @@ async function applyTemporary(): Promise<void> {
   if (exampleEditor.value?.busy || configuring.value) throw new Error('图片或工作流正在处理，请完成后再保存');
   commitRename();
   const target = active.value;
-  if (jsonEditor.value?.dirty && (modelEditor.value?.dirty || loraEditor.value?.dirty)) {
-    throw new Error('JSON 与模型或 LoRA 同时有未应用修改，请先处理 JSON，再修改对应控件，避免互相覆盖');
-  }
-  let workflow = jsonEditor.value?.prepare() ?? target.workflow;
-  const model = modelEditor.value?.prepare(workflow);
-  if (model) workflow = model.workflow;
-  workflow = loraEditor.value?.prepare(workflow) ?? workflow;
-  if (workflow.trim()) getWorkflowPlaceholders(workflow);
-  const defaultSize = sizeEditor.value?.prepare() ?? target.defaultSize;
-  const autoRepair = await repairEditor.value?.prepare(workflow) ?? target.autoRepair;
+  const patch = prepareWorkflowForm(target, formEditors(), true);
+  if (patch.workflow.trim()) getWorkflowPlaceholders(patch.workflow);
+  const autoRepair = await repairEditor.value?.prepare(patch.workflow) ?? target.autoRepair;
   if (active.value !== target) throw new Error('当前工作流已变化，请重新操作');
-  Object.assign(target, { workflow, defaultSize, autoRepair, promptMode: model?.promptMode ?? target.promptMode });
+  Object.assign(target, { ...patch, autoRepair });
   revision.value++;
   await nextTick();
 }
@@ -128,7 +147,7 @@ function beforeUnload(event: BeforeUnloadEvent) {
   if (dirty.value || comfyWorkflowDrafts.values().some(p=>comfyWorkflowDrafts.dirty(p.id))) { event.preventDefault(); event.returnValue = ''; }
 }
 onMounted(() => window.addEventListener('beforeunload', beforeUnload));
-onBeforeUnmount(() => { unregisterLeave(); finishLeave(false); window.removeEventListener('beforeunload', beforeUnload); });
+onBeforeUnmount(() => { clearTimeout(jumpTimer); unregisterLeave(); finishLeave(false); window.removeEventListener('beforeunload', beforeUnload); });
 
 const workflowOptions = computed(() =>
   settings.comfyui.workflows.map(w => ({ value: w.id, label: `${comfyWorkflowDrafts.current(w).name || '未命名工作流'}${comfyWorkflowDrafts.dirty(w.id) ? ' · 未保存' : ''}` })),
@@ -287,9 +306,11 @@ function applyAssist() {
 </script>
 
 <template>
-  <div class="panel">
+  <div ref="panelRoot" class="panel">
+    <nav class="wf-jump-nav" aria-label="工作流区域跳转"><button v-for="[label,selector] in jumps" :key="label" type="button" :class="{active:activeJump===label}" :aria-current="activeJump===label?'location':undefined" @click="jumpTo(label,selector)">{{label}}</button></nav>
+    <div ref="scrollArea" class="wf-scroll">
     <div class="bbi-sections">
-      <Collapsible title="配置" :open="false">
+      <Collapsible ref="configDisclosure" class="wf-connection" title="配置" :open="false">
         <div class="api-row">
           <span class="bbi-field-label">URL</span>
           <input
@@ -318,7 +339,7 @@ function applyAssist() {
         </div>
       </Collapsible>
 
-      <Collapsible title="工作流" :open="false">
+      <Collapsible ref="workflowDisclosure" title="工作流" :open="true">
         <fieldset class="wf-edit-fieldset" :disabled="saving">
         <div class="wf-row">
           <span class="bbi-field-label">当前工作流</span>
@@ -383,12 +404,6 @@ function applyAssist() {
           </span>
         </div>
 
-        <div class="wf-save-row">
-          <span role="status" :class="{'wf-unsaved':dirty}">{{ dirty ? '有未保存修改' : saveStatus || '已保存' }}</span>
-          <button type="button" class="bbi-btn" :disabled="!dirty || saving" @click="discardCurrent()">放弃修改</button>
-          <button type="button" class="bbi-btn bbi-btn-primary" :disabled="!dirty || saving" @click="saveCurrent">{{saving ? '保存中…' : '保存当前工作流'}}</button>
-        </div>
-        <p v-if="saveError" class="wf-fixed-warning" role="alert">{{saveError}}</p>
         <!-- 分界:线以下的开关、尺寸与 JSON 均跟随当前选中的这一套 -->
         <hr class="wf-divider" />
         <div :key="editorKey">
@@ -425,6 +440,12 @@ function applyAssist() {
       </Collapsible>
     </div>
 
+    </div>
+    <footer class="wf-save-bar">
+      <span role="status" class="wf-save-status" :class="{'wf-unsaved':dirty}"><i aria-hidden="true"></i>{{dirty?'有未保存的修改':saveStatus||'已保存'}}</span>
+      <div class="wf-save-buttons"><button type="button" class="bbi-btn" :disabled="!dirty||saving" @click="discardCurrent()">放弃修改</button><button type="button" class="bbi-btn bbi-btn-primary" :disabled="!dirty||saving" @click="saveCurrent">{{saving?'保存中…':'保存当前工作流'}}</button></div>
+      <p v-if="saveError" class="wf-save-error" role="alert">{{saveError}}</p>
+    </footer>
     <ModalMask :open="leaveOpen" top-layer @close="!saving && finishLeave(false)">
       <section class="bbi-modal" role="dialog" aria-modal="true" aria-label="工作流有未保存修改">
         <header class="bbi-modal-head"><span class="bbi-modal-title">工作流有未保存修改</span></header>
@@ -500,6 +521,16 @@ function applyAssist() {
 </template>
 
 <style scoped>
+.panel{height:100%;min-height:0;display:flex;flex-direction:column}
+.wf-scroll{flex:1;min-height:0;overflow-y:auto;padding:20px var(--bbi-page-pad);scroll-padding-top:16px}
+.wf-jump-nav{flex:none;display:flex;flex-wrap:wrap;gap:4px;padding:10px var(--bbi-page-pad);border-bottom:1px solid var(--bbi-line)}
+.wf-jump-nav button{font:inherit;font-size:13px;white-space:nowrap;padding:6px 10px;border:0;border-radius:7px;background:transparent;color:var(--bbi-ink-soft);cursor:pointer}
+.wf-jump-nav button:hover{background:var(--bbi-surface-2)}.wf-jump-nav button.active{background:var(--bbi-accent-soft);color:var(--bbi-accent)}
+.wf-save-bar{flex:none;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:14px var(--bbi-page-pad);border-top:1px solid var(--bbi-line);background:var(--bbi-surface)}
+.wf-save-status{font-size:13px;color:var(--bbi-ink-soft);display:flex;align-items:center;gap:9px}.wf-save-status i{width:7px;height:7px;border-radius:50%;background:var(--bbi-ink-muted)}.wf-save-status.wf-unsaved i{background:var(--bbi-accent)}
+.wf-save-buttons{display:flex;gap:10px}.wf-save-buttons button{min-height:42px}.wf-save-error{flex-basis:100%;margin:0;color:var(--bbi-danger);font-size:13px}
+@media(max-width:620px){.wf-jump-nav{flex-wrap:nowrap;overflow-x:auto;padding:8px 16px}.wf-scroll{padding:16px}.wf-save-bar{padding:12px 16px}.wf-save-buttons{width:100%}.wf-save-buttons button{flex:1}}
+
 .wf-negative-controls{border:1px solid var(--bbi-line);border-radius:12px;padding:14px;margin-bottom:14px}
 .wf-negative-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
 .wf-negative-row:not(:first-child){margin-top:16px}
