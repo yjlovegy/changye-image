@@ -41,7 +41,7 @@ import {
   type CharTagAutoOp,
   type CharTagField,
 } from '@/state/charTags';
-import { injectImageTags, parseImagePlan, type ImagePlan } from '@/autoTag/protocol';
+import { injectImageTags, parseImagePlan, ImageSourceValidationError, IMAGE_SOURCE_RETRY_INSTRUCTION, type ImagePlan } from '@/autoTag/protocol';
 import { clearAutoGenerateForFloor, consumeAutoGenerate, hasPendingAutoGenerateForFloor, markForAutoGenerate } from '@/floor/autoGenerate';
 import { hasActiveGenerationForFloor, isGenerationFloorLocked, lockGenerationFloor, shiftIdleGenerationForInsertion } from '@/floor/genState';
 import { shiftCollapseStateForInsertion } from '@/floor/collapseState';
@@ -64,7 +64,8 @@ function addPromptValidationRetryHint(messages: ChatMsg[], error: unknown): void
   const instruction = natural && error instanceof ExplicitAppearanceValidationError
     ? '上次 nl 中包含 @角色占位符。请直接在 nl 中写明可见外貌，tag 保持空字符串，返回修正后的完整 JSON。'
     : error instanceof SceneNegativeValidationError ? SCENE_NEGATIVE_RETRY_INSTRUCTION
-    : error instanceof ExplicitAppearanceValidationError ? EXPLICIT_APPEARANCE_RETRY_INSTRUCTION : '';
+    : error instanceof ExplicitAppearanceValidationError ? EXPLICIT_APPEARANCE_RETRY_INSTRUCTION
+    : error instanceof ImageSourceValidationError ? IMAGE_SOURCE_RETRY_INSTRUCTION : '';
   if (!instruction || messages.some(message => message.content === instruction)) return;
   const index = messages.at(-1)?.role === 'assistant' ? messages.length - 1 : messages.length;
   messages.splice(index, 0, { role: 'system', content: instruction });
@@ -375,6 +376,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
           ) {
             throw new Error('NAI 4.5/V5 建档必须附带 nl 外貌描述');
           }
+          candidate.images.forEach(image => sourceForPlannedImage(image, preparedTarget.segments));
           parsed.plan = candidate;
         };
         // 有重试时给 source 带上第几次,历史里两条记录一眼看出是重试关系

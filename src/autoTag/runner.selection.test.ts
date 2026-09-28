@@ -9,6 +9,7 @@ import { parseImageTags } from '@/st/imageTagRegex';
 import { promptFailures } from '@/state/promptFailures';
 import { stopPromptTasks, activePromptTasks } from '@/state/promptTasks';
 import { sourceForPrompt } from '@/floor/promptSource';
+import { IMAGE_SOURCE_RETRY_INSTRUCTION } from '@/autoTag/protocol';
 import { settings } from '@/state/settings';
 import { SCENE_NEGATIVE_RETRY_INSTRUCTION } from '@/autoTag/negative';
 import { EXPLICIT_APPEARANCE_RETRY_INSTRUCTION } from '@/autoTag/facialDetail';
@@ -86,7 +87,7 @@ it.each(['anima', 'krea2'])('stores per-image paragraph snapshots through the fl
   vi.mocked(requestViaMainApi).mockImplementation(async (_messages, options) => {
     const raw = JSON.stringify({ images: [
       { position: 'P2', sourceParagraphs: ['P1','P2'], tag: 'adult woman, reading', nl: 'An adult woman reads a book at a library table.' },
-      { position: 'P4', tag: 'adult woman, cooking', nl: 'An adult woman cooks in a kitchen at night.' },
+      { position: 'P4', sourceParagraphs: ['P4'], tag: 'adult woman, cooking', nl: 'An adult woman cooks in a kitchen at night.' },
     ], changes: [] });
     options?.validate?.(raw);
     return raw;
@@ -98,6 +99,48 @@ it.each(['anima', 'krea2'])('stores per-image paragraph snapshots through the fl
   expect(sourceForPrompt(message, tags[1], 0)).toEqual({text:'晚上她在厨房做饭。', kind:'excerpt', legacy:false});
   expect(message.mes.indexOf(tags[0])).toBeLessThan(message.mes.indexOf('稍后她离开'));
   expect(tags.join('')).not.toContain('sourceParagraphs');
+});
+
+it.each(['anima', 'krea2'])('retries missing or speech-only sources and saves earlier narrative at a later insertion (%s)', async mode => {
+  settings.defaultBackend = 'comfyui';
+  state.preset.promptMode = mode;
+  settings.autoTag.retryCount = 2;
+  const message = state.context!.chat[0];
+  message.is_user = false;
+  message.mes = '图书馆窗边摆着一张木桌。\n\n她站在桌旁翻开一本蓝色的书。\n\n“找到了！”\n\n第二天，她去了车站。';
+  message.swipes = [message.mes];
+  let attempt = 0;
+  vi.mocked(requestViaMainApi).mockImplementation(async (messages, options) => {
+    attempt++;
+    if (attempt > 1) expect(messages.filter(m => m.content === IMAGE_SOURCE_RETRY_INSTRUCTION)).toHaveLength(1);
+    const raw = JSON.stringify({ images: [{position:'P3', tag:'adult reader, library', nl:'An adult reader opens a blue book beside a wooden table.',
+      ...(attempt === 1 ? {} : {sourceParagraphs: attempt === 2 ? ['P3'] : ['P1','P2']})}], changes:[] });
+    options?.validate?.(raw);
+    return raw;
+  });
+  await requestFloorTags(0);
+  expect(requestViaMainApi).toHaveBeenCalledTimes(3);
+  expect(applyMessageText).toHaveBeenCalledTimes(1);
+  const tag = parseImageTags(message.mes)[0];
+  expect(sourceForPrompt(message, tag, 0).text).toBe('图书馆窗边摆着一张木桌。\n\n她站在桌旁翻开一本蓝色的书。');
+  expect(message.mes.indexOf(tag)).toBeGreaterThan(message.mes.indexOf('“找到了！”'));
+  expect(message.mes.indexOf(tag)).toBeLessThan(message.mes.indexOf('第二天'));
+});
+
+it('does not save a misleading source when source correction retries are exhausted', async () => {
+  const message = state.context!.chat[0];
+  message.is_user = false;
+  message.mes = '她站在窗边翻书。\n\n“找到了！”';
+  message.swipes = [message.mes];
+  const before = message.mes;
+  vi.mocked(requestViaMainApi).mockImplementation(async (_messages, options) => {
+    const raw = JSON.stringify({images:[{position:'P2',sourceParagraphs:['P2'],tag:'adult reader',nl:'An adult reader opens a book.'}],changes:[]});
+    options?.validate?.(raw); return raw;
+  });
+  await requestFloorTags(0);
+  expect(applyMessageText).not.toHaveBeenCalled();
+  expect(message.mes).toBe(before);
+  expect(promptFailures[0]?.reason).toContain('sourceParagraphs');
 });
 
 beforeEach(() => {

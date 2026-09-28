@@ -19,11 +19,14 @@ function parseImagePlan(
 describe('auto tag position protocol', () => {
   const sourceSegments = Array.from({ length: 5 }, (_, i) => ({ id: `P${i + 1}`, sourceLine: i * 2, text: `正文${i + 1}` }));
   const sourceResponse = (sourceParagraphs: unknown) => JSON.stringify({ images: [{ position: 'P4', sourceParagraphs, tag: 'adult artist, library' }] });
-  it('validates a small contiguous source ending at the image insertion position', () => {
+  it('normalizes source references independently of insertion metadata', () => {
     const plan = parseImagePlan(sourceResponse([' p2 ', 'p3', 'P4']), sourceSegments, 1);
     expect(plan.images[0]).toMatchObject({ position: 'P4', sourceLine: 6, sourceParagraphs: ['P2', 'P3', 'P4'] });
   });
-  it.each([[], ['P1','P2','P3','P4'], ['P3','P5'], ['P2','P4'], ['P4','P3'], ['P4','P4'], ['P99'], ['P3'], 'P4', [4], null])('rejects invalid or overbroad source references: %j', refs => {
+  it.each([['P3'], ['P1','P3'], ['P1','P2','P3','P4']])('accepts earlier, nonadjacent and longer sources: %j', (...refs) => {
+    expect(parseImagePlan(sourceResponse(refs), sourceSegments, 1).images[0].sourceParagraphs).toEqual(refs);
+  });
+  it.each([[], ['P3','P5'], ['P4','P3'], ['P4','P4'], ['P99'], 'P4', [4], null].map(refs => [refs]))('rejects invalid source references: %j', refs => {
     expect(() => parseImagePlan(sourceResponse(refs), sourceSegments, 1)).toThrow('sourceParagraphs');
   });
   it('keeps old responses without source references parseable', () => {

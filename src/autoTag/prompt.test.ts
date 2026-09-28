@@ -64,8 +64,10 @@ describe('auto tag prompt', () => {
       settings.defaultBackend = 'comfyui';
       const messages = await buildAutoTagMessages(context(), 1, {...settings.autoTag, prompts:prompts()}, null, undefined, null, false, mode);
       const task = messages.find(m => m.content.includes('你是严谨的剧情画面规划'))!.content;
-      expect(task).toContain('先选择直接支撑本图核心画面的最小正文范围');
-      expect(task).toContain('连续的 1～3 个目标正文 P编号');
+      expect(task).toContain('先选择足以支撑本图核心画面的正文');
+      expect(task).toContain('来源与 position 分开判断');
+      expect(task).toContain('必要时可超过三段');
+      expect(task).toContain('不能只剩独立对白、感叹或拟声词');
       expect(task).toContain('不把稍后发生的状态提前画进本图');
       expect(JSON.parse(task.split('\n').find(line => line.startsWith('{"images":'))!).images[0].sourceParagraphs).toEqual(['P2']);
     } finally { settings.defaultBackend = previous; }

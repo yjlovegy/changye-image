@@ -1,5 +1,4 @@
 import { ANIMA_CONTENT_RULE, ANIMA_EXAMPLES } from './animaPrompt';
-import { MAX_IMAGE_SOURCE_PARAGRAPHS } from './protocol';
 import { DEFAULT_KREA2_SPEC, DEFAULT_KREA2_THINKING, KREA2_CONTENT_RULE, KREA2_VISUAL_CONTRACT, normalizePromptMode, type PromptMode } from '@/promptMode';
 import type { ChatMsg } from '@/api/client';
 import { supportsSceneNegative } from '@/autoTag/negative';
@@ -252,7 +251,8 @@ ${outputShape}
 1. 先完成角色建档与变化检查，再选图；不能因为没有图片或图片数量较少而跳过 changes 检查，没有任何变化时 changes 返回空数组。
 ${imageCountRule} 多张图必须是剧情或视觉状态明显不同的单一瞬间，不要返回同一事件的相邻动作或换镜头版本。
 3. position 必须是“目标正文”段尾标出的 P编号（如 P2），表示把图片 tag 插在该段之后；选择让画面所需事实刚刚完整成立、且尚未切换到下一场景的位置。不要返回此前上下文中的位置，也不要自行编造编号。
-   每张图另填 sourceParagraphs：先选择直接支撑本图核心画面的最小正文范围，再据此写提示词。填连续的 1～${MAX_IMAGE_SOURCE_PARAGRAPHS} 个目标正文 P编号，按正文顺序排列，最后一个必须等于 position，如 ["P2"] 或 ["P2","P3"]。一段能表达就只选一段；仅在同一瞬间的动作或必要指代跨段时扩到相邻段，不因允许三段而凑满。
+   每张图必须另填 sourceParagraphs：先选择足以支撑本图核心画面的正文，再据此写提示词。按正文顺序列出实际来源 P编号；来源与 position 分开判断，不要求以 position 结尾，可跳过无关对白，但不得引用 position 之后的事件。例如 P2 写场景与人物、P3 写动作、P4 是一声感叹，可填 sourceParagraphs:["P2","P3"]，position:"P4"。
+   来源必须包含画面所需的人物、动作及场景依据，不能只剩独立对白、感叹或拟声词；选段精准是保留完整依据并排除无关事件，不是字数越少越好。通常少数几段即可，必要时可超过三段；不要为缩短来源漏掉关键描述，也不要无差别选择整楼。
    所选段落应表达同一场景中的一个可见瞬间，不能跨场景、跨时间拼接事件，不把整楼当成每张图的共同来源。其它正文和角色资料只供辨认人物、补充已成立的背景及服装连续性，不从参考段落另选动作，也不把稍后发生的状态提前画进本图。不要为了收录整段人物档案或环境描写而扩大来源。sourceParagraphs 只写编号，不复述、翻译或改写原文；插件会从本次正文提取对应段落。
 ${contentRule}${negativeRule}
 ${sizeRule}

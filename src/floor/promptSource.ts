@@ -1,7 +1,7 @@
 import type { STMessage } from '@/st/context';
 import { stripImageTags } from '@/st/imageTagRegex';
 import type { TargetSegment } from '@/autoTag/clean';
-import type { ImageInsertion } from '@/autoTag/protocol';
+import { ImageSourceValidationError, type ImageInsertion } from '@/autoTag/protocol';
 export const PROMPT_SOURCES_KEY = 'bbi_prompt_sources';
 export interface PromptSource { text: string; kind: 'selection' | 'floor' | 'excerpt' }
 interface SourceRecord extends PromptSource { rawTag: string; swipe: number }
@@ -13,10 +13,26 @@ function entries(message: STMessage): SourceRecord[] {
 }
 /** Capture the exact cleaned paragraphs sent in this request, even if the floor later changes. */
 export function sourceForPlannedImage(image: Pick<ImageInsertion, 'position' | 'sourceParagraphs'>, segments: TargetSegment[]): PromptSource {
+  if (!image.sourceParagraphs && segments.length !== 1) {
+    throw new ImageSourceValidationError('本图缺少 sourceParagraphs，不能把插入位置直接当成画面来源');
+  }
   const ids = image.sourceParagraphs ?? [image.position];
   const paragraphs = ids.map(id => segments.find(segment => segment.id === id)?.text);
-  if (!paragraphs.length || paragraphs.some(text => !text?.trim())) throw new Error('本图原文段落已失效，无法保存来源');
+  if (!paragraphs.length || paragraphs.some(text => !text?.trim())) throw new ImageSourceValidationError('本图原文段落已失效，无法保存来源');
+  if (!paragraphs.some(text => hasNarrativeSource(text!))) {
+    throw new ImageSourceValidationError('本图 sourceParagraphs 只有独立对白、感叹或拟声词，请补选支撑画面的人物、动作和场景段落');
+  }
   return { text: paragraphs.join('\n\n'), kind: 'excerpt' };
+}
+
+/** Conservative format check, not a semantic scene classifier. Manual selections bypass it. */
+function hasNarrativeSource(text: string): boolean {
+  const outsideDialogue = text
+    .replace(/“[^”]*”|「[^」]*」|『[^』]*』|"[^"]*"|'[^']*'/gu, '')
+    .replace(/[\p{P}\p{S}\s]/gu, '');
+  if (!outsideDialogue) return false;
+  // Unquoted standalone interjections; do not reject short actions such as “她抬手。”
+  return !/^(?:啊|呀|哦|噢|嗯|唔|呃|诶|哎|唉|哼|哈|呵|嘶|哇|砰|啪|咚|嗒|滴|哒|叮|当)+$/u.test(outsideDialogue);
 }
 export function sourceForPrompt(message: STMessage, rawTag: string, swipe: number): PromptSource & { legacy: boolean } {
   const saved = entries(message).find(v => v.rawTag === rawTag && v.swipe === swipe);

@@ -20,7 +20,7 @@ export interface ImageInsertion {
   position: string;
   /** 位置 ID 对应的原始物理行(0-based，仅插件内部使用)。 */
   sourceLine: number;
-  /** 本图直接依据的连续正文段落；旧响应未提供时由调用方回退到 position 所在段。 */
+  /** 本图直接依据的正文段落，与图片插入位置分别记录。 */
   sourceParagraphs?: string[];
   /** danbooru 短 tag 部分(必填)。 */
   tag: string;
@@ -163,17 +163,23 @@ function sanitizePosition(value: unknown, index: number): string {
   return position;
 }
 
-export const MAX_IMAGE_SOURCE_PARAGRAPHS = 3;
+export class ImageSourceValidationError extends Error {}
+
+export const IMAGE_SOURCE_RETRY_INSTRUCTION = '上次 sourceParagraphs 缺失或无效。请重新检查每张图的来源：按正文顺序填写支撑本图的实际段落编号，包含人物、动作和场景依据，不能只选独立对白、感叹或拟声词。可跳过无关对白，不必以 position 结尾，也不必压缩到三段以内；不得引用插入位置之后的事件。position 只决定插图位置。返回修正后的完整 JSON。';
 
 /** Source references are local paragraph IDs, never model-written quotations. */
 function sanitizeSourceParagraphs(value: unknown, position: string, segments: TargetSegment[], index: number): string[] | undefined {
   if (value === undefined) return undefined; // Compatibility with existing providers / saved responses.
-  const fail = () => new Error(`images[${index}].sourceParagraphs 必须包含目标正文中连续的 1～${MAX_IMAGE_SOURCE_PARAGRAPHS} 个 P编号，按正文顺序排列，最后一个等于 position`);
-  if (!Array.isArray(value) || !value.length || value.length > MAX_IMAGE_SOURCE_PARAGRAPHS) throw fail();
+  const fail = () => new ImageSourceValidationError(`images[${index}].sourceParagraphs 必须包含目标正文中按顺序排列、不重复且不晚于 position 的 P编号`);
+  if (!Array.isArray(value) || !value.length || value.length > segments.length) throw fail();
   const ids = value.map(id => typeof id === 'string' ? id.trim().toUpperCase() : '');
   const end = segments.findIndex(segment => segment.id === position);
-  const start = end - ids.length + 1;
-  if (start < 0 || ids.some((id, offset) => id !== segments[start + offset]?.id)) throw fail();
+  let previous = -1;
+  for (const id of ids) {
+    const current = segments.findIndex(segment => segment.id === id);
+    if (current <= previous || current > end) throw fail();
+    previous = current;
+  }
   return ids;
 }
 
