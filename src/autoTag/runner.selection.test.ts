@@ -76,6 +76,29 @@ it('saves the exact original selection for later rewrites', async () => {
   const tag=parseImageTags(message.mes).at(-1)!;
   expect(sourceForPrompt(message,tag,0)).toEqual({text:'她翻开书。',kind:'selection',legacy:false});
 });
+it.each(['anima', 'krea2'])('stores per-image paragraph snapshots through the floor generation path (%s)', async mode => {
+  settings.defaultBackend = 'comfyui';
+  state.preset.promptMode = mode;
+  const message = state.context!.chat[0];
+  message.is_user = false;
+  message.mes = '她走进图书馆。\n\n她翻开桌上的书。\n\n稍后她离开大楼。\n\n晚上她在厨房做饭。';
+  message.swipes = [message.mes];
+  vi.mocked(requestViaMainApi).mockImplementation(async (_messages, options) => {
+    const raw = JSON.stringify({ images: [
+      { position: 'P2', sourceParagraphs: ['P1','P2'], tag: 'adult woman, reading', nl: 'An adult woman reads a book at a library table.' },
+      { position: 'P4', tag: 'adult woman, cooking', nl: 'An adult woman cooks in a kitchen at night.' },
+    ], changes: [] });
+    options?.validate?.(raw);
+    return raw;
+  });
+  await requestFloorTags(0);
+  const tags = parseImageTags(message.mes);
+  expect(tags).toHaveLength(2);
+  expect(sourceForPrompt(message, tags[0], 0)).toEqual({text:'她走进图书馆。\n\n她翻开桌上的书。', kind:'excerpt', legacy:false});
+  expect(sourceForPrompt(message, tags[1], 0)).toEqual({text:'晚上她在厨房做饭。', kind:'excerpt', legacy:false});
+  expect(message.mes.indexOf(tags[0])).toBeLessThan(message.mes.indexOf('稍后她离开'));
+  expect(tags.join('')).not.toContain('sourceParagraphs');
+});
 
 beforeEach(() => {
   vi.clearAllMocks();

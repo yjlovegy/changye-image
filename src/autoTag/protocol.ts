@@ -20,6 +20,8 @@ export interface ImageInsertion {
   position: string;
   /** 位置 ID 对应的原始物理行(0-based，仅插件内部使用)。 */
   sourceLine: number;
+  /** 本图直接依据的连续正文段落；旧响应未提供时由调用方回退到 position 所在段。 */
+  sourceParagraphs?: string[];
   /** danbooru 短 tag 部分(必填)。 */
   tag: string;
   /** 自然语言部分；解析兼容旧数据可空，新规划由 runner 按后端能力强制校验。 */
@@ -161,6 +163,20 @@ function sanitizePosition(value: unknown, index: number): string {
   return position;
 }
 
+export const MAX_IMAGE_SOURCE_PARAGRAPHS = 3;
+
+/** Source references are local paragraph IDs, never model-written quotations. */
+function sanitizeSourceParagraphs(value: unknown, position: string, segments: TargetSegment[], index: number): string[] | undefined {
+  if (value === undefined) return undefined; // Compatibility with existing providers / saved responses.
+  const fail = () => new Error(`images[${index}].sourceParagraphs 必须包含目标正文中连续的 1～${MAX_IMAGE_SOURCE_PARAGRAPHS} 个 P编号，按正文顺序排列，最后一个等于 position`);
+  if (!Array.isArray(value) || !value.length || value.length > MAX_IMAGE_SOURCE_PARAGRAPHS) throw fail();
+  const ids = value.map(id => typeof id === 'string' ? id.trim().toUpperCase() : '');
+  const end = segments.findIndex(segment => segment.id === position);
+  const start = end - ids.length + 1;
+  if (start < 0 || ids.some((id, offset) => id !== segments[start + offset]?.id)) throw fail();
+  return ids;
+}
+
 /**
  * 解析并严格校验模型给出的“目标位置 ID + 提示词”列表。tag 必填;nl/negative 选填。
  * size 一律容忍:归一不出就当竖屏——为它抛错会白白吃掉 runner 的重试次数。
@@ -196,6 +212,7 @@ export function parseImagePlan(
     if (sourceLine === undefined) {
       throw new Error(`images[${index}].position=${position} 不在目标正文可选位置中`);
     }
+    const sourceParagraphs = sanitizeSourceParagraphs(entry.sourceParagraphs, position, segments, index);
     // 兼容模型按旧协议/习惯返回 prompt 键的情况
     const tag = sanitizeContent(entry.tag ?? entry.prompt, 'tag', index);
     const nl = sanitizeContent(entry.nl, 'nl', index);
@@ -205,7 +222,7 @@ export function parseImagePlan(
     const characters = sanitizeCharacters(entry.characters, index);
     // 兼容模型按习惯返回 orientation / aspect 键
     const size = normalizeOrientation(entry.size ?? entry.orientation ?? entry.aspect);
-    images.push({ position, sourceLine, tag: promptMode === 'krea2' ? '' : tag, nl, negative, characters, size, ...(promptMode ? { promptMode } : {}) });
+    images.push({ position, sourceLine, ...(sourceParagraphs ? { sourceParagraphs } : {}), tag: promptMode === 'krea2' ? '' : tag, nl, negative, characters, size, ...(promptMode ? { promptMode } : {}) });
   }
 
   const limitedImages = images.slice(0, normalizedMax);

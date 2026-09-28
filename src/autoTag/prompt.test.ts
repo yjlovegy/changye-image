@@ -58,6 +58,18 @@ function context(): STContext {
 }
 
 describe('auto tag prompt', () => {
+  it.each(['anima', 'krea2'] as const)('asks for local source paragraphs before composing each %s image', async mode => {
+    const previous = settings.defaultBackend;
+    try {
+      settings.defaultBackend = 'comfyui';
+      const messages = await buildAutoTagMessages(context(), 1, {...settings.autoTag, prompts:prompts()}, null, undefined, null, false, mode);
+      const task = messages.find(m => m.content.includes('你是严谨的剧情画面规划'))!.content;
+      expect(task).toContain('先选择直接支撑本图核心画面的最小正文范围');
+      expect(task).toContain('连续的 1～3 个目标正文 P编号');
+      expect(task).toContain('不把稍后发生的状态提前画进本图');
+      expect(JSON.parse(task.split('\n').find(line => line.startsWith('{"images":'))!).images[0].sourceParagraphs).toEqual(['P2']);
+    } finally { settings.defaultBackend = previous; }
+  });
   it('applies Anima selection rules after legacy custom rules without rewriting saved settings', async () => {
     const previousBackend = settings.defaultBackend;
     try {

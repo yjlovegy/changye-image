@@ -345,7 +345,7 @@ export function openPromptEditor(options: PromptEditorOptions): void {
         revise: (content, instruction, signal) => requestDraft(content, instruction, signal),
         rewrite: (content, signal) => requestDraft(content, null, signal),
         sourceText: original?.text ?? '',
-        sourceNotice: original?.legacy ? '旧图片未保存原选段，重写将使用该楼正文。' : original?.kind === 'selection' ? '重写将根据本图原选段，按当前工作流重新生成草稿。' : '重写将根据本图原正文，按当前工作流重新生成草稿。',
+        sourceNotice: original?.legacy ? '旧图片未保存原选段，重写将使用该楼正文。' : original?.kind === 'selection' ? '重写将根据本图原选段，按当前工作流重新生成草稿。' : original?.kind === 'excerpt' ? '重写将根据本图对应段落，按当前工作流重新生成草稿。' : '旧图片保存的是整楼正文，未记录精确段落；重写将使用这份原正文。',
         busy,
         closing,
         onDirty: (value: boolean) => {

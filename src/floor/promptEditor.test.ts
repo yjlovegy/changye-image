@@ -149,15 +149,16 @@ afterEach(async () => {
 });
 
 describe('prompt editor revision controller', () => {
-  it('rewrites from the saved selection as a draft and retains its source after confirmation', async () => {
+  it.each(['selection', 'excerpt'] as const)('rewrites from the saved %s as a draft and retains its source after confirmation', async kind => {
     const message=state.context!.chat[0];
     const rawTag=parseImageTags(message.mes)[1];
-    message.extra = {[PROMPT_SOURCES_KEY]:rememberPromptSources(message,0,[{rawTag,text:'她在窗边翻书。',kind:'selection'}])};
+    message.extra = {[PROMPT_SOURCES_KEY]:rememberPromptSources(message,0,[{rawTag,text:'她在窗边翻书。',kind}])};
     vi.mocked(rewriteImagePrompt).mockResolvedValue({...revised});
     const props=open({revisionMode:false});
     expect(props.sourceText).toBe('她在窗边翻书。');
+    expect(props.sourceNotice).toContain(kind === 'excerpt' ? '对应段落' : '原选段');
     const next=await props.rewrite(original,new AbortController().signal);
-    expect(rewriteImagePrompt).toHaveBeenCalledWith(state.context,0,expect.objectContaining({kind:'selection',text:'她在窗边翻书。'}),original,expect.any(AbortSignal));
+    expect(rewriteImagePrompt).toHaveBeenCalledWith(state.context,0,expect.objectContaining({kind,text:'她在窗边翻书。'}),original,expect.any(AbortSignal));
     expect(state.context!.saveChat).not.toHaveBeenCalled();
     expect(markForAutoGenerate).not.toHaveBeenCalled();
     props.onApply(next,false); await flush();

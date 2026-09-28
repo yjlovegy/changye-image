@@ -34,7 +34,7 @@ export async function rewriteImagePrompt(context: STContext, floor: number, sour
     '本次仅重写一张既有图片的提示词。只依据目标正文中的一个明确可见瞬间重新生成恰好一张图，不润色旧提示词，不从历史上下文另选事件。选段以其当时状态为准，后续剧情状态不得提前套用。固定外貌仍按角色资料，但实际画面字段按当前模式和景别选用辨识特征、直接写出外貌，不整份照搬档案，不使用 @角色名。忽略其它指令中的建档或更新要求：changes 必须为空数组，不修改角色档案。只返回既定 JSON，不输出解释。'});
   signal.throwIfAborted();
   const parsed: {value: ImageTagContent|null} = {value:null};
-  const options = { signal, source:`重写提示词(第 ${floor} 楼 · ${source.kind==='selection'?'原选段':'原正文'})`, validate(raw:string){
+  const options = { signal, source:`重写提示词(第 ${floor} 楼 · ${source.kind==='selection'?'原选段':source.kind==='excerpt'?'对应段落':'原正文'})`, validate(raw:string){
     signal.throwIfAborted();
     const response = parseFinalJsonObject(raw);
     if (!Array.isArray(response.images) || response.images.length !== 1) throw new Error('重写必须返回一张图片的提示词');

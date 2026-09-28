@@ -1,6 +1,6 @@
 import { trackPromptTask } from '@/state/promptTasks';
 import { reportPromptFailure } from '@/state/promptFailures';
-import { PROMPT_SOURCES_KEY, rememberPromptSources } from '@/floor/promptSource';
+import { PROMPT_SOURCES_KEY, rememberPromptSources, sourceForPlannedImage } from '@/floor/promptSource';
 import { requestCompletion, requestViaMainApi } from '@/api/client';
 import { naiSupportsCharacterPrompts } from '@/backends/nai';
 import { readBookMemory } from '@/autoTag/bookMemory';
@@ -527,7 +527,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
       [
         { key: BBI_CHAR_EXTRA_KEY, value: makeCharTagFloorDelta(floorOps, swipeId ?? 0) },
         { key: PROMPT_SOURCES_KEY, value: rememberPromptSources(message, swipeId ?? 0,
-          plan.images.map(image => ({rawTag:serializeImageTag(image),text:source,kind:'floor'}))) },
+          plan.images.map(image => ({rawTag:serializeImageTag(image),...sourceForPlannedImage(image, preparedTarget.segments)}))) },
       ],
     );
     if (result === 'saved') {
