@@ -1,3 +1,4 @@
+import { ANIMA_CONTENT_RULE, ANIMA_EXAMPLES } from '@/autoTag/animaPrompt';
 import { normalizeAutoRepair, type AutoRepairSettings } from '@/backends/comfyInpaintGraph';
 import { normalizeInpaintTuning, type InpaintTuning } from '@/backends/inpaintTuning';
 import { createWorkflowDrafts } from './workflowDrafts';
@@ -436,17 +437,17 @@ export interface ExcludesSettings {
  */
 export const DEFAULT_COMFY_SPEC = `【ComfyUI 提示词规范】
 你输出的画面提示词会被直接填入 ComfyUI 工作流。
-每张新图必须同时输出核心 tag 与完整英文 nl。tag 稳定身份、可见脸型五官和关键属性，nl 将同一组面部结构与神态、穿着、动作姿势、空间归属和背景光线写成完整英文；两部分共同进入最终生成内容，不能互相替代。
+${ANIMA_CONTENT_RULE}
 
 tag（JSON 的 tag 键）：danbooru 短 tag——英文小写、逗号分隔的关键词串，多词用空格连接（不要用下划线），例如：
-1girl, medium shot, adult woman, sitting upright at a desk, right hand holding a page open, left forearm resting on desk, oval face, softly tapered jaw, thin arched eyebrows, almond-shaped brown eyes, straight nose bridge, full lower lip, long black hair, white collared shirt, reading, art studio, side lighting
-从重要到次要排列：人数/主体 → 镜头构图 → 核心动作姿态与接触/位置 → 外貌五官 → 服饰 → 表情视线 → 场景 → 光线氛围；保持核心 tag 精简，优先删重复修饰与泛背景，不为机械数量上限删掉可见身份锚点和核心动作。
+${ANIMA_EXAMPLES.single.tag}
+从重要到次要排列：人数/主体 → 镜头构图 → 核心姿态 → 按景别选择的辨识特征 → 服饰 → 表情视线 → 场景 → 光线氛围；保持核心 tag 精简，优先删重复修饰与泛背景，不为机械数量上限删掉可见身份锚点和核心动作。
 动作区先确定一个瞬间的躯干方向、肢体位置及实际接触，再描述道具和人物关系；正文指定的支撑与离地状态不能被其它标签改变。辅助细节与核心动作必须同时成立，不能用 sitting、standing 等一个姿态名代替具体接触。同一动作词不得重复写两遍。
-脸部和眼睛可见时写出表情与视线；背面或遮挡时省略不可见项，不改变姿势来展示它们。tag 优先用常见 danbooru 词；可见脸型、眉形、眼型、鼻形、唇形在 tag 与 nl 两边都要保留，缺少标准标签时 tag 使用准确的短英文视觉词组。临时神态与空间关系在 nl 中进一步展开：
+脸部和眼睛可见时写出表情与视线；背面或遮挡时省略不可见项，不改变姿势来展示它们。tag 优先用常见 danbooru 词；按景别选择可辨认的身份锚点，不逐项展开全部五官，也不要求 tag 与 nl 两边重复。临时神态与空间关系在 nl 中进一步展开：
 - 表情从这类实际存在的 tag 里选（可叠加 1~2 个）：smile、grin、laughing、blush、embarrassed、frown、pout、puffy cheeks、surprised、crying、tears、angry、serious、sad、worried、scared、smug、seductive smile、expressionless、half-closed eyes、open mouth、clenched teeth。
 - 视线常用 looking at viewer、looking at another、looking away、looking down、looking up、looking back、closed eyes；具体注视对象在 nl 中说明。
-- 核心 tag 可用 smile、blush 等简短视觉词；温柔、迟疑等情绪须落实到可见眉眼嘴部变化并写进 nl。没有准确标准 tag 的五官在 tag 使用简短英文短语，在 nl 用完整句子展开；复杂接触关系用自然语言说明，不为套词表丢掉事实。
-- 正文没写表情不是不写的理由——推断一个；判断为面无表情时也要显式写 expressionless。
+- 核心 tag 可用 smile、blush 等简短视觉词；温柔、迟疑等情绪须落实到可见眉眼嘴部变化并写进 nl。没有准确标准 tag 的必要辨识特征可用简短英文短语，详细差异按镜头需要在 nl 补充；复杂接触关系用自然语言说明，不为套词表丢掉事实。
+- 只在镜头能辨认时补充符合当前状态的表情；不为全身或远景硬加微小眉眼变化。
 
 同人角色身份 tag：
 - 若角色明确来自已有动漫、游戏、小说等作品，必须在人数/构图之后、普通外貌之前写模型可识别的英文 Danbooru 身份 tag，格式为 character name \\(copyright name\\)。角色名与作品名使用其通行英文 tag，不得直译中文、缩写作品名或只写角色名。
@@ -458,18 +459,17 @@ tag（JSON 的 tag 键）：danbooru 短 tag——英文小写、逗号分隔的
 - 人数 tag 必须明确（2girls、1boy 1girl 等）；缺了模型会漏画或多画。
 - 构图词（medium shot、full body 等，只写一个）紧跟人数 tag 写在前面，把画面主体锁在角色身上。
 - 每个角色的发色、瞳色、脸部锚点、体型与服装邻接绑定，不要把多个角色的属性拆成一堆无主颜色；不使用 girl1/girl2 作为身份。
-- 角色各自的颜色/服装/物件必须绑定到该角色的特征词上——模型靠相邻关系配对：写 "white dress on green hair girl, black dress on blue hair girl"，不要写成 "a white dress and a black dress" 这种无法分配的一堆。
-- 同类不同款的服装尤其要绑定，不能靠一个统称糊过去：两人都穿校服但男女版型不同时，写 "dark pleated skirt on green hair girl, black opaque pantyhose on green hair girl, white shirt on black hair boy, dark trousers on black hair boy"，绝不能只裸写一个 school uniform——那会让模型把裙子套到男生身上，或者干脆给两人各自随机设计一套。同理，pantyhose、blazer 这类只有一个人穿的部件也必须带上主人。
+- 角色各自的颜色、服装、物件必须明确归属：tag 用简短人物分组，nl 用完整句子说明；同类不同款的服装尤其要绑定，不能靠一个统称糊过去。只在可能混淆时补充所属称谓，不逐个五官反复追加 on + 人物称谓。
 - 每人的必要身份特征在其描述中只出现一次，即使两人都是长发也要保持归属清楚；不要用共有特征省略规则打散绑定。同发色时用画面位置或既有衣着区分，不能发明新发色。
-- 各自不同的动作/姿态也用同一个绑定手法写进 tag：写 "black hair girl waving, silver hair girl eating dango"，不要写成 "waving, eating dango" 这种无法分配的裸动作（模型会随机安到人头上）；多人共同参与的互动（holding hands、hug 等）直接写。
+- tag 可概括核心姿态，nl 说明各自不同动作和共有关系；不能在 tag 中列一串无法分配的动作。
 - 可见的表情与视线是每人各自绑定的特征：写清谁微笑、谁看向谁，不把 smile、looking at another 裸放到公共串里。背面或眼睛被遮挡的角色省略对应不可见项，不替他补一个虚构注视动作。
 - 体型词（petite、tall、muscular 等）必须绑定到具体角色；发色与瞳色也要在 nl 的同一角色分述中配对，避免两个人互换眼睛或身体特征。
 - 肤色与肤质以明确人设和当前状态为准，角色库中已确定的 pale skin、fair skin、tan、dark skin 等不能因模型默认风格而丢弃；未知肤色不自动叠加白皙词。多人时写清各自归属，避免把某人的肤色套到所有人身上。
 - 场景词 1~2 个即可，多了会抢角色主体；背景不重要时用 blurred background 类词压住。
 
-多人 tag 示例（对照上面的规则看写法）：
-2girls, adult women, medium shot, black-haired woman standing on screen left and waving her right hand at shoulder height, silver-haired woman standing on screen right and holding a book in both hands at waist level, black-haired woman with blue almond-shaped eyes, oval face and tapered jaw on black-haired woman, thin arched eyebrows on black-haired woman, straight nose on black-haired woman, full lower lip on black-haired woman, silver-haired woman with red round eyes, square face and angular jaw on silver-haired woman, thick straight eyebrows on silver-haired woman, rounded nose tip on silver-haired woman, thin lips on silver-haired woman, white dress on black-haired woman, red dress on silver-haired woman, black-haired woman smiling at viewer, silver-haired woman looking toward the path, park, sunset
-（构图紧跟人数且只写一个景别词；在完整 nl 中明确黑发与蓝眼归同一人、银发与红眼归另一人，衣物、体型、动作、神态与视线逐人对应。）
+多人 tag 示例：
+${ANIMA_EXAMPLES.pair.tag}
+（用已有发型、衣着或画面位置区分角色；具体动作与空间关系由 nl 补充。）
 
 {{nl}}
 
@@ -495,7 +495,7 @@ tag（JSON 的 tag 键）：danbooru 短 tag——英文小写、逗号分隔的
    架空世界可以采用原创或混合风格，但必须内部统一，不得随意堆叠相互冲突的文明元素；连续场景中保持同一套视觉判断。丰富画面优先依靠镜头、构图、光线、色调和有依据的具体细节，而不是把 hanfu、wuxia、ancient chinese architecture 等相关词机械堆进每张图。
 
 3. 角色的固定外貌——**已知设定优先，缺失的五官结构按授权补全一次并固定**。
-   出现在【角色固定外貌库】里的角色，核心 tag 保留库中可见特征的原词；nl 把同一组脸型、眉形、眼型、鼻形、唇形写成完整英文句子，不改变含义。先从角色参考、旧眼睛字段与自然语言记录提取细节；仍缺失的五组结构允许做相容的补全设计，以“五官补全设计”为 reason 按任务要求保存。已有非空字段不覆盖，不能每张重设计。性别、年龄外观、发瞳色、种族、肤色与标志特征等其它未知属性保持未指定。背面、遮挡或镜头外的部位不强写。
+   出现在【角色固定外貌库】里的角色，档案保留完整结构；本图按景别选择辨识特征，tag 与 nl 分工表达，不改变选中特征的含义，不要求把整份档案输出两遍。先从角色参考、旧眼睛字段与自然语言记录提取细节；仍缺失的五组结构允许做相容的补全设计，以“五官补全设计”为 reason 按任务要求保存。已有非空字段不覆盖，不能每张重设计。性别、年龄外观、发瞳色、种族、肤色与标志特征等其它未知属性保持未指定。背面、遮挡或镜头外的部位不强写。
 
 4. 剧情事实（在场人物、动作、事件、关键道具）——**严格以正文为准，不得编造**。
    不得加入正文未发生的人物、动作或情节；人数必须与正文一致。
@@ -512,16 +512,16 @@ tag（JSON 的 tag 键）：danbooru 短 tag——英文小写、逗号分隔的
 - 一律使用英文。`;
 
 /** {{nl}} 宏的展开内容；新配图始终生成核心 tag + 英文自然语言。 */
-export const DEFAULT_COMFY_NL_SPEC = `nl（JSON 的 nl 键，必填）：用连贯完整的英文句子详细描述同一可见瞬间，不能是关键词清单或一句笼统摘要。依据画面复杂度组织段落，不机械限制句数或堆砌词数。
-先用一至两句确立主体动作姿势、必要支撑/接触和空间关系，再完整写已知可见外貌、脸部轮廓与眉眼鼻唇耳细节、当前衣着和神态视线，最后交代必要场所、物件与光线。相机方向与身体方向分开描述，身体左右和画面左右不能混用。按已知外貌及本次允许的五官补全设计描写，既有结构优先；其它未知固定特征不填，遮挡或镜头外部位不写。背景依据剧情和构图需要描写，不默认强制虚化。
-例如（五官为此成年示例专属，不能套用到其他角色）：An adult woman sits upright on a chair facing a studio desk, her right hand holding a page of an open book while her left forearm rests on the desktop. Both elbows are bent, and the book lies between her hands. Her long black hair falls over a white collared shirt. Her oval face tapers to a soft jaw; thin arched brows frame almond-shaped brown eyes, above a straight nose bridge and lips with a fuller lower lip. Her brows draw together and her lips part slightly as she looks down at the book. Window light illuminates her face and hands, with shelves of art books behind her in a medium shot.
-nl 与 tag 描述的是同一画面：tag 保留核心身份与属性关键词，nl 把已知可见细节组织成准确的英文叙述，不把同一套身份外貌反复描述成多个人。
-核心动作要写到「谁的身体部位 + 接触点」的具体程度（如 her knee pressing against the tented blanket），姿态词（kneeling、sitting）只是辅助，不得拿姿态替代核心动作。
-多人画面先总述实际人数与构图，再分别描述每人，主动方和被动方的动作须能组成同一次互动，最后补充必要环境。每人的外貌、衣物、表情、手脚与物件都要明确归属，不能只详写主角。
-切换描写对象时使用**区分性称谓**（the green-haired girl with green eyes ...）；同一角色的连续句可用 her/she 承接，关系可能混淆时重新指明角色。tag 的归属在 nl 中用完整句子说明，不使用一串没有主人的颜色或身体部位。
-区分性称谓 = 足以把此人和同框其他人分开的最短说法（发色 + 瞳色通常就够），不是把他的整串固定外貌重新念一遍：写 the black-haired girl with blue eyes，不要写 1girl, long black hair, blue eyes, petite, white dress 这种把 tag 串塞进句子的写法——那会让模型以为画面里有多个同样的人。
-多人 nl 示例（与上面 tag 示例是同一画面）：
-Two adult women stand side by side in a park at sunset, framed in a medium shot. On screen left, the black-haired woman faces the viewer, waving her own right hand at shoulder height while her left arm hangs relaxed. On screen right, the silver-haired woman holds a book in both hands at waist level, with both elbows bent. The black-haired woman has an oval face tapering to a soft jaw, thin arched brows, almond-shaped blue eyes, a straight nose and a full lower lip. She wears a white dress and smiles at the viewer. The silver-haired woman has a square face with an angular jaw, thick straight brows, round red eyes, a rounded nose tip and thin lips. She wears a red dress and looks toward the path with relaxed lips. Warm light falls across both faces, with trees behind them.`;
+export const DEFAULT_COMFY_NL_SPEC = `nl（JSON 的 nl 键，必填）：用连贯完整的英文句子描述同一可见瞬间，先交代人物位置、关键动作和物件归属，再补足必要的可见外貌与环境。完整指画面关系清楚，不要求复述每条 tag 或逐项展开档案。根据画面复杂度决定长度，不机械限制句数或词数。
+全身和多人画面保留主要辨识特征，半身选择主要脸型眉眼，面部特写再展开可见五官；标志特征按可见性保留。背面、遮挡或画外的部位不写，不改变姿势展示五官。肤色与服装沿用已有事实，不能因精简而串人或更改。
+区分画面左右和人物自身左右；同发色者可用已有衣着或位置区分。一个人的连续句使用无歧义的指代，切换人物时明确称谓，不重复整串外貌。不要把 tag 关键词串直接复制成句子。
+单人全身示例：
+${ANIMA_EXAMPLES.single.nl}
+多人示例（与 tag 示例同一画面）：
+${ANIMA_EXAMPLES.pair.nl}
+面部特写示例：
+${ANIMA_EXAMPLES.portrait.nl}
+示例只演示粒度，不是角色默认长相；遵守实际设定和当前任务。`;
 
 /**
  * NAI 规范内置默认:与 ComfyUI 规范同构,danbooru 短 tag;质量词由后端按模型自动附加,故禁写。
@@ -618,10 +618,10 @@ export const DEFAULT_COMFY_THINKING = `【输出前内部检查】
 1. 目标与时间：只为目标正文选图，选定一个实际可见且已完整成立的瞬间和合法 P编号；图片数量遵守最少/最多限制，下限为0且没有合适画面时可留空，不凑相邻动作或换镜头重复图。每个时点仅有一套可同时成立的动作、服装与临时状态。
 2. 人物与依据：清点实际入镜者及正式角色档案。优先记录已有明确的稳定特征；用户允许缺失的脸型、眉形、眼型、鼻形、唇形做相容的补全设计并固定保存，reason 标记“五官补全设计”。已有未锁条目用 fillOnly:true 补空，已有值不覆盖，其它未知固定属性保留空白。真实永久变化按对应 P编号生效，不能把表情、姿势、临时发型/衣着变化写进固定字段。
 3. 神态与动作：先确定躯干朝向、动作肢体的方向和屈伸、真实支撑/接触、物件持有者及人物相对位置；相机俯视不等于人物弯腰，画面左右不等于身体左右，腾跃不强补落地。当前剧情优先于偏好，每只手脚只执行同时成立的动作；再确定可见神态和视线。
-4. 可见外貌：逐项核对脸型轮廓、眉形、眼型（不只是瞳色）、鼻梁/鼻尖、唇形这五组已确定且可见的结构；再核对耳、发色发型、肤色肤质、体型比例、标志特征与配饰。面部结构优先复用已保存值，其它未知项留空，背面或遮挡部位省略，不改变剧情姿势来展示五官。肤色按人设保留，不自动增白或丢掉明确肤色。
+4. 可见外貌：档案保持完整，本图按全身、半身或特写取舍；优先能区分角色的发型、衣着和标志特征，近景再展开可辨认五官，不逐图列五组清单。面部结构优先复用已保存值，其它未知项留空，背面或遮挡部位省略，不改变剧情姿势来展示五官。肤色按人设保留，不自动增白或丢掉明确肤色。
 5. 服装连续性：没有穿脱、换装、损坏、时间跳跃或场景切换时沿用上一状态。可见服装保留版型/剪裁、主色与关键部件；多人逐人绑定，不能只写无主的 school uniform、pantyhose 或颜色。角色和物件在前后左右的关系要能画成同一个空间。
 6. 镜头与环境：只选一个能容纳核心动作/接触点的景别。背景只包含场景已有的事实与必要物件，不增添路人、地形、地面材质或天气。已成立的时间和光源优先，仅补与之相容的光向、明暗、色调、景深和构图；size 由空间分布决定，不按人数机械定横屏。
-7. 最终视觉核对：核心 tag 和完整英文 nl 同时存在并描述同一瞬间，开头先交代动作与空间结构。逐人核对两通道的朝向、肢体位置、支撑面、接触点和物件持有者；出现冲突先修正正向，不靠负面抵消。逐人绑定已知可见外貌、衣物、神态、手脚动作和物件归属；nl 讲清细节与空间关系，不把一串标签当句子。逐人比对 tag 与 nl 都是否写出了五组可见面部结构，不能只写头发瞳色、泛称美貌或临时表情；没有可靠标准 tag 时用短英文视觉词组，nl 用完整句子展开，不删关键事实来迁就词表。缩减重复形容与泛背景，保留身份锚点和动作。无人物画面不用补人物槽位。
+7. 最终视觉核对：核心 tag 和完整英文 nl 同时存在并描述同一瞬间，开头先交代动作与空间结构。逐人核对两通道的朝向、肢体位置、支撑面、接触点和物件持有者；出现冲突先修正正向，不靠负面抵消。逐人绑定已知可见外貌、衣物、神态、手脚动作和物件归属；nl 讲清细节与空间关系，不把一串标签当句子。核对 tag 与 nl 是否互补，删去逐项重复的五官和同义修饰；允许为明确人物归属重复少量身份特征，不删关键事实来迁就词表。缩减重复形容与泛背景，保留身份锚点和动作。无人物画面不用补人物槽位。
 8. 协议核对：同人身份 tag 的括号按 ComfyUI 规范转义；协议要求 negative 时，每张图必须填写有针对性且与正文及 tag/nl 不冲突的英文场景负面词；删除不确定或冲突的候选后重新选择，不得省略或留空。协议未要求 negative 时不额外添加。只输出一次最终 JSON，不额外解释。`;
 
 /**

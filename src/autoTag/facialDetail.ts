@@ -1,5 +1,6 @@
 import { extractCharRefNames } from '@/autoTag/charAnchors';
 import type { ImageCharacterPrompt } from '@/autoTag/protocol';
+import { animaVisualContract } from './animaPrompt';
 
 /** Shared final contract, after user-customized backend rules. Not a claim of semantic validation. */
 export function facialDetailContract(options: {
@@ -7,6 +8,7 @@ export function facialDetailContract(options: {
   characterPrompts: boolean;
   allowDesign: boolean;
 }): string {
+  if (options.mixed && !options.characterPrompts) return animaVisualContract(options.allowDesign);
   const target = options.characterPrompts ? '各角色自己的 characters[].tag / characters[].nl' : 'tag / nl';
   return `【脸型与五官逐项要求】
 本段优先于旧规范中的“细微五官只写自然语言”“只能用标准标签”“为精简省略五官”。先按当前动作确定身体姿态和镜头，再确定是否露脸及可见范围，逐人检查五组稳定结构：
@@ -28,12 +30,12 @@ ${options.mixed
 
 export class ExplicitAppearanceValidationError extends Error {
   constructor(label: string) {
-    super(`${label}仍含 @角色名 占位符：请在 tag 和英文描述中直接写全该人物可见的脸型、眉眼鼻唇及外貌，不能用旧档案自然语言代替`);
+    super(`${label}仍含 @角色名 占位符：请直接写出本图所需的实际外貌，按当前模式和景别取舍，不能用旧档案自然语言代替`);
     this.name = 'ExplicitAppearanceValidationError';
   }
 }
 
-export const EXPLICIT_APPEARANCE_RETRY_INSTRUCTION = '上一轮输出仍有 @角色名 占位符，未通过验收。本轮请在实际 tag 和英文 nl 中直接写全每个人可见的脸型、眉形、眼型、鼻形、唇形及其它外貌；复用已提供的固定字段，不能依赖旧自然语言缓存。保持原选定画面与 JSON 协议，只交付修正后的完整 JSON。';
+export const EXPLICIT_APPEARANCE_RETRY_INSTRUCTION = '上一轮输出仍有 @角色名 占位符，未通过验收。本轮请用已提供的固定字段替换占位符，按当前模式和景别选择本图需要的外貌，不能依赖旧自然语言缓存或整份照搬档案。保持原选定画面、tag/nl 分工与 JSON 协议，只交付修正后的完整 JSON。';
 
 /** New AI output cannot fall back to an old, incomplete profile nl. Legacy saved tags remain readable. */
 export function assertExplicitAppearance(

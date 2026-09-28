@@ -117,7 +117,7 @@ describe('reviseImagePrompt', () => {
     expect(system).toContain('背影、遮挡或远景看不清的部位不强加五官');
   });
 
-  it.each([false, true])('uses five facial structures in both active positive channels (NAI characters: %s)', async characterPrompts => {
+  it.each([false, true])('uses the active backend detail policy (NAI characters: %s)', async characterPrompts => {
     if (characterPrompts) {
       settings.defaultBackend = 'nai';
       settings.nai.model = 'nai-diffusion-4-5-full';
@@ -127,11 +127,15 @@ describe('reviseImagePrompt', () => {
     const marker = '输出形状示例：';
     const sample = JSON.parse(system.slice(system.lastIndexOf(marker) + marker.length)).images[0];
     const illustrated = characterPrompts ? sample.characters[0] : sample;
-    for (const tag of ['square face', 'straight eyebrows', 'narrow eyes', 'gently convex nose bridge', 'thin defined lips']) {
+    if (characterPrompts) for (const tag of ['square face', 'straight eyebrows', 'narrow eyes', 'gently convex nose bridge', 'thin defined lips']) {
       expect(illustrated.tag).toContain(tag);
     }
-    for (const phrase of ['square face', 'straight eyebrows', 'narrow eyes', 'gently convex nose bridge', 'clearly outlined lips']) {
+    if (characterPrompts) for (const phrase of ['square face', 'straight eyebrows', 'narrow eyes', 'gently convex nose bridge', 'clearly outlined lips']) {
       expect(illustrated.nl).toContain(phrase);
+    }
+    if (!characterPrompts) {
+      expect(illustrated.tag + illustrated.nl).not.toMatch(/nose bridge|eyebrows|lips/);
+      expect(system).toContain('【Anima 景别与描述取舍】');
     }
     if (characterPrompts) {
       expect(system).toContain(facialDetailContract({ mixed: true, characterPrompts: true, allowDesign: true }));
@@ -172,6 +176,14 @@ describe('reviseImagePrompt', () => {
     const marker = '输出形状示例：';
     const sample = JSON.parse(system.slice(system.lastIndexOf(marker) + marker.length)).images[0];
     const character = characterPrompts ? sample.characters[0] : sample;
+    if (!characterPrompts) {
+      expect(character.tag).toContain('sitting');
+      expect(character.nl).toContain('sits upright on a wooden chair');
+      expect(character.nl).toContain('both feet on the floor');
+      expect(character.nl).toContain('right hand holds a paintbrush');
+      expect(character.nl).toContain('left rests on the lap');
+      expect(character.nl).not.toContain('square face');
+    } else {
     expect(character.tag.indexOf('sitting on wooden chair')).toBeLessThan(character.tag.indexOf('brown hair'));
     expect(character.nl.startsWith('The adult artist sits upright on a wooden chair')).toBe(true);
     expect(character.nl.indexOf('seat supporting the hips')).toBeLessThan(character.nl.indexOf('square face'));
@@ -179,6 +191,7 @@ describe('reviseImagePrompt', () => {
     expect(character.nl).toContain('easel directly ahead');
     expect(character.nl).toContain('right hand holds a paintbrush');
     expect(character.nl).toContain('left hand rests on the lap');
+    }
     expect(character.tag).toContain('blue shirt, dark trousers');
     expect(sample.tag).toContain('full body');
     expect(sample.tag + character.tag + sample.nl + character.nl).not.toMatch(/waist.up|stands|standing/);

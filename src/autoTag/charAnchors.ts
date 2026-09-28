@@ -66,7 +66,7 @@ export function buildLibraryText(entries: CharTagEntry[], lockedNames?: Readonly
   const lockedNote = lockedNames?.size
     ? '; entries marked [locked] are global and immutable: never report changes for them, always copy their fields as-is'
     : '';
-  return `【角色固定外貌库】[system-maintained; copy fixed fields verbatim into character prompts${lockedNote}]\n结构字段是外貌依据；nl 仅作不冲突的补充，旧 nl 没写出的已知五官仍须从结构字段补进本图 tag 和 nl。脸部五组核对：face（轮廓）、eyebrows（眉形）、eyeShape/eyes（眼型和瞳色）、nose（鼻形）、mouth（唇形）；未列出的键可能尚未建档，先从旧 eyes/raw/nl 和参考资料提取，剩余缺项按本轮五官补全设计规则补空。可选表现偏好只在当前剧情未明确且不冲突时参考，不得照抄进固定外貌，也不得由 AI 修改。\n${lines.join('\n')}`;
+  return `【角色固定外貌库】[system-maintained; reuse selected fixed fields accurately in character prompts${lockedNote}]\n结构字段是完整外貌依据；nl 仅作不冲突的补充，旧 nl 没写出的已知五官仍以结构字段为准。本图如何选择、分配外貌细节遵守当前模式与景别规则，不能因本图省略而删除档案字段。脸部五组核对：face（轮廓）、eyebrows（眉形）、eyeShape/eyes（眼型和瞳色）、nose（鼻形）、mouth（唇形）；未列出的键可能尚未建档，先从旧 eyes/raw/nl 和参考资料提取，剩余缺项按本轮五官补全设计规则补空。可选表现偏好只在当前剧情未明确且不冲突时参考，不得照抄进固定外貌，也不得由 AI 修改。\n${lines.join('\n')}`;
 }
 
 /** 旧接口兼容:runner 之外仍有调用方依赖锚定文本形态。 */

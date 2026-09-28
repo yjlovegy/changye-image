@@ -1,3 +1,4 @@
+import { ANIMA_CONTENT_RULE, ANIMA_EXAMPLES } from './animaPrompt';
 import { describe, expect, it } from 'vitest';
 
 import { buildAutoTagMessages } from '@/autoTag/prompt';
@@ -57,6 +58,24 @@ function context(): STContext {
 }
 
 describe('auto tag prompt', () => {
+  it('applies Anima selection rules after legacy custom rules without rewriting saved settings', async () => {
+    const previousBackend = settings.defaultBackend;
+    try {
+      settings.defaultBackend = 'comfyui';
+      const options = { ...settings.autoTag, prompts: prompts({
+        comfySpec: '自定义水彩风格；tag 与 nl 必须分别写全全部五官。{{nl}}',
+        comfyThinking: '旧检查：每张图复述全部档案。',
+      }) };
+      const before = JSON.stringify(options);
+      const messages = await buildAutoTagMessages(context(), 1, options, null, undefined, null, false, 'anima');
+      expect(JSON.stringify(options)).toBe(before);
+      expect(messages.some(m => m.content.includes('自定义水彩风格'))).toBe(true);
+      expect(messages.findLast(m => m.role === 'system')!.content).toContain('优先于旧自定义规范');
+      expect(messages.findLast(m => m.role === 'system')!.content).toContain(ANIMA_CONTENT_RULE);
+      const krea = await buildAutoTagMessages(context(), 1, options, null, undefined, null, false, 'krea2');
+      expect(krea.some(m => m.content.includes('【Anima 景别与描述取舍】'))).toBe(false);
+    } finally { settings.defaultBackend = previousBackend; }
+  });
   it.each(['anima','krea2'] as const)('omits negative generation in %s when the workflow switch is off', async mode => {
     const previousBackend=settings.defaultBackend, previous=activeComfyPreset().generateNegative, previousWorkflow=activeComfyPreset().workflow;
     try {
@@ -79,7 +98,7 @@ describe('auto tag prompt', () => {
       }, null, undefined, null, negativeRequired);
       expect(messages.some(m => m.content.includes('先外貌后动作，省略接触点'))).toBe(true);
       const final = messages.findLast(m => m.role === 'system')!.content;
-      expect(final.indexOf('【姿势与空间关系优先】')).toBeGreaterThan(final.indexOf('【脸型与五官逐项要求】'));
+      expect(final.indexOf('【姿势与空间关系优先】')).toBeGreaterThan(final.indexOf('【Anima 景别与描述取舍】'));
       expect(final).toContain('screen left/right');
       expect(final).toContain('坐地面、台阶不改成椅子');
       expect(final).toContain('腾跃的瞬间可以没有承重点');
@@ -87,12 +106,12 @@ describe('auto tag prompt', () => {
       expect(final).toContain(negativeRequired ? '先改正正向内部的矛盾' : '当前没有本画面负面输入');
       const task = messages.find(m => m.content.includes('你是严谨的剧情画面规划'))!.content;
       const image = JSON.parse(task.split('\n').find(line => line.startsWith('{"images":'))!).images[0];
-      expect(image.tag.indexOf('standing upright')).toBeLessThan(image.tag.indexOf('oval face'));
-      expect(image.nl.indexOf('stands upright')).toBeLessThan(image.nl.indexOf('oval face'));
-      for (const channel of [image.tag, image.nl]) {
-        expect(channel).toContain('waist level');
-        expect(channel).toContain('both hands');
-      }
+      expect(image.tag).toBe(ANIMA_EXAMPLES.single.tag);
+      expect(image.nl).toBe(ANIMA_EXAMPLES.single.nl);
+      expect(image.tag).toContain('full body');
+      expect(image.nl).toContain('waist level');
+      expect(image.nl).toContain('both hands');
+      expect(image.tag + image.nl).not.toMatch(/nose tip|cupid|eyelashes/);
       expect(image).not.toHaveProperty('pose');
       expect(image).not.toHaveProperty('spatial');
     } finally {
@@ -115,7 +134,7 @@ describe('auto tag prompt', () => {
       const json = contract.split('\n').find(line => line.startsWith('{"images":'))!;
       const sample = JSON.parse(json).images[0];
       const person = backend === 'nai' ? sample.characters[0] : sample;
-      for (const term of ['oval face', 'arched eyebrow', 'almond-shaped', 'straight nose bridge', 'lower lip']) {
+      if (backend === 'nai') for (const term of ['oval face', 'arched eyebrow', 'almond-shaped', 'straight nose bridge', 'lower lip']) {
         expect(person.tag).toContain(term);
         expect(person.nl).toContain(term);
       }
@@ -129,7 +148,7 @@ describe('auto tag prompt', () => {
       expect(final).toContain('不能声称设计细节是原文事实');
       expect(final).toContain('禁止 @角色名 占位符');
       expect(final).toContain('难以辨认五官的远景');
-      expect(final).toContain('不改变剧情姿势');
+      expect(final).toContain(backend === 'nai' ? '不改变剧情姿势' : '不能为了展示五官改变');
       expect(contract).toContain('eyeShape');
       expect(contract).toContain('fillOnly:true');
       expect(contract).toContain('[locked] 全局条目不补写');
@@ -741,11 +760,11 @@ describe('auto tag prompt', () => {
     const messages = await buildAutoTagMessages(context(), 1, options, null, undefined, library);
 
     // 示例改用实际外貌串;@占位符已撤回(见 charAnchors.ts 文件头)
-    expect(messages.some(m => m.content.includes('adult woman, long silver hair, red eyes, oval face'))).toBe(true);
+    expect(messages.some(m => m.content.includes(ANIMA_EXAMPLES.single.tag))).toBe(true);
     expect(messages.some(m => m.content.includes('@小雪'))).toBe(false);
     expect(messages.some(m => m.content.includes('系统会替换成库中最新 tag'))).toBe(false);
     // 照抄库中字段 + 一张图只写一遍,是本次回退的两条核心措辞
-    expect(messages.some(m => m.content.includes('照抄库中/刚建档的字段值'))).toBe(true);
+    expect(messages.some(m => m.content.includes('准确复用已有值'))).toBe(true);
     expect(messages.some(m => m.content.includes('只写一遍'))).toBe(true);
     expect(messages.findLast(message => message.role === 'user')!.content).toContain(library);
     expect(messages.findLast(message => message.role === 'user')!.content).not.toContain('currently empty');
@@ -847,13 +866,13 @@ describe('auto tag prompt', () => {
         if (backend === 'nai') settings.nai.model = 'nai-diffusion-4-full';
         const messages = await buildAutoTagMessages(context(), 1, options, null);
         const spec = messages.find(m => m.content.includes('从重要到次要排列'));
-        expect(spec?.content).toContain(backend === 'comfyui' ? '核心动作姿态与接触/位置 → 外貌五官 → 服饰 → 表情视线 → 场景' : '动作姿态 → 表情视线 → 场景');
+        expect(spec?.content).toContain(backend === 'comfyui' ? '核心姿态 → 按景别选择的辨识特征 → 服饰 → 表情视线 → 场景' : '动作姿态 → 表情视线 → 场景');
         expect(spec?.content).toContain(backend === 'comfyui' ? '脸部和眼睛可见时写出表情与视线' : '表情与视线每张图都要写，不得省略');
-        expect(spec?.content).toContain('判断为面无表情时也要显式写 expressionless');
+        expect(spec?.content).toContain(backend === 'comfyui' ? '只在镜头能辨认时补充' : '判断为面无表情时也要显式写 expressionless');
         // 首轮实跑漏出 gentle smile / shy expression / neutral curious expression
         // 这类非 danbooru 词组:槽位填对了,转 tag 时原样直译。规范里要给限定词表。
         if (backend === 'comfyui') {
-          expect(spec?.content).toContain('没有准确标准 tag 的五官在 tag 使用简短英文短语');
+          expect(spec?.content).toContain('没有准确标准 tag 的必要辨识特征可用简短英文短语');
           expect(spec?.content).toContain('背面或遮挡时省略不可见项');
         } else {
           expect(spec?.content).toContain('必须使用模型认识的标准 danbooru 词，不得自创描述性词组');
@@ -888,18 +907,18 @@ describe('auto tag prompt', () => {
       expect(spec?.content).toContain('背面或眼睛被遮挡的角色省略');
       expect(spec?.content).toContain('体型词（petite、tall、muscular 等）必须绑定到具体角色');
       // 示例必须展示个人属性绑定，避免面部结构漂移为公共属性。
-      expect(spec?.content).toContain('square face and angular jaw on silver-haired woman');
+      expect(spec?.content).toContain('不逐个五官反复追加');
       // 发色瞳色是绑定锚点,裸列才对——不能被上一条误伤成 black hair on black hair girl。
       expect(spec?.content).toContain('发色与瞳色也要在 nl 的同一角色分述中配对');
       // 瘦身时删掉「不许退回笼统词」当轮就复发:tag 里裸写 school uniform +
       // black opaque pantyhose,男孩的 white shirt/dark pants 干脆没进 tag。
       expect(spec?.content).toContain('同类不同款的服装尤其要绑定，不能靠一个统称糊过去');
-      expect(spec?.content).toContain('dark pleated skirt on green hair girl');
-      expect(spec?.content).toContain('white shirt on black hair boy');
-      expect(spec?.content).toContain('会让模型把裙子套到男生身上');
+      expect(spec?.content).toContain('adult man with short black hair and white shirt');
+      expect(spec?.content).toContain('adult woman with long brown hair and blue dress');
+      expect(spec?.content).toContain('不能因精简而串人或更改');
       // 示例串要真的示范绑定写法,否则模型照着旧示例抄裸 tag。
-      expect(spec?.content).toContain('black-haired woman smiling at viewer');
-      expect(spec?.content).toContain('silver-haired woman standing on screen right and holding a book in both hands at waist level');
+      expect(spec?.content).toContain('glasses on woman');
+      expect(spec?.content).toContain(ANIMA_EXAMPLES.pair.nl);
     } finally {
       settings.defaultBackend = oldBackend;
     }
@@ -915,10 +934,10 @@ describe('auto tag prompt', () => {
     const messages = await buildAutoTagMessages(context(), 1, options, null);
     expect(messages.some(m => m.content.includes('自定义画风保留'))).toBe(true);
     const lastSystem = messages.findLast(m => m.role === 'system')!.content;
-    expect(lastSystem).toContain('每张图必须同时交付核心 tag 与完整英文 nl');
+    expect(lastSystem).toContain(ANIMA_CONTENT_RULE);
     expect(lastSystem).toContain('缺乏依据的固定特征不要创造');
     expect(lastSystem).toContain('不设机械词数');
-    expect(lastSystem).toContain('谁的手接触谁的哪个部位');
+    expect(lastSystem).toContain('物件持有者');
     expect(lastSystem).toContain('最终只输出JSON，不展示推理过程');
     expect(lastSystem).toContain('fillOnly:true');
     expect(messages.some(m => m.role === 'assistant')).toBe(false);

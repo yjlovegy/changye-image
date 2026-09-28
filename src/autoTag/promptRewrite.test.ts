@@ -42,6 +42,10 @@ it('uses the selected auxiliary channel and validates Anima output',async()=>{
   vi.mocked(requestCompletion).mockImplementation(async(_c,_m,o)=>{const raw=JSON.stringify({images:[image]});o?.validate?.(raw);return raw;});
   const next=await rewriteImagePrompt(context,0,{text:'她翻书。',kind:'floor'},original,new AbortController().signal);
   expect(next.tag).toBe(image.tag); expect(requestCompletion).toHaveBeenCalledTimes(1);
+  const rewriteRule = vi.mocked(requestCompletion).mock.calls[0][1].find(m => m.content.includes('本次仅重写'))!.content;
+  expect(rewriteRule).toContain('按当前模式和景别选用辨识特征');
+  expect(rewriteRule).toContain('changes 必须为空数组');
+  expect(rewriteRule).not.toContain('直接写完整外貌');
   expect(requestViaMainApi).not.toHaveBeenCalled();
 });
 it('rejects multiple images instead of silently choosing another scene',async()=>{
