@@ -47,7 +47,7 @@ export async function collectAppearanceReferences(
   const worldbook = await fetchWorldInfo(context.chat, floors, context.name1, context.name2, [name]);
   const story = floors.map(floor => {
     const message = context.chat[floor];
-    const body = stripImageTags(cleanHistoryText(message.mes, settings.excludes.customStripTags));
+    const body = stripImageTags(cleanHistoryText(message.mes, settings.storyTags?.length ? [] : settings.excludes.customStripTags, settings.storyTags));
     return body.trim() ? `第 ${floor} 楼｜${message.name || (message.is_user ? context.name1 : context.name2)}\n${body}` : '';
   }).filter(Boolean).join('\n\n');
   const legacy = CHAR_TAG_FIELDS.every(field => !existing.fields[field]?.trim()) ? existing.raw : '';

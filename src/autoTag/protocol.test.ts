@@ -26,8 +26,17 @@ describe('auto tag position protocol', () => {
   it.each([['P3'], ['P1','P3'], ['P1','P2','P3','P4']])('accepts earlier, nonadjacent and longer sources: %j', (...refs) => {
     expect(parseImagePlan(sourceResponse(refs), sourceSegments, 1).images[0].sourceParagraphs).toEqual(refs);
   });
-  it.each([[], ['P3','P5'], ['P4','P3'], ['P4','P4'], ['P99'], 'P4', [4], null].map(refs => [refs]))('rejects invalid source references: %j', refs => {
+  it.each([[], ['P3','P5'], ['P99'], 'P4', [4], null].map(refs => [refs]))('rejects invalid source references: %j', refs => {
     expect(() => parseImagePlan(sourceResponse(refs), sourceSegments, 1)).toThrow('sourceParagraphs');
+  });
+  it('repairs order and duplicates without changing evidence', () => {
+    expect(parseImagePlan(sourceResponse(['P4','P2','P4','p3']), sourceSegments, 1).images[0].sourceParagraphs).toEqual(['P2','P3','P4']);
+  });
+  it('identifies the exact future reference', () => {
+    expect(() => parseImagePlan(sourceResponse(['P3','P5']), sourceSegments, 1)).toThrow('插图位置是 P4，却引用了后面的 P5');
+  });
+  it('diagnoses a prose response', () => {
+    expect(() => parseImagePlan('她走进图书馆，坐在窗边翻书。', sourceSegments, 1)).toThrow('不是有效的图片规划 JSON');
   });
   it('keeps old responses without source references parseable', () => {
     expect(parseImagePlan(sourceResponse(undefined), sourceSegments, 1).images[0].sourceParagraphs).toBeUndefined();

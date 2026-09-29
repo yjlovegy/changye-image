@@ -356,7 +356,7 @@ onBeforeUnmount(() => {
       <fieldset class="bbi-editor-fields" :disabled="editingLocked" aria-label="提示词草稿">
       <button v-if="naturalOnly && tag" type="button" class="bbi-btn bbi-btn-sm" @click="showLegacyTags = !showLegacyTags">{{ showLegacyTags ? '收起旧标签' : '查看旧标签' }}</button>
       <div v-if="!naturalOnly || showLegacyTags" class="bbi-modal-field">
-        <span class="bbi-modal-label">画面 TAG(danbooru 短 TAG,逗号分隔)</span>
+        <span class="bbi-modal-label">画面 TAG（danbooru 短 TAG，逗号分隔）</span>
         <BbiTextarea
           v-model="tag"
           class="bbi-prompt-area"
@@ -403,7 +403,7 @@ onBeforeUnmount(() => {
         <ResolutionControls scope="本张图片" :disabled="editingLocked" :width="displayedResolution.width" :height="displayedResolution.height" :sizes="settings.comfyui.resolutionFavorites" @change="changeResolution" @save="saveResolutionFavorite" @remove="removeResolutionFavorite" />
       </div>
       <div v-else class="bbi-modal-field">
-        <span class="bbi-modal-label">画幅方向(具体像素在「渠道」页配置)</span>
+        <span class="bbi-modal-label">画幅方向（具体像素在「渠道」页配置）</span>
         <div class="bbi-segmented" role="tablist" aria-label="画幅方向">
           <button
             class="bbi-seg"
@@ -435,8 +435,8 @@ onBeforeUnmount(() => {
       <!-- 改提示词会换 promptHash 桶,而 stale 态只显示最新一张、翻页器不出现。
            这是既有存储设计,但手动改提示词会让它从边角情况变成日常,故明确告知。 -->
       <p v-if="historyCount > 1" class="bbi-editor-note">
-        当前提示词下已有 {{ historyCount }} 张图。修改后只显示最新一张(图片没有被删除,
-        把提示词改回原样即可全部找回)。
+        当前提示词下已有 {{ historyCount }} 张图。修改后只显示最新一张（图片没有被删除，
+        把提示词改回原样即可全部找回）。
       </p>
 
       <p v-if="error" class="bbi-editor-error">{{ error }}</p>

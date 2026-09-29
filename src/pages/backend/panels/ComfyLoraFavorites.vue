@@ -63,7 +63,7 @@ function useSelected() {
     <div class="favorite-actions"><span class="bbi-field-hint">已选 {{ selected.length }} 项</span><button type="button" class="bbi-btn favorite-use" :disabled="!canAdd || !selected.length" @click="useSelected">加入LoRA堆</button></div>
     <slot />
     <div class="favorite-form">
-      <div class="favorite-field"><span class="bbi-field-label">标签</span><BbiTextarea v-model="tag" mono aria-label="新收藏标签" placeholder="&lt;lora:名称:权重&gt;" /></div>
+      <div class="favorite-field"><span class="bbi-field-label">标签</span><BbiTextarea v-model="tag" mono aria-label="新收藏标签" placeholder="&lt;lora：名称：权重&gt;" /></div>
       <div class="favorite-field"><span class="bbi-field-label">备注</span><BbiTextarea v-model="note" aria-label="新收藏备注" placeholder="填写用途或适用场景" /></div>
       <div class="form-actions"><span v-if="message" class="success" role="status">✓ {{ message }}</span><button type="button" class="bbi-btn favorite-add" @click="add">加入收藏</button></div>
     </div>

@@ -59,7 +59,7 @@ export const NAI_SAMPLERS: { value: string; label: string }[] = [
 ];
 
 export const NAI_NOISE_SCHEDULES: { value: string; label: string }[] = [
-  { value: 'karras', label: 'Karras(推荐)' },
+  { value: 'karras', label: 'Karras（推荐）' },
   { value: 'native', label: 'Native' },
   { value: 'exponential', label: 'Exponential' },
   { value: 'polyexponential', label: 'Polyexponential' },
@@ -187,10 +187,10 @@ export interface NaiSize {
 /** 解析「832×1216 / 832x1216」;宽高须为 64 的倍数、256–2048。 */
 export function parseResolution(text: string): NaiSize {
   const size = parseSize(text);
-  if (!size) throw new NaiError(`分辨率格式无效:${text || '(空)'};应如 832×1216`);
+  if (!size) throw new NaiError(`分辨率格式无效：${text || '（空）'}；应如 832×1216`);
   const { width, height } = size;
   if (width % 64 !== 0 || height % 64 !== 0) {
-    throw new NaiError(`分辨率 ${width}×${height} 不是 64 的倍数,NAI 要求宽高均为 64 的倍数`);
+    throw new NaiError(`分辨率 ${width}×${height} 不是 64 的倍数，NAI 要求宽高均为 64 的倍数`);
   }
   if (width < 256 || height < 256 || width > 2048 || height > 2048) {
     throw new NaiError(`分辨率 ${width}×${height} 超出 NAI 允许范围(256–2048)`);
@@ -513,14 +513,14 @@ async function naiHttpError(resp: Response, label: string): Promise<NaiError> {
   const retryAfterMs = parseRetryAfter(resp.headers?.get('Retry-After'));
   switch (resp.status) {
     case 400:
-      return new NaiError(`${label}:请求校验失败:${detail.slice(0, 300)}`, resp.status, retryAfterMs);
+      return new NaiError(`${label}：请求校验失败：${detail.slice(0, 300)}`, resp.status, retryAfterMs);
     case 401:
       return new NaiError(`${label}:API Key 错误或无效`, resp.status, retryAfterMs);
     case 402:
-      return new NaiError(`${label}:需要有效订阅(402)`, resp.status, retryAfterMs);
+      return new NaiError(`${label}：需要有效订阅(402)`, resp.status, retryAfterMs);
     case 429:
       return new NaiError(
-        `${label}:请求过于频繁(429),已自动退避重试;仍失败请调低「同时出图数」或稍后再试`,
+        `${label}：请求过于频繁(429)，已自动退避重试；仍失败请调低「同时出图数」或稍后再试`,
         resp.status,
         retryAfterMs,
       );
@@ -540,7 +540,7 @@ export async function testNaiConnection(
     signal,
   });
   if (resp.status === 404) {
-    return { message: '地址可达,但无订阅接口(第三方站);请以实际生图验证' };
+    return { message: '地址可达，但无订阅接口（第三方站）；请以实际生图验证' };
   }
   if (!resp.ok) throw await naiHttpError(resp, '连接 NAI 失败');
   const data = (await resp.json().catch(() => null)) as {
@@ -552,7 +552,7 @@ export async function testNaiConnection(
   const active = data?.subscription?.active ?? data?.active;
   const tierName = ['Free', 'Tablet', 'Scroll', 'Opus'][Number(tier)] ?? `Tier ${tier}`;
   return {
-    message: `连接正常:${tierName}${active === false ? '(订阅未激活)' : ''}`,
+    message: `连接正常：${tierName}${active === false ? '（订阅未激活）' : ''}`,
   };
 }
 
@@ -562,7 +562,7 @@ export function unzipNaiImage(buffer: ArrayBuffer): { base64: string; filename: 
   try {
     files = unzipSync(new Uint8Array(buffer));
   } catch {
-    throw new NaiError('响应不是有效的 zip 包(第三方站可能返回了其他格式)');
+    throw new NaiError('响应不是有效的 zip 包（第三方站可能返回了其他格式）');
   }
   const name = Object.keys(files).find(n => /\.(png|jpe?g|webp)$/i.test(n)) ?? Object.keys(files)[0];
   if (!name) throw new NaiError('zip 包内没有图片文件');
@@ -602,14 +602,14 @@ export async function generateNaiImage(
             },
       );
     } catch (error) {
-      console.warn(`[长夜的绘图器] 读取 vibe「${vibe.name}」失败:`, error);
+      console.warn(`[长夜的绘图器] 读取 vibe「${vibe.name}」失败：`, error);
     }
   }
   const skipped = applyVibes(params, nai, loaded);
   if (skipped.length) {
     const reason = naiSupportsVibes(nai.model) ? '缺当前模型编码' : '当前模型不支持 Vibe Transfer';
-    console.warn(`[长夜的绘图器] 以下 vibe 因${reason}被跳过:`, skipped);
-    toastr.warning(`vibe「${skipped.join('、')}」${reason},已跳过`, '长夜的绘图器');
+    console.warn(`[长夜的绘图器] 以下 vibe 因${reason}被跳过：`, skipped);
+    toastr.warning(`vibe「${skipped.join('、')}」${reason}，已跳过`, '长夜的绘图器');
   }
 
   const body = {
@@ -682,7 +682,7 @@ export async function encodeVibeImage(
       if (!resp.ok) throw await naiHttpError(resp, 'vibe 编码失败');
       const bytes = new Uint8Array(await resp.arrayBuffer());
       if (bytes.length < 100) {
-        throw new NaiError(`vibe 编码数据异常(仅 ${bytes.length} 字节),接口可能返回了错误响应`);
+        throw new NaiError(`vibe 编码数据异常(仅 ${bytes.length} 字节)，接口可能返回了错误响应`);
       }
       return uint8ToBase64(bytes);
     },
@@ -704,10 +704,10 @@ export function parseNaiv4vibe(text: string): ImportedVibe {
   try {
     json = JSON.parse(text);
   } catch {
-    throw new NaiError('不是有效的 .naiv4vibe 文件(JSON 解析失败)');
+    throw new NaiError('不是有效的 .naiv4vibe 文件（JSON 解析失败）');
   }
   if (json?.identifier !== 'novelai-vibe-transfer') {
-    throw new NaiError('不是 NovelAI vibe 文件(缺少 novelai-vibe-transfer 标识)');
+    throw new NaiError('不是 NovelAI vibe 文件（缺少 novelai-vibe-transfer 标识）');
   }
   const encodings: NaiVibeEncodings = {};
   for (const [modelKey, group] of Object.entries(json.encodings ?? {})) {

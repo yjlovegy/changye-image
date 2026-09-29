@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { bindAutoTagging, captureSelectionImageSnapshot, requestFloorTags, requestSelectionImage } from '@/autoTag/runner';
+import { addPromptValidationRetryHint, bindAutoTagging, captureSelectionImageSnapshot, requestFloorTags, requestSelectionImage } from '@/autoTag/runner';
 import { requestCompletion, requestViaMainApi } from '@/api/client';
 import { buildAutoTagMessages } from '@/autoTag/prompt';
 import { applyMessageText } from '@/st/messageEdit';
@@ -9,7 +9,7 @@ import { parseImageTags } from '@/st/imageTagRegex';
 import { promptFailures } from '@/state/promptFailures';
 import { stopPromptTasks, activePromptTasks } from '@/state/promptTasks';
 import { sourceForPrompt } from '@/floor/promptSource';
-import { IMAGE_SOURCE_RETRY_INSTRUCTION } from '@/autoTag/protocol';
+import { ImageSourceValidationError, ImagePlanFormatError, IMAGE_SOURCE_RETRY_INSTRUCTION } from '@/autoTag/protocol';
 import { settings } from '@/state/settings';
 import { SCENE_NEGATIVE_RETRY_INSTRUCTION } from '@/autoTag/negative';
 import { EXPLICIT_APPEARANCE_RETRY_INSTRUCTION } from '@/autoTag/facialDetail';
@@ -286,7 +286,9 @@ describe('manual selection image request', () => {
     await requestSelectionImage(0, '她翻开书。', snapshotAt());
     expect(sequences).toHaveLength(2);
     expect(sequences[1].at(-1)).toBe('assistant:custom prefill');
-    expect(sequences[1].at(-2)).toBe('system:' + SCENE_NEGATIVE_RETRY_INSTRUCTION);
+    expect(sequences[1]).toContain('system:' + SCENE_NEGATIVE_RETRY_INSTRUCTION);
+    expect(sequences[1].at(-2)).toContain('【本次返回校验失败】');
+    expect(sequences[1].at(-2)).toContain('previousResponse');
   });
 
   it.each(['selection', 'automatic'])('does not save or generate when %s exhausts retries with an empty negative', async mode => {
@@ -722,4 +724,16 @@ describe('selection character completion transaction', () => {
     expect(readCharTagFloorDelta(context.chat[0])!.ops.at(-1)).toMatchObject({ field: 'mouth', value: 'thin lips' });
     expect(toastr.warning).toHaveBeenCalledWith(expect.stringContaining('角色档案已变化'), '长夜的绘图器');
   });
+});
+
+it('targets malformed output and replaces only the latest retry diagnostic', () => {
+  const messages:any[]=[{role:'system',content:'任务规则'},{role:'user',content:'目标正文'},{role:'assistant',content:'预填充'}];
+  addPromptValidationRetryHint(messages,new ImagePlanFormatError('不是图片规划'),'她在窗边读书。');
+  expect(messages.at(-2).content).toContain('她在窗边读书。');
+  addPromptValidationRetryHint(messages,new ImageSourceValidationError('第 3 张图：P62 晚于 P61。'),'{"images":[]}');
+  const diagnostics=messages.filter(m=>m.content.startsWith('【本次返回校验失败】'));
+  expect(diagnostics).toHaveLength(1);
+  expect(diagnostics[0].content).toContain('P62 晚于 P61');
+  expect(diagnostics[0].content).not.toContain('她在窗边读书。');
+  expect(messages.at(-1).content).toBe('预填充');
 });

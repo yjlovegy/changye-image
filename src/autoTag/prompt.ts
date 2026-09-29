@@ -128,14 +128,14 @@ export async function buildAutoTagMessages(
   const target = context.chat[targetFloor];
   const preparedTarget =
     preparedTargetOverride ??
-    prepareTargetText(target.mes, settings.excludes.customStripTags);
+    prepareTargetText(target.mes, settings.storyTags?.length ? [] : settings.excludes.customStripTags, settings.storyTags);
   const previous = recentFloors(context, targetFloor, options.contextMessages)
     .filter(floor => floor !== targetFloor)
     .map(
       floor =>
         `--- 上下文｜${roleLabel(context, floor)} ---\n${cleanHistoryText(
           context.chat[floor].mes,
-          settings.excludes.customStripTags,
+          settings.storyTags?.length ? [] : settings.excludes.customStripTags, settings.storyTags,
         )}`,
     )
     .join('\n\n');
@@ -182,7 +182,7 @@ export async function buildAutoTagMessages(
   sampleImage.size = 'portrait';
   const outputShape = JSON.stringify({ images: [sampleImage], changes: [] });
   const contentRule = krea2 ? `4. ${KREA2_CONTENT_RULE}` : anima ? `4. ${ANIMA_CONTENT_RULE} 不得包含质量词、负面词或 XML 标签。` : naiCharPromptsOn
-    ? '4. Every image must include Base tag, English Base nl, and characters. Write every nl in English even when the story text is in another language, but keep every character name exactly as in the story: Chinese names stay Chinese (小雪, never Xiaoxue or Snow) in characters[].name, changes[].name, and inside any tag/nl text. Base contains only global counts, scene, composition, lighting, and shared relations — this applies to the Base nl as much as to the Base tag. Give each individual character visible inside the selected frame one Character Prompt ordered left-to-right then top-to-bottom; name/tag/nl are all required. This includes visible characters who have no library profile: a one-off unnamed individual gets a Character Prompt too, keyed by the term the story uses for them. Anonymous crowds visible in the frame remain in Base. Character tag uses girl/boy without a numeric count and contains that character appearance, outfit, and action. Do not include quality tags, negative tags, or XML.'
+    ? '4. Every image must include Base tag, English Base nl, and characters. Write every nl in English even when the story text is in another language, but keep every character name exactly as in the story: Chinese names stay Chinese （小雪， never Xiaoxue or Snow） in characters[].name, changes[].name, and inside any tag/nl text. Base contains only global counts, scene, composition, lighting, and shared relations — this applies to the Base nl as much as to the Base tag. Give each individual character visible inside the selected frame one Character Prompt ordered left-to-right then top-to-bottom; name/tag/nl are all required. This includes visible characters who have no library profile: a one-off unnamed individual gets a Character Prompt too, keyed by the term the story uses for them. Anonymous crowds visible in the frame remain in Base. Character tag uses girl/boy without a numeric count and contains that character appearance, outfit, and action. Do not include quality tags, negative tags, or XML.'
     : nlOn
     ? '4. tag 与 nl 必须同时非空：tag 是保留核心身份、脸型五官、服装、神态动作和构图的英文短 tag；没有标准标签的具体五官使用简短准确的英文视觉短语；nl 是同一画面的完整、详细、连贯的自然英文描述，必须写完整句子及句末标点，不能只给一句笼统摘要或再次堆砌 tag。二者都只含正面内容，不得包含质量词、负面词、JSON 以外的说明或 <bbi_image>/<tag>/<nl>/<size> 标签。'
     : '4. tag 只能是该画面的正面内容提示词；不得包含质量词、负面词、JSON 以外的说明或 <bbi_image> 标签。';
@@ -254,7 +254,7 @@ ${imageCountRule} 多张图必须是剧情或视觉状态明显不同的单一�
 3. position 必须是“目标正文”段尾标出的 P编号（如 P2），表示把图片 tag 插在该段之后；选择让画面所需事实刚刚完整成立、且尚未切换到下一场景的位置。不要返回此前上下文中的位置，也不要自行编造编号。
    每张图必须另填 sourceParagraphs：先选择足以支撑本图核心画面的正文，再据此写提示词。按正文顺序列出实际来源 P编号；来源与 position 分开判断，不要求以 position 结尾，可跳过无关对白，但不得引用 position 之后的事件。例如 P2 写场景与人物、P3 写动作、P4 是一声感叹，可填 sourceParagraphs:["P2","P3"]，position:"P4"。
    来源必须包含画面所需的人物、动作及场景依据，不能只剩独立对白、感叹或拟声词；选段精准是保留完整依据并排除无关事件，不是字数越少越好。通常少数几段即可，必要时可超过三段；不要为缩短来源漏掉关键描述，也不要无差别选择整楼。
-   所选段落应表达同一场景中的一个可见瞬间，不能跨场景、跨时间拼接事件，不把整楼当成每张图的共同来源。其它正文和角色资料只供辨认人物、补充已成立的背景及服装连续性，不从参考段落另选动作，也不把稍后发生的状态提前画进本图。不要为了收录整段人物档案或环境描写而扩大来源。sourceParagraphs 只写编号，不复述、翻译或改写原文；插件会从本次正文提取对应段落。
+   所选段落应表达同一场景中的一个可见瞬间，不能跨场景、跨时间拼接事件，不把整楼当成每张图的共同来源。每张图的核心动作和互动必须能在所选段落中找到依据，不得从前文另借事件，不得为凑图片数量编造动作。其它正文和角色资料只供辨认人物、补充已成立的背景及服装连续性，不从参考段落另选动作，也不把稍后发生的状态提前画进本图。不要为了收录整段人物档案或环境描写而扩大来源。sourceParagraphs 只写编号，不复述、翻译或改写原文；插件会从本次正文提取对应段落。
 ${contentRule}${negativeRule}
 ${sizeRule}
 6. 只给“目标正文”选图，不要给此前上下文补图。优先表现正文中玩家主角和主要角色的表情、状态、行动及关系；主要角色单独出镜同样成立，不要求玩家每张都出现，也不得把不在场者加入画面。在不损失主体内容与核心互动的前提下，优先选择不带无关人物的构图，不为凑热闹主动加入路人或人群。主要角色依据设定与剧情判断，不等同于所有已建档角色。

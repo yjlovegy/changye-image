@@ -206,7 +206,7 @@ const filesGone = computed(
 const statusLabel = computed(() => {
   // 退避优先:请求已经失败过、正在等重试,不能继续报「生成中」骗人
   const retry = retryInfo.value;
-  if (retry) return `请求受限,稍后第 ${retry.attempt}/${retry.max} 次重试…`;
+  if (retry) return `请求受限，稍后第 ${retry.attempt}/${retry.max} 次重试…`;
   if (phase.value === 'queued') return '排队中…';
   const ahead = queueAhead.value;
   if (phase.value === 'generating' && ahead !== null && ahead > 0) return `排队中(前面 ${ahead} 个)`;
@@ -225,10 +225,10 @@ const barText = computed(() => {
 /** 无图且后端未就绪时,占位区中央的配置引导。 */
 const pendingHint = computed(() => {
   if (!comfyActive.value && !naiActive.value)
-    return '出图后端未选择,请到长夜的绘图器「工作流」页选择出图渠道';
+    return '出图后端未选择，请到长夜的绘图器「工作流」页选择出图渠道';
   return naiActive.value
-    ? '未配置 NAI,请到长夜的绘图器「工作流」页填写 API Key'
-    : '未配置 ComfyUI,请到长夜的绘图器「工作流」页填写工作流';
+    ? '未配置 NAI，请到长夜的绘图器「工作流」页填写 API Key'
+    : '未配置 ComfyUI，请到长夜的绘图器「工作流」页填写工作流';
 });
 
 async function generate(): Promise<void> {
@@ -415,7 +415,7 @@ async function removeEntry(
     target.generationId,
   );
   if (!removed) {
-    toastr.error('删除失败,聊天记录未能保存', '长夜的绘图器');
+    toastr.error('删除失败，聊天记录未能保存', '长夜的绘图器');
     return;
   }
   const ctx = getContext();
@@ -611,11 +611,11 @@ onMounted(() => {
       </button>
     </p>
     <p v-else-if="isStale && !busy" class="bbi-figure__status bbi-figure__status--warn">
-      提示词已修改,上图由旧提示词生成;点右上角重绘按新提示词出图
+      提示词已修改，上图由旧提示词生成；点右上角重绘按新提示词出图
     </p>
     <!-- 文件被删(通常是在图库里删的):记录还在但图没了,明说一句免得像凭空丢图 -->
     <p v-else-if="filesGone" class="bbi-figure__status bbi-figure__status--warn">
-      图片文件已删除(在图库里删掉了);可点上方重新生成
+      图片文件已删除（在图库里删掉了）；可点上方重新生成
     </p>
 
     <!-- 提示词面板:悬浮 文本按钮唤起,复制按钮跟着面板走 -->

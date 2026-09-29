@@ -210,10 +210,10 @@ function readSelectedMessage(actions: SelectionImageMenuActions): SelectedMessag
   }
   const visible = visibleSelectionText(messageText, anchorRange);
   const anchor = locateSelectionSourceEnd(snapshot.source, visible.all, visible.before, visible.selected,
-    settings.excludes.customStripTags, paragraphContexts(messageText, anchorRange, visible.before));
+    [], paragraphContexts(messageText, anchorRange, visible.before), settings.storyTags);
   return {
     floor, text, messageText, range, rangeText: range.toString(),
-    snapshot: { ...snapshot, insertionOffset: anchor.offset }, anchorError: anchor.reason,
+    snapshot: { ...snapshot, insertionOffset: anchor.offset, scopeTagsKey: JSON.stringify(settings.storyTags ?? []) }, anchorError: anchor.reason,
   };
 }
 
@@ -317,7 +317,7 @@ export function bindSelectionImageMenu(actions: SelectionImageMenuActions = {
       // Preserve the context-menu snapshot; runner verifies identity again before writing.
       void actions.requestImage(selected.floor, selected.text, selected.snapshot).catch(error => {
         console.error('[长夜的绘图器] 选中文字生图失败', error);
-        toastr.error(error instanceof Error ? error.message : '选中文字生图失败,请重试', '长夜的绘图器');
+        toastr.error(error instanceof Error ? error.message : '选中文字生图失败，请重试', '长夜的绘图器');
       });
     });
   };

@@ -159,10 +159,10 @@ export type NaiModel =
  * 只在控制台留一条告警,不弹窗打扰。
  */
 export const NAI_MODELS: { value: NaiModel; label: string }[] = [
-  { value: 'nai-diffusion-5-full', label: 'NAI 5 Full(最新,无过滤)' },
-  { value: 'nai-diffusion-5-curated', label: 'NAI 5 Curated(有内容过滤)' },
-  { value: 'nai-diffusion-4-5-full', label: 'NAI 4.5 Full(无过滤)' },
-  { value: 'nai-diffusion-4-5-curated', label: 'NAI 4.5 Curated(有内容过滤)' },
+  { value: 'nai-diffusion-5-full', label: 'NAI 5 Full（最新，无过滤）' },
+  { value: 'nai-diffusion-5-curated', label: 'NAI 5 Curated（有内容过滤）' },
+  { value: 'nai-diffusion-4-5-full', label: 'NAI 4.5 Full（无过滤）' },
+  { value: 'nai-diffusion-4-5-curated', label: 'NAI 4.5 Curated（有内容过滤）' },
 ];
 
 export type NaiVibeEncodings = Record<string, { encoding: string; infoExtracted: number }>;
@@ -903,6 +903,9 @@ export interface AutoTagPrompts {
 }
 
 export interface ImageSettings {
+  /** Global positive story scopes, independent of legacy shared exclusions. */
+  storyTags: string[];
+  worldInfoKeywords: string[];
   /** Explicitly saved editor defaults, keyed by workflow ID; independent of generation drafts. */
   inpaintProfiles?: Record<string, InpaintTuning>;
   /** 插件总开关。 */
@@ -1079,6 +1082,8 @@ function defaults(): ImageSettings {
         prefill: '',
       },
     },
+    storyTags: [],
+    worldInfoKeywords: [],
     excludes: excludesDefaults(),
     storage: { saveAsJpeg: true },
   };
@@ -1459,7 +1464,7 @@ function normalizeNai(raw: unknown, def: NaiSettings): NaiSettings {
   // 已下线模型(4.5 以下)静默回落会换掉画风与 vibe 编码 key。不弹窗(该人群已基本不存在),
   // 但留一条控制台告警 —— 否则「我的模型自己变了」这类反馈完全无据可查。
   if (stored && stored !== model) {
-    console.warn(`[长夜的绘图器] NAI 模型「${stored}」已下线,本次回落为 ${model}`);
+    console.warn(`[长夜的绘图器] NAI 模型「${stored}」已下线，本次回落为 ${model}`);
   }
 
   // 画师串库:允许为空,故没有「恒非空」兜底(与 normalizeComfyUI 刻意不同)
@@ -1639,6 +1644,8 @@ function normalize(raw: unknown): ImageSettings {
       };
     })(),
   };
+  merged.storyTags = Array.isArray(r.storyTags) ? [...new Set(r.storyTags.filter((x): x is string => typeof x === "string").map(sanitizeTagName).map(x => x.toLowerCase()).filter(Boolean))] : [];
+  merged.worldInfoKeywords = Array.isArray(r.worldInfoKeywords) ? r.worldInfoKeywords.filter((x): x is string => typeof x === "string" && !!x.trim()).map(x => x.trim()) : [];
   merged.excludes = normalizeExcludes(r.excludes);
   // 存储行为:嵌套对象逐字段兜底(老数据无 storage 键 → 默认关)
   const rs = (r.storage ?? {}) as Partial<StoragePrefs>;
@@ -1673,6 +1680,8 @@ function applyInto(target: ImageSettings, src: ImageSettings): void {
   target.channels = src.channels;
   target.assignments = src.assignments;
   target.autoTag = src.autoTag;
+  target.storyTags = src.storyTags;
+  target.worldInfoKeywords = src.worldInfoKeywords;
   target.excludes = src.excludes;
   target.storage = src.storage;
 }
@@ -1915,29 +1924,6 @@ function hydrateSharedExcludes(): void {
     if (excludesHasUserData(settings.excludes)) writeSharedExcludes(false);
   }
   bindSharedExcludesListener();
-}
-
-/* ============ 排除角色闸门(与角色记忆插件 isCurrentChatExcluded 同口径) ============ */
-
-/** 当前单角色聊天的角色名;群聊或未进入聊天时返回 null(群聊不参与排除)。 */
-function currentCharName(): string | null {
-  const ctx = getContext();
-  if (!ctx) return null;
-  if (ctx.groupId) return null; // 群聊:多角色,不按单名排除
-  const idx = ctx.characterId;
-  if (idx === undefined || idx === null || idx === '') return null;
-  const ch = ctx.characters?.[Number(idx)];
-  return ch?.name ?? null;
-}
-
-/**
- * 当前聊天是否被排除(该角色名在排除名单里)。被排除则自动 tag 全流程停用。
- * 按「名字」匹配:同名的重名卡会被一并排除——与角色记忆插件排除角色的口径完全一致。
- */
-export function isCurrentChatExcluded(): boolean {
-  if (!settings.excludes.excludedChars.length) return false;
-  const name = currentCharName();
-  return name !== null && settings.excludes.excludedChars.includes(name);
 }
 
 /** 写回 extension_settings 并防抖落盘到服务器(跨设备同步的关键)。 */

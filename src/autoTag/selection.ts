@@ -11,6 +11,7 @@ export interface SelectionImageSnapshot {
   message: STMessage;
   /** 选区之后的安全插图位置（必要时顺延到格式末尾）；未可靠定位时不允许发起生图。 */
   insertionOffset?: number;
+  scopeTagsKey?: string;
 }
 
 export const MAX_SELECTION_IMAGE_TEXT_LENGTH = 12_000;

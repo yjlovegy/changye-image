@@ -127,11 +127,12 @@ export function rebaseImagePositions(
   plannedSegments: TargetSegment[],
   images: ImageInsertion[],
   stripTags: string[],
+  storyTags: string[] = [],
 ): RebaseResult | null {
   const report: RebaseReport = { anchored: 0, remapped: 0, drifted: 0 };
   if (!images.length) return { images: [], report };
 
-  const newSegments = prepareTargetText(currentText, stripTags).segments;
+  const newSegments = prepareTargetText(currentText, stripTags, storyTags).segments;
   if (!newSegments.length) return null;
 
   const oldByLine = new Map(plannedSegments.map((segment, index) => [segment.sourceLine, index]));
@@ -152,7 +153,7 @@ export function rebaseImagePositions(
     if (direct < 0) report.drifted += 1;
     else if (newSegments[target].text === plannedSegments[oldIndex].text) report.anchored += 1;
     else report.remapped += 1;
-    out.push({ ...image, sourceLine: newSegments[target].sourceLine });
+    out.push({ ...image, sourceLine: newSegments[target].sourceLine, sourceOffset: newSegments[target].sourceOffset });
   }
 
   // 升序保证叙事顺序单调;sort 稳定,落到同一行的图片保持模型给出的原相对顺序

@@ -11,7 +11,7 @@ const hiresFix = ref(false);
 
 <template>
   <div class="panel">
-    <p class="bbi-page-intro">Stable Diffusion WebUI(A1111 / Forge / reForge),走其 /sdapi/v1 接口。</p>
+    <p class="bbi-page-intro">Stable Diffusion WebUI(A1111 / Forge / reForge)，走其 /sdapi/v1 接口。</p>
 
     <div class="bbi-sections">
       <Collapsible title="配置" :open="false">
@@ -116,10 +116,10 @@ const hiresFix = ref(false);
           </div>
         </div>
         <label class="bbi-switch-row">
-          <span class="bbi-field-label">Hires. fix(高清修复)</span>
+          <span class="bbi-field-label">Hires. fix（高清修复）</span>
           <input v-model="hiresFix" type="checkbox" class="bbi-checkbox" disabled />
         </label>
-        <p class="bbi-field-hint">参数功能开发中,当前仅展示。</p>
+        <p class="bbi-field-hint">参数功能开发中，当前仅展示。</p>
       </Collapsible>
     </div>
   </div>

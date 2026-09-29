@@ -107,7 +107,7 @@ const artistOptions = computed(() => [
   { value: NO_ARTIST, label: '不使用' },
   // 内置配方排用户库前面:新用户默认选中的是内置条,放在「不使用」旁边最顺;
   // 名称后括注内置,与用户自建的同名条目区分开
-  ...BUILTIN_NAI_ARTISTS.map(a => ({ value: a.id, label: `${a.name}(内置)` })),
+  ...BUILTIN_NAI_ARTISTS.map(a => ({ value: a.id, label: `${a.name}（内置）` })),
   ...settings.nai.artistPresets.map(a => ({ value: a.id, label: a.name || '未命名画师串' })),
 ]);
 
@@ -185,7 +185,7 @@ async function confirmRemoveArtist() {
     try {
       await deleteUserImage(previewPath);
     } catch (error) {
-      toastr.warning(`条目已删除,但预览图文件清理失败：${errorMessage(error)}`, '画师串');
+      toastr.warning(`条目已删除，但预览图文件清理失败：${errorMessage(error)}`, '画师串');
     }
   }
   list.splice(index, 1);
@@ -281,7 +281,7 @@ const CHANNEL_PROMPT_TARGETS: NaiPromptTarget[] = [
   {
     key: 'quality',
     label: '正面质量词',
-    hint: '拼在画面 TAG 之后(整体顺序:画师串 → 画面 TAG → 质量词)。画师串里设置了质量词时,会用画师串那份,这里的不生效。',
+    hint: '拼在画面 TAG 之后（整体顺序：画师串 → 画面 TAG → 质量词）。画师串里设置了质量词时，会用画师串那份，这里的不生效。',
     fallback: () => naiDefaultQualityTags(settings.nai.model),
     read: () => settings.nai.qualityTags,
     write: v => (settings.nai.qualityTags = v),
@@ -289,7 +289,7 @@ const CHANNEL_PROMPT_TARGETS: NaiPromptTarget[] = [
   {
     key: 'negative',
     label: '负面提示词',
-    hint: '留空 = 按模型取官方负面词;要额外排除什么,直接往这一份里接。画师串里设置了负面词时,会用画师串那份,这里的不生效。',
+    hint: '留空 = 按模型取官方负面词；要额外排除什么，直接往这一份里接。画师串里设置了负面词时，会用画师串那份，这里的不生效。',
     fallback: () => naiDefaultUndesired(settings.nai.model),
     read: () => settings.nai.undesiredContent,
     write: v => (settings.nai.undesiredContent = v),
@@ -310,8 +310,8 @@ const artistBoundTargets = computed<NaiPromptTarget[]>(() => {
       label: '正面质量词',
       readonly,
       hint: readonly
-        ? '内置画师串的绑定位随插件版本更新,不可改;复制为我的画师串后可自定义。留空 = 用渠道级设置(渠道级也留空,则按模型取官方词)。'
-        : '这份质量词随当前画师串一起切换。留空 = 用渠道级设置(渠道级也留空,则按模型取官方词)。',
+        ? '内置画师串的绑定位随插件版本更新，不可改；复制为我的画师串后可自定义。留空 = 用渠道级设置（渠道级也留空，则按模型取官方词）。'
+        : '这份质量词随当前画师串一起切换。留空 = 用渠道级设置（渠道级也留空，则按模型取官方词）。',
       fallback: () => settings.nai.qualityTags.trim() || naiDefaultQualityTags(settings.nai.model),
       read: () => a.quality,
       write: v => (a.quality = v),
@@ -321,8 +321,8 @@ const artistBoundTargets = computed<NaiPromptTarget[]>(() => {
       label: '负面提示词',
       readonly,
       hint: readonly
-        ? '内置画师串的绑定位随插件版本更新,不可改;复制为我的画师串后可自定义。留空 = 用渠道级设置(渠道级也留空,则按模型取官方负面词)。'
-        : '这份负面词随当前画师串一起切换。留空 = 用渠道级设置(渠道级也留空,则按模型取官方负面词)。',
+        ? '内置画师串的绑定位随插件版本更新，不可改；复制为我的画师串后可自定义。留空 = 用渠道级设置（渠道级也留空，则按模型取官方负面词）。'
+        : '这份负面词随当前画师串一起切换。留空 = 用渠道级设置（渠道级也留空，则按模型取官方负面词）。',
       fallback: () =>
         settings.nai.undesiredContent.trim() || naiDefaultUndesired(settings.nai.model),
       read: () => a.negative,
@@ -707,7 +707,7 @@ async function removeVibe(vibe: NaiVibe) {
 <template>
   <div class="panel">
     <p class="bbi-page-intro">
-      NovelAI 生图接口。地址默认为官方,填第三方兼容站(镜像/转发)即走第三方,协议一致。
+      NovelAI 生图接口。地址默认为官方，填第三方兼容站（镜像/转发）即走第三方，协议一致。
     </p>
 
     <div class="bbi-sections">
@@ -723,7 +723,7 @@ async function removeVibe(vibe: NaiVibe) {
             placeholder="https://image.novelai.net"
             spellcheck="false"
           />
-          <p class="bbi-field-hint">默认官方;第三方站填域名即可,自动补全 /ai 端点。</p>
+          <p class="bbi-field-hint">默认官方；第三方站填域名即可，自动补全 /ai 端点。</p>
         </div>
 
         <div class="bbi-field">
@@ -796,7 +796,7 @@ async function removeVibe(vibe: NaiVibe) {
             <button
               class="bbi-icon-btn art-op"
               type="button"
-              title="管理画师串库:搜索、预览图、批量删除"
+              title="管理画师串库：搜索、预览图、批量删除"
               aria-label="管理画师串库"
               @click="artistManagerOpen = true"
             >
@@ -875,11 +875,11 @@ async function removeVibe(vibe: NaiVibe) {
             placeholder="artist:xxx, artist:yyy"
           />
           <p v-if="isBuiltinArtist" class="bbi-field-hint art-hint">
-            内置画师串随插件版本更新,不可直接改;点上方复制按钮建一条自己的再改。
+            内置画师串随插件版本更新，不可直接改；点上方复制按钮建一条自己的再改。
           </p>
           <!-- 仅 V5 模型下提醒:V5 与 4.5 的画师串响应差异大,4.5 及以下不需要这条噪音 -->
           <p v-if="isV5Model" class="bbi-field-hint art-hint art-hint-warn">
-            NAI 5 对画师串的响应与 4.5 差异很大,旧画师串直接套用效果可能跑偏,建议重新调试。
+            NAI 5 对画师串的响应与 4.5 差异很大，旧画师串直接套用效果可能跑偏，建议重新调试。
           </p>
 
           <!-- 随画师串一起切换的正/负面词:设置了覆盖下面渠道级,没设置就用下面的 -->
@@ -895,7 +895,7 @@ async function removeVibe(vibe: NaiVibe) {
             </li>
           </ul>
           <p class="bbi-field-hint art-hint">
-            这里设置的提示词会覆盖下面的，随画师串一起切换;这里没设置，就会用下面的。
+            这里设置的提示词会覆盖下面的，随画师串一起切换；这里没设置，就会用下面的。
           </p>
         </template>
         <!-- 不选画师串时无提示:下拉里「不使用」已自明 -->
@@ -918,7 +918,7 @@ async function removeVibe(vibe: NaiVibe) {
           </li>
         </ul>
         <p class="bbi-field-hint art-hint">
-          画师串里没设置正/负面词时，就会用这里的;这里也留空，则按模型取官方词。
+          画师串里没设置正/负面词时，就会用这里的；这里也留空，则按模型取官方词。
         </p>
       </Collapsible>
 
@@ -934,18 +934,18 @@ async function removeVibe(vibe: NaiVibe) {
         <div class="be-row">
           <div class="bbi-field">
             <div class="bbi-field-head">
-              <span class="bbi-field-label">竖屏尺寸(宽×高)</span>
+              <span class="bbi-field-label">竖屏尺寸（宽×高）</span>
             </div>
             <BbiCombo v-model="settings.nai.portraitSize" :options="['832×1216', '1024×1536', '1024×1024']" aria-label="竖屏尺寸" placeholder="832×1216" />
           </div>
           <div class="bbi-field">
             <div class="bbi-field-head">
-              <span class="bbi-field-label">横屏尺寸(宽×高)</span>
+              <span class="bbi-field-label">横屏尺寸（宽×高）</span>
             </div>
             <BbiCombo v-model="settings.nai.landscapeSize" :options="['1216×832', '1536×1024', '1024×1024']" aria-label="横屏尺寸" placeholder="1216×832" />
           </div>
         </div>
-        <p class="bbi-field-hint">竖屏用于单人、特写、立绘;横屏用于群像、远景、全景;方向由自动 TAG 判定。</p>
+        <p class="bbi-field-hint">竖屏用于单人、特写、立绘；横屏用于群像、远景、全景；方向由自动 TAG 判定。</p>
 
         <div class="be-row">
           <div class="bbi-field">
@@ -1002,10 +1002,10 @@ async function removeVibe(vibe: NaiVibe) {
             <input class="bbi-input" type="number" v-model.number="settings.nai.seed" min="0" />
           </div>
         </div>
-        <p class="bbi-field-hint">Scale = 提示词相关性;Rescale = 相关性调整;种子 0 = 随机。</p>
+        <p class="bbi-field-hint">Scale = 提示词相关性；Rescale = 相关性调整；种子 0 = 随机。</p>
 
         <label class="bbi-switch-row">
-          <span class="bbi-field-label">Variety Boost(画面多样性,按尺寸自动计算)</span>
+          <span class="bbi-field-label">Variety Boost（画面多样性，按尺寸自动计算）</span>
           <input v-model="settings.nai.varietyBoost" type="checkbox" class="bbi-checkbox" />
         </label>
 
@@ -1020,14 +1020,14 @@ async function removeVibe(vibe: NaiVibe) {
           />
         </div>
         <p class="bbi-field-hint">
-          NAI 服务端不排队,并发高容易被限流(429),建议保持 1;超出的请求自动排队等待。
-          被限流时会自动退避重试(最多 3 次),并让所有排队任务一起冷却,不会连着撞上去。
+          NAI 服务端不排队，并发高容易被限流(429)，建议保持 1；超出的请求自动排队等待。
+          被限流时会自动退避重试（最多 3 次），并让所有排队任务一起冷却，不会连着撞上去。
         </p>
       </Collapsible>
 
-      <Collapsible title="Vibe 库(氛围转移)" :open="false">
+      <Collapsible title="Vibe 库（氛围转移）" :open="false">
         <p v-if="vibesSupported" class="bbi-field-hint vibe-hint">
-          上传参考图,生成时叠加其风格/氛围;编码按当前选中的模型进行,会消耗一次接口调用。
+          上传参考图，生成时叠加其风格/氛围；编码按当前选中的模型进行，会消耗一次接口调用。
         </p>
         <p v-else class="bbi-field-hint vibe-hint">
           Current model does not support Vibe Transfer.
@@ -1050,7 +1050,7 @@ async function removeVibe(vibe: NaiVibe) {
           <input ref="vibeImportInput" type="file" accept=".naiv4vibe" hidden @change="onVibeImportChange" />
         </div>
 
-        <p v-if="!settings.nai.vibes.length" class="bbi-field-hint">还没有 vibe;上传一张参考图开始。</p>
+        <p v-if="!settings.nai.vibes.length" class="bbi-field-hint">还没有 vibe；上传一张参考图开始。</p>
 
         <template v-else>
           <div class="vibe-toolbar">
@@ -1069,7 +1069,7 @@ async function removeVibe(vibe: NaiVibe) {
               v-if="prefixGroupPlans.length"
               class="bbi-btn bbi-btn-sm"
               type="button"
-              title="旧版迁移把组名拼进了名字,点此还原成真正的分组"
+              title="旧版迁移把组名拼进了名字，点此还原成真正的分组"
               @click="applyPrefixGroups"
             >
               <Icon name="checklist" :size="12" />
@@ -1108,7 +1108,7 @@ async function removeVibe(vibe: NaiVibe) {
                 <button
                   class="bbi-btn bbi-btn-sm bbi-btn-primary"
                   type="button"
-                  title="只叠加这一组:关掉组外全部勾选,开启本组"
+                  title="只叠加这一组：关掉组外全部勾选，开启本组"
                   @click="soloGroup(group)"
                 >
                   只开这组
@@ -1116,7 +1116,7 @@ async function removeVibe(vibe: NaiVibe) {
                 <button
                   class="bbi-btn bbi-btn-sm"
                   type="button"
-                  title="开启本组,不影响其它组(用来叠加多组)"
+                  title="开启本组，不影响其它组（用来叠加多组）"
                   @click="setGroupEnabled(group, true)"
                 >
                   全开
@@ -1143,7 +1143,7 @@ async function removeVibe(vibe: NaiVibe) {
                   v-if="group.name"
                   class="bbi-icon-mini"
                   type="button"
-                  title="解散分组(只取消归类,不删除 Vibe)"
+                  title="解散分组（只取消归类，不删除 Vibe）"
                   aria-label="解散分组"
                   @click="dissolveGroup(group)"
                 >
@@ -1207,7 +1207,7 @@ async function removeVibe(vibe: NaiVibe) {
                       class="bbi-btn bbi-btn-sm"
                       type="button"
                       :disabled="vibeEncoding"
-                      title="该 vibe 缺当前模型的编码,生成时会被跳过;点击按当前模型补编码"
+                      title="该 vibe 缺当前模型的编码，生成时会被跳过；点击按当前模型补编码"
                       @click="reencodeVibe(vibe)"
                     >
                       <Icon name="refresh" :size="12" /> 补当前模型编码
@@ -1216,7 +1216,7 @@ async function removeVibe(vibe: NaiVibe) {
                       当前模型暂不支持 Vibe
                     </span>
                     <span v-else-if="!vibe.modelKeys.includes(currentVibeKey)" class="vibe-missing">
-                      缺当前模型编码且无原图,无法使用
+                      缺当前模型编码且无原图，无法使用
                     </span>
                     <button
                       class="bbi-btn bbi-btn-sm"
@@ -1239,7 +1239,7 @@ async function removeVibe(vibe: NaiVibe) {
 
       <Collapsible title="从智绘姬迁移" :open="false">
         <p class="bbi-field-hint vibe-hint">
-          复制智绘姬(st-chatu8)的 vibe 到本库:只建副本、不改源数据,重复的自动跳过。
+          复制智绘姬(st-chatu8)的 vibe 到本库：只建副本、不改源数据，重复的自动跳过。
         </p>
         <p class="bbi-field-hint">
           <template v-if="!chatu8Detect.found">未检测到智绘姬（插件未安装或未启用）。</template>
@@ -1266,7 +1266,7 @@ async function removeVibe(vibe: NaiVibe) {
 
         <!-- 提示词预设导入:与 vibe 同区同级;有没有新预设不在这里报,点开弹窗看预览 -->
         <p class="bbi-field-hint vibe-hint">
-          提示词预设同理:前置固定正向 → 画师串，后置固定正向 → 正面质量词，固定负向 → 负面提示词（自动带上当前模型官方基线）。
+          提示词预设同理：前置固定正向 → 画师串，后置固定正向 → 正面质量词，固定负向 → 负面提示词（自动带上当前模型官方基线）。
         </p>
         <p class="bbi-field-hint">
           <template v-if="!chatu8ArtistDetect.found">未检测到智绘姬（插件未安装或未启用）。</template>

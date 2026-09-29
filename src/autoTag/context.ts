@@ -1,7 +1,7 @@
 import type { STContext, STMessage, WorldInfoEntry } from '@/st/context';
 import { getCheckWorldInfo, getContext, getEjsTemplate } from '@/st/context';
 import { isWorldInfoEntryExcluded, sortWorldInfoEntriesLikeST } from '@/autoTag/excludes';
-import { stripCustomTags } from '@/autoTag/clean';
+import { cleanHistoryText, stripCustomTags } from '@/autoTag/clean';
 import { settings } from '@/state/settings';
 
 /**
@@ -52,6 +52,7 @@ function cleanScanText(mes: string): string {
     .replace(RE_THINK_BLOCK, '') // 思维链
     .replace(/<!--[\s\S]+?-->/g, '') // HTML 注释
     .replace(/<horae[\s\S]*?>[\s\S]*?<\/horae[\s\S]*?>/gi, ''); // 旧 horae 格式
+  if (settings.storyTags?.length) return cleanHistoryText(s, [], settings.storyTags);
   s = stripCustomTags(s, settings.excludes.customStripTags); // 用户自定义标签(与角色记忆插件同名单)
   s = stripManagedTags(s);
 
@@ -131,7 +132,7 @@ async function renderWorldInfoContent(
     const out = await ejs.evalTemplate(text, env);
     if (typeof out === 'string') text = out;
   } catch (e) {
-    console.log('[长夜的绘图器] 世界书 EJS 渲染失败(退回未执行文本):', e);
+    console.log('[长夜的绘图器] 世界书 EJS 渲染失败（退回未执行文本）：', e);
   }
   return text;
 }
@@ -195,12 +196,12 @@ export async function fetchWorldInfo(
     );
     const chunks = await Promise.all(
       entries
-        .filter(e => e && !isWorldInfoEntryExcluded(e, settings.excludes))
+        .filter(e => e && !isWorldInfoEntryExcluded(e, settings.excludes, settings.worldInfoKeywords))
         .map(e => renderWorldInfoContent(typeof e.content === 'string' ? e.content : '', e, refFloor)),
     );
     return joinWorldInfoChunks(chunks);
   } catch (e) {
-    console.log('[长夜的绘图器] 世界书激活失败(降级为不带设定):', e);
+    console.log('[长夜的绘图器] 世界书激活失败（降级为不带设定）：', e);
     return '';
   }
 }

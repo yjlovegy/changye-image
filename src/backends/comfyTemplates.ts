@@ -106,7 +106,7 @@ export const COMFY_TEMPLATES: Record<ComfySimpleTemplateId, ComfyTemplateMeta> =
     modelLabel: '模型',
     vaeRequired: false,
     vaeLabel: 'VAE',
-    vaePlaceholder: '可留空,用模型内置',
+    vaePlaceholder: '可留空，用模型内置',
     clips: [],
     supportsNegative: true,
     portraitSize: '832×1216',
@@ -132,7 +132,7 @@ export const COMFY_TEMPLATES: Record<ComfySimpleTemplateId, ComfyTemplateMeta> =
   },
   anima: {
     id: 'anima',
-    label: 'Anima 系(Qwen 链路)',
+    label: 'Anima 系（Qwen 链路）',
     modelKind: 'unet',
     modelLabel: '模型',
     vaeRequired: true,

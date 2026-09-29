@@ -14,11 +14,12 @@ import type { ExcludesSettings } from '@/state/settings';
  * 编译失败降级为字面子串包含(大小写不敏感)——用户填了带元字符的普通名字(如「(临时)」)
  * 也不会误伤,只是退化成子串比对。与角色记忆插件 engine.ts 的 isWorldInfoEntryExcluded 同逻辑。
  */
-export function isWorldInfoEntryExcluded(entry: WorldInfoEntry, excludes: ExcludesSettings): boolean {
+export function isWorldInfoEntryExcluded(entry: WorldInfoEntry, excludes: ExcludesSettings, keywords: string[] = []): boolean {
   const world = entry.world?.trim();
   if (world && excludes.excludedWorldNames.includes(world)) return true;
   const comment = entry.comment?.trim();
   if (!comment) return false;
+  if (keywords.some(word => word.trim() && comment.toLowerCase().includes(word.trim().toLowerCase()))) return true;
   for (const raw of excludes.excludedWorldInfoPatterns) {
     const pat = raw.trim();
     if (!pat) continue;

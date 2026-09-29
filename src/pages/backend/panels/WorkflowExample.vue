@@ -15,7 +15,7 @@ const src = computed(() => normalizeWorkflowExample(props.preset.exampleImage));
 const owners = comfyExampleOwners;
 defineExpose({ busy });
 let pickedTarget: ComfyWorkflowPreset | undefined;
-const filename = computed(() => `${props.preset.name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_') || '工作流'}-示例图.${src.value?.split('.').pop() || 'png'}`);
+const filename = computed(() => `${props.preset.name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_') || '工作流'}-示例图。${src.value?.split('.').pop() || 'png'}`);
 watch(src, () => { broken.value = false; status.value = ''; }, { flush: 'sync' });
 
 function pick() {

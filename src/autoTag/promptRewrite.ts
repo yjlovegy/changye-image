@@ -20,7 +20,7 @@ import type { PromptSource } from '@/floor/promptSource';
 export async function rewriteImagePrompt(context: STContext, floor: number, source: PromptSource,
   content: ImageTagContent, signal: AbortSignal): Promise<ImageTagContent> {
   signal.throwIfAborted();
-  const prepared = prepareTargetText(source.text, settings.excludes.customStripTags);
+  const prepared = prepareTargetText(source.text, [], source.kind === "floor" ? settings.storyTags : []);
   if (!prepared.segments.length) throw new Error('本图没有可读取的原正文或选段，请使用“按意见修改”');
   const preset = activeComfyPreset();
   const mode = normalizePromptMode(preset.promptMode);

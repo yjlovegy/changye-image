@@ -135,7 +135,7 @@ const confirmRollbackOpen = ref(false);
 const pendingRollback = ref<{ name: string; record: CharTagChangeRecord } | null>(null);
 
 const FIELD_PLACEHOLDERS: Record<CharTagField, string> = {
-  fandom: '同人角色填: character name (copyright name), 不带转义括号; 原创留空',
+  fandom: '同人角色填： character name (copyright name), 不带转义括号； 原创留空',
   sex: '如 1girl / 1boy',
   age: '如 adult woman, mature appearance（描述视觉年龄）',
   hair: '如 waist-length black hair, blunt bangs, straight hair',
@@ -151,7 +151,7 @@ const FIELD_PLACEHOLDERS: Record<CharTagField, string> = {
   body: '如 slim, narrow shoulders, defined waist',
   extra: '如 mole under left eye, scar on right cheek（注明左右与位置）',
   accessories: '如 round glasses, silver stud earrings（长期佩戴）',
-  outfit: '如 white collared shirt, navy pleated skirt（角色标志服装,可不填）',
+  outfit: '如 white collared shirt, navy pleated skirt（角色标志服装，可不填）',
 };
 
 const FIELD_GROUPS: { title: string; fields: CharTagField[] }[] = [
@@ -162,10 +162,10 @@ const FIELD_GROUPS: { title: string; fields: CharTagField[] }[] = [
 ];
 
 const PREFERENCE_PLACEHOLDERS: Record<CharPreferenceField, string> = {
-  expression: '如:平时神情沉静,微笑时嘴角轻扬；当前剧情有明确情绪时服从剧情',
-  gaze: '如:交谈时看向对方的眼睛,思考时稍微垂眸',
-  action: '如:紧张时轻捏袖口；只在当前场景适合时使用',
-  pose: '如:站立时肩膀放松,坐姿端正；剧情指定姿势时服从剧情',
+  expression: '如：平时神情沉静，微笑时嘴角轻扬；当前剧情有明确情绪时服从剧情',
+  gaze: '如：交谈时看向对方的眼睛，思考时稍微垂眸',
+  action: '如：紧张时轻捏袖口；只在当前场景适合时使用',
+  pose: '如：站立时肩膀放松，坐姿端正；剧情指定姿势时服从剧情',
 };
 
 /** 全局库名字集(响应式),用于分区与「覆盖」徽标。 */
@@ -341,7 +341,7 @@ function confirmEntry() {
     return;
   }
   if (!previewTag.value) {
-    toastr.warning('至少填一个外貌字段(或整串 TAG)', '长夜的绘图器');
+    toastr.warning('至少填一个外貌字段（或整串 TAG）', '长夜的绘图器');
     return;
   }
   if (draftHasInactiveRaw.value && !draftStartedWithFields.value && confirmedFieldPreview.value !== previewTag.value) {
@@ -407,7 +407,7 @@ function confirmPromote() {
   confirmPromoteOpen.value = false;
   if (!editingName.value || !guardDraftContext()) return;
   if (promoteCharTagToGlobal(editingName.value)) {
-    toastr.success(`「${editingName.value}」已提升为全局角色,所有聊天生效`, '长夜的绘图器');
+    toastr.success(`「${editingName.value}」已提升为全局角色，所有聊天生效`, '长夜的绘图器');
   }
   closeEntry();
 }
@@ -416,7 +416,7 @@ function copyToChat() {
   if (!editingName.value || !guardDraftContext()) return;
   const name = editingName.value;
   if (copyGlobalCharTagToChat(name)) {
-    toastr.success(`已把「${name}」复制到本聊天,之后本聊天以副本为准`, '长夜的绘图器');
+    toastr.success(`已把「${name}」复制到本聊天，之后本聊天以副本为准`, '长夜的绘图器');
   }
   closeEntry();
 }
@@ -432,7 +432,7 @@ async function completeFromReferences() {
   }
   const ctx = getContext();
   if (!ctx) {
-    toastr.info('当前酒馆上下文不可用,请打开角色后重试', '长夜的绘图器');
+    toastr.info('当前酒馆上下文不可用，请打开角色后重试', '长夜的绘图器');
     return;
   }
   const contextKey = appearanceContextKey(ctx);
@@ -452,7 +452,7 @@ async function completeFromReferences() {
     if (draft.value !== d || controller.signal.aborted || d.name.trim() !== name) return;
     const currentContext = getContext();
     if (!currentContext || appearanceContextKey(currentContext) !== contextKey) {
-      toastr.info('角色卡或聊天已切换,本次外貌补全未应用', '长夜的绘图器');
+      toastr.info('角色卡或聊天已切换，本次外貌补全未应用', '长夜的绘图器');
       return;
     }
     const next: Suggestion[] = [];
@@ -507,7 +507,7 @@ function confirmRollback() {
   if (rollbackCharTag(p.name, p.record)) {
     toastr.success(`已回滚「${p.name}」的${fieldLabel(p.record.field)}变更`, '长夜的绘图器');
   } else {
-    toastr.warning('回滚失败:条目可能已删除', '长夜的绘图器');
+    toastr.warning('回滚失败：条目可能已删除', '长夜的绘图器');
   }
 }
 
@@ -524,8 +524,10 @@ function sourceLabel(entry: CharTagEntry): string {
     <hr class="bbi-rule" />
 
     <p class="bbi-field-hint">
-      为角色记录固定外貌与五官细节,生成时作为外貌依据。神态、视线、动作和姿势默认随剧情,也可填写角色偏好。
-      自动配图和选段配图会为未锁定的结构化档案补齐缺失的脸型、眉形、眼型、鼻形与唇形,已有值优先保留;合理设计会标注在变化记录中。
+      为角色记录固定外貌与五官细节，生成时作为外貌依据。神态、视线、动作和姿势默认随剧情，也可填写角色偏好。
+    </p>
+    <p class="bbi-field-hint">
+      自动配图和选段配图会为未锁定的结构化档案补齐缺失的脸型、眉形、眼型、鼻形与唇形，已有值优先保留。
     </p>
 
     <!-- ===== 全局角色库 ===== -->
@@ -552,7 +554,7 @@ function sourceLabel(entry: CharTagEntry): string {
       <div class="bbi-fold-wrap" :class="{ 'is-collapsed': !globalShown }">
         <div class="bbi-fold-inner">
           <p class="bbi-field-hint">
-            所有聊天生效,仅手动维护——AI 不会修改全局角色,适合玩家角色等固定形象。本聊天有同名角色时以本聊天为准。
+            所有聊天生效，仅手动维护——AI 不会修改全局角色，适合玩家角色等固定形象。本聊天有同名角色时以本聊天为准。
           </p>
           <ul v-if="globalCharTagLib.entries.length" class="bbi-char-grid">
           <li v-for="entry in globalCharTagLib.entries" :key="entry.name" class="bbi-char-card">
@@ -561,7 +563,7 @@ function sourceLabel(entry: CharTagEntry): string {
                 <span class="bbi-char-name">{{ entry.name }}</span>
                 <span class="bbi-char-pills">
                   <span class="bbi-char-pill is-global">全局</span>
-                  <span v-if="charTagBaseNames.has(entry.name)" class="bbi-char-pill is-override" title="本聊天有同名角色,当前聊天以本聊天的为准">
+                  <span v-if="charTagBaseNames.has(entry.name)" class="bbi-char-pill is-override" title="本聊天有同名角色，当前聊天以本聊天的为准">
                     本聊天已覆盖
                   </span>
                 </span>
@@ -576,7 +578,7 @@ function sourceLabel(entry: CharTagEntry): string {
           </li>
           </ul>
           <p v-else class="bbi-char-empty">
-            还没有全局角色。在本聊天角色的编辑弹窗里点「提升为全局」,或点右上角「+」添加。
+            还没有全局角色。在本聊天角色的编辑弹窗里点「提升为全局」，或点右上角「+」添加。
           </p>
         </div>
       </div>
@@ -619,7 +621,7 @@ function sourceLabel(entry: CharTagEntry): string {
                   >
                     {{ sourceLabel(entry) }}
                   </span>
-                  <span v-if="globalNameSet.has(entry.name)" class="bbi-char-pill is-override" title="与全局库同名,当前聊天以本条为准">
+                  <span v-if="globalNameSet.has(entry.name)" class="bbi-char-pill is-override" title="与全局库同名，当前聊天以本条为准">
                     覆盖全局
                   </span>
                   <span
@@ -731,7 +733,7 @@ function sourceLabel(entry: CharTagEntry): string {
           top-layer
           @confirm="confirmRawTransition"
         >
-          当前使用上方字段，旧整串仅保留为备份。请确认原有外貌中仍需保留的特征已移入字段；也可返回,将上方字段留空继续使用整串。
+          当前使用上方字段，旧整串仅保留为备份。请确认原有外貌中仍需保留的特征已移入字段；也可返回，将上方字段留空继续使用整串。
           <span class="bbi-char-confirm-preview-label">保存后实际生效的外貌 TAG:</span>
           <code class="bbi-char-confirm-preview">{{ previewTag }}</code>
         </ConfirmDialog>
@@ -745,7 +747,7 @@ function sourceLabel(entry: CharTagEntry): string {
           top-layer
           @confirm="confirmRemove"
         >
-          确定删除「{{ editingName }}」的固定外貌 TAG 吗?之后生成时该角色的外貌将不再锚定。
+          确定删除「{{ editingName }}」的固定外貌 TAG 吗？之后生成时该角色的外貌将不再锚定。
         </ConfirmDialog>
 
         <ConfirmDialog
@@ -756,8 +758,8 @@ function sourceLabel(entry: CharTagEntry): string {
           top-layer
           @confirm="confirmPromote"
         >
-          把「{{ editingName }}」的当前外貌快照进全局库?之后所有聊天(包括本聊天)都以全局值为准,
-          AI 不能再修改它;本聊天的副本与变更记录将被清除。
+          把「{{ editingName }}」的当前外貌快照进全局库？之后所有聊天（包括本聊天）都以全局值为准，
+          AI 不能再修改它；本聊天的副本与变更记录将被清除。
         </ConfirmDialog>
       </div>
     </ModalMask>

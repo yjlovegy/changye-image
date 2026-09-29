@@ -335,7 +335,7 @@ describe('formatPromptText', () => {
         characters: [{ name: '顾晚', tag: 'black hair', nl: 'looking away' }],
       }),
     ).toBe(
-      '1girl, moonlight\n\nShe stands on the roof.\n\n角色: 顾晚\nblack hair\nlooking away\n\nNegative: lowres',
+      '1girl, moonlight\n\nShe stands on the roof.\n\n角色： 顾晚\nblack hair\nlooking away\n\nNegative: lowres',
     );
   });
 
@@ -354,7 +354,7 @@ describe('formatPromptText', () => {
       size: 'portrait',
     });
     expect(formatPromptText(parseImageTagContent(raw))).toBe(
-      '1girl\n\nnight\n\n角色: 顾晚\nblack hair\n\nNegative: blurry',
+      '1girl\n\nnight\n\n角色： 顾晚\nblack hair\n\nNegative: blurry',
     );
   });
 });

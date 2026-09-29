@@ -1,7 +1,7 @@
 import { requestFloorTags } from '@/autoTag/runner';
 import { confirmDialog } from '@/components/confirm';
 import { ensureChatObserver, onChatMutation } from '@/floor/chatObserver';
-import { isCurrentChatExcluded, settings } from '@/state/settings';
+import { settings } from '@/state/settings';
 import { getContext, isAiStoryMessage } from '@/st/context';
 import { hasImageTagTrace } from '@/st/imageTagRegex';
 
@@ -103,15 +103,13 @@ function syncButtons(): void {
   const chat = getContext()?.chat;
   // 上下文还没就绪:什么都别做——此时「谁该有」无从判断,照着空 chat 对账会把按钮全撤掉
   if (!chat) return;
-  // 排除角色:该聊天整条自动 tag 链路停用(与角色记忆插件同名单),手动按钮一并撤掉
-  const excluded = isCurrentChatExcluded();
   for (const mesEl of document.querySelectorAll<HTMLElement>('#chat .mes')) {
     const extra = mesEl.querySelector('.extraMesButtons');
     if (!extra) continue;
     const floor = Number(mesEl.getAttribute('mesid'));
     // 判据吃 chat 里的消息对象,不吃 DOM 的 is_system 属性(见文件头注释)。
     // 顺带的好处:/hide 只翻属性、不动 DOM 树,本来就触发不了 observer,现在也无需触发。
-    const wanted = !excluded && Number.isInteger(floor) && isAiStoryMessage(chat[floor]);
+    const wanted = Number.isInteger(floor) && isAiStoryMessage(chat[floor]);
     const existing = extra.querySelector<HTMLElement>(`.${BUTTON_CLASS}`);
     if (wanted && !existing) extra.appendChild(createButton());
     else if (!wanted && existing && existing.dataset.running !== '1') existing.remove();

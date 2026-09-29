@@ -35,7 +35,7 @@ export function appearanceHash(text: string): string {
 }
 function textAt(context: STContext, floor: number): string {
   const message = context.chat[floor];
-  return isStoryMessage(message) ? stripImageTags(cleanHistoryText(message.mes, settings.excludes.customStripTags)).trim() : '';
+  return isStoryMessage(message) ? stripImageTags(cleanHistoryText(message.mes, settings.storyTags?.length ? [] : settings.excludes.customStripTags, settings.storyTags)).trim() : '';
 }
 export function appearanceKeys(context: STContext, end: number): string[] {
   const keys = ['start'];
@@ -99,8 +99,8 @@ export function parseCurrentChanges(raw: string, sources: Source[], names: Set<s
   const clean = raw.replace(/<think(?:ing)?\b[\s\S]*?<\/think(?:ing)?>/gi, '');
   let parsed: { changes?: unknown };
   try { parsed = JSON.parse(clean.slice(clean.indexOf('{'), clean.lastIndexOf('}') + 1)); }
-  catch { throw new Error('当前造型整理未返回有效 JSON'); }
-  if (!Array.isArray(parsed.changes)) throw new Error('当前造型整理缺少 changes 数组');
+  catch { throw new Error('当前人物形象整理未返回有效 JSON'); }
+  if (!Array.isArray(parsed.changes)) throw new Error('当前人物形象整理缺少 changes 数组');
   return parsed.changes.flatMap((item: any) => {
     if (!item || !names.has(item.name) || !CURRENT_FIELDS.includes(item.field) || !Number.isInteger(item.floor)) return [];
     if (typeof item.value !== 'string' || !item.value.trim() || item.value.length > 900 || /[<>]/.test(item.value)) return [];
@@ -149,7 +149,7 @@ export async function syncCurrentAppearance(context: STContext, entries: CharTag
         { role: 'user', content: JSON.stringify({ characters: entries.map(e => ({ name: e.name, fields: e.fields, raw: e.raw })), current: state, sources: chunk }) }];
       const channel = getTagGenChannel();
       const validate = (raw: string) => { parseCurrentChanges(raw, chunk, names); };
-      const options = { signal, source: '当前造型整理', validate };
+      const options = { signal, source: '当前人物形象整理', validate };
       const raw = channel ? await requestCompletion(channel, messages, options) : await requestViaMainApi(messages, options);
       guard();
       for (const change of parseCurrentChanges(raw, chunk, names)) lookFor(state, change.name)[change.field] = change;

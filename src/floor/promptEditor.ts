@@ -86,15 +86,15 @@ const LATE_HYDRATION_MS = 100;
 function failureReason(result: Exclude<ApplyMessageResult, 'saved'>): string {
   switch (result) {
     case 'chat-changed':
-      return '聊天已切换,提示词未保存';
+      return '聊天已切换，提示词未保存';
     case 'floor-changed':
-      return '楼层已变化,提示词未保存';
+      return '楼层已变化，提示词未保存';
     case 'swipe-changed':
-      return '已切换到别的 swipe,提示词未保存';
+      return '已切换到别的 swipe，提示词未保存';
     case 'build-failed':
-      return '正文里的这条 TAG 已被改动,请关闭弹窗后重新编辑';
+      return '正文里的这条 TAG 已被改动，请关闭弹窗后重新编辑';
     case 'unavailable':
-      return 'SillyTavern 上下文不可用,提示词未保存';
+      return 'SillyTavern 上下文不可用，提示词未保存';
   }
 }
 
@@ -131,7 +131,7 @@ async function writeBack(
   }
   const message = context.chat?.[at.messageId];
   if (!message) {
-    toastr.error('楼层已不存在,提示词未保存', '长夜的绘图器');
+    toastr.error('楼层已不存在，提示词未保存', '长夜的绘图器');
     return false;
   }
   if (regenerate && !backendStatus().configured) {
@@ -317,7 +317,7 @@ export function openPromptEditor(options: PromptEditorOptions): void {
     asking = true;
     void confirmDialog({
       title: '放弃修改',
-      text: '提示词的改动还没有应用,关闭后会丢失。',
+      text: '提示词的改动还没有应用，关闭后会丢失。',
       confirmText: '放弃',
       cancelText: '继续编辑',
       tone: 'danger',

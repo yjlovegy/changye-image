@@ -159,7 +159,7 @@ async function estimateTokens(id: number, messages: ChatMsg[], response: string)
       ),
     );
   } catch (e) {
-    console.debug('[长夜的绘图器] token 估算失败(已忽略)', e);
+    console.debug('[长夜的绘图器] token 估算失败（已忽略）', e);
   }
 }
 
@@ -287,7 +287,7 @@ async function requestCompletionAtUrl(
 ): Promise<string> {
   const ctx = getContext();
   if (!ctx) throw new ApiError('SillyTavern 上下文不可用');
-  if (!channel.url || !channel.model) throw new ApiError('副 API 渠道未配置完整(缺 url 或 model)');
+  if (!channel.url || !channel.model) throw new ApiError('副 API 渠道未配置完整（缺 url 或 model）');
 
   const stream = channel.stream ?? false;
   // 预填充开关(默认开):关闭时丢掉末尾那条 assistant 预填充消息。
@@ -304,7 +304,7 @@ async function requestCompletionAtUrl(
   const historyId = safeHistory(() =>
     beginLlm({
       source: opts.source || '未标注',
-      channelName: channel.name || channel.model || '(未命名渠道)',
+      channelName: channel.name || channel.model || '（未命名渠道）',
       model: channel.model,
       stream,
       messages: outMessages,
@@ -495,7 +495,7 @@ export function mainApiAvailable(): boolean {
 export async function requestViaMainApi(messages: ChatMsg[], opts: RequestOptions = {}): Promise<string> {
   const ctx = getContext();
   if (typeof ctx?.generateRaw !== 'function') {
-    throw new ApiError('当前 ST 版本不支持 generateRaw,无法跟随主 API');
+    throw new ApiError('当前 ST 版本不支持 generateRaw，无法跟随主 API');
   }
 
   // 历史埋点。跟随主 API 走 ST 内部黑盒,拿不到 usage,token 一律靠估算。
@@ -555,7 +555,7 @@ export async function testChannel(channel: ApiChannel): Promise<{ ok: boolean; m
     if (changed) channel.url = primaryUrl;
     return {
       ok: true,
-      message: `连通正常${changed ? `,已采用:${primaryUrl}` : ''},返回:${reply.slice(0, 40)}`,
+      message: `连通正常${changed ? `，已采用：${primaryUrl}` : ''}，返回：${reply.slice(0, 40)}`,
     };
   } catch (e) {
     if (!(e instanceof ApiError) || (e.status !== 404 && e.status !== 405)) {
@@ -571,12 +571,12 @@ export async function testChannel(channel: ApiChannel): Promise<{ ok: boolean; m
         channel,
         [{ role: 'user', content: '回复"ok"两个字符即可。' }],
         fallbackUrl,
-        { source: '连通性测试(备用地址)' },
+        { source: '连通性测试（备用地址）' },
       );
       channel.url = fallbackUrl;
       return {
         ok: true,
-        message: `连通正常,已自动改用:${fallbackUrl},返回:${reply.slice(0, 40)}`,
+        message: `连通正常，已自动改用：${fallbackUrl}，返回：${reply.slice(0, 40)}`,
       };
     } catch {
       // 备用地址也失败时保留首个错误,避免把模型名等真实问题掩盖成路径错误。

@@ -1,3 +1,4 @@
+import { outsideStoryRanges, storyRanges } from './storyScope';
 /**
  * 正文清洗工具(与角色记忆插件 timeTag.ts 的 stripCustomTags 完全同口径,改动需双端同步)。
  * 名单来自共享存储(settings.excludes.customStripTags),输入时已由 sanitizeTagName 消毒,
@@ -89,7 +90,8 @@ function clampToStoryBody(
 }
 
 /** 历史楼层与角色记忆插件 cleanBody 同口径；本插件的 bbi_image 必须保留供角色外貌续接。 */
-export function cleanHistoryText(mes: string, tags: string[]): string {
+export function cleanHistoryText(mes: string, tags: string[], storyTags: string[] = []): string {
+  if (storyTags.length) return prepareTargetText(mes, tags, storyTags).segments.map(segment => segment.text).join("\n\n");
   return clampToStoryBody(mes, tags, true)
     .replace(RE_START, (_, value) => `(起始时间:${String(value).trim()})`)
     .replace(RE_END, (_, value) => `(结束时间:${String(value).trim()})`);
@@ -111,6 +113,7 @@ export interface TargetSegment {
   id: string;
   /** 对应原始正文的物理行号(0-based，仅插件内部使用)。 */
   sourceLine: number;
+  sourceOffset?: number;
   /** 删除噪声后的该行叙事文本。 */
   text: string;
 }
@@ -182,7 +185,7 @@ function retainedLineText(source: string, line: SourceLineRange, ranges: Removal
   return pieces.join(' ').replace(/[ \t]+/g, ' ').trim();
 }
 
-function targetRemovalRanges(source: string, tags: string[]): RemovalRange[] {
+function targetRemovalRanges(source: string, tags: string[], storyTags: string[]): RemovalRange[] {
   const noise: RemovalRange[] = [
     ...rangesForRegex(source, RE_THINK_BLOCK),
     ...rangesForRegex(source, /<!--[\s\S]+?-->/g),
@@ -194,6 +197,8 @@ function targetRemovalRanges(source: string, tags: string[]): RemovalRange[] {
   }
 
   const masked = maskedSource(source, noise);
+  if (storyTags.length) return mergeRanges([...noise, ...outsideStoryRanges(masked, storyTags),
+    ...rangesForRegex(source, /<\/?[\p{L}\p{N}_-]+(?=[\s/>])[^>]*>/gu)]);
   const crop: RemovalRange[] = [];
   const startRe = /<bbs_start\b/gi;
   let lastStart = -1;
@@ -226,11 +231,14 @@ function targetRemovalRanges(source: string, tags: string[]): RemovalRange[] {
  * 目标正文删除同款噪声和时间标签，并只给保留下来的非空物理行追加段尾位置 ID。
  * 每个 ID 直接保存原始 sourceLine，不再要求模型复制原文，也不依赖清洗后文本反查。
  */
-export function prepareTargetText(mes: string, tags: string[]): PreparedTargetText {
+export function prepareTargetText(mes: string, tags: string[], storyTags: string[] = []): PreparedTargetText {
   const source = String(mes ?? '');
-  const ranges = targetRemovalRanges(source, tags);
+  const ranges = targetRemovalRanges(source, tags, storyTags);
+  // Use original tag offsets: masking removes delimiters as well as outside prose.
+  const originalScopes = storyTags.length ? storyRanges(source, storyTags) : [];
   const segments = sourceLineRanges(source)
-    .map(line => ({ sourceLine: line.index, text: retainedLineText(source, line, ranges) }))
+    .map(line => ({ sourceLine: line.index, text: retainedLineText(source, line, ranges),
+      ...(storyTags.length ? { sourceOffset: Math.max(...originalScopes.filter(r => r.start < line.end && r.end > line.start).map(r => Math.min(r.end, line.end))) } : {}) }))
     .filter(segment => !!segment.text)
     .map((segment, index) => ({ id: `P${index + 1}`, ...segment }));
   return {

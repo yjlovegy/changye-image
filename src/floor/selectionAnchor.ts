@@ -1,3 +1,4 @@
+import { storyRanges } from '@/autoTag/storyScope';
 /** Source offsets are UTF-16 offsets, like DOM Range. Never find the first matching sentence. */
 export type SelectionAnchorResult = { offset: number; reason?: never } | { offset?: never; reason: string };
 
@@ -20,6 +21,7 @@ export function locateSelectionSourceEnd(
   selectedText: string,
   stripTags: string[] = [],
   contexts: SelectionAnchorContext[] = [],
+  storyTags: string[] = [],
 ): SelectionAnchorResult {
   const fail = (reason: string): SelectionAnchorResult => ({ reason });
   if (source.length > 250_000) return fail('这条消息过长，暂时无法可靠定位选区');
@@ -30,7 +32,7 @@ export function locateSelectionSourceEnd(
   // them when finishing a paragraph (a story wrapper may contain the entire reply).
   // <game> is also a rolecard narrative delimiter: the host may strip it and
   // render its body as sibling paragraphs. Escaping it moves an image to reply end.
-  const flowTags = new Set(['div', 'section', 'article', 'main', 'aside', 'header', 'footer', 'nav', 'blockquote', 'details', 'content', 'story', 'narrative', 'game']);
+  const flowTags = new Set(['div', 'section', 'article', 'main', 'aside', 'header', 'footer', 'nav', 'blockquote', 'details', 'content', 'story', 'narrative', 'game', ...storyTags.map(tag => tag.toLowerCase())]);
   const markdownBlocks: Array<{ start: number; end: number; multilineList: boolean }> = [];
   const hide = (start: number, end: number) => hidden.fill(1, start, end);
   const matches = (pattern: RegExp, visit: (match: RegExpMatchArray, start: number) => void) => {
@@ -106,7 +108,7 @@ export function locateSelectionSourceEnd(
     });
   }
   const stack: Array<{ name: string; start: number; transparent: boolean }> = [];
-  matches(/<\/?([a-zA-Z][\w:-]*)(?:\s[^<>]*?)?\s*\/?>/g, (m, i) => {
+  matches(/<\/?([\p{L}\p{N}_:-]+)(?:\s[^<>]*?)?\s*\/?>/gu, (m, i) => {
     if (hidden[i]) return;
     hide(i, i + m[0].length);
     const name = m[1].toLowerCase();
@@ -168,6 +170,14 @@ export function locateSelectionSourceEnd(
       break;
     }
     if (projectedEnd < 0) return fail('选区所在段落无法唯一对应原文，请多选相邻正文后重试');
+  }
+  if (storyTags.length) {
+    const ranges = storyRanges(source, storyTags);
+    for (const end of ends.slice(projectedEnd - selected.length, projectedEnd)) {
+      if (!ranges.some(range => end > range.start && end <= range.end)) {
+        return fail('选区不在「自定义标签范围」内，请重新选择正文。');
+      }
+    }
   }
   let offset = ends[projectedEnd - 1];
   if (offset === undefined) return fail('无法定位选区，请重新选择');

@@ -20,6 +20,7 @@ export interface ImageInsertion {
   position: string;
   /** 位置 ID 对应的原始物理行(0-based，仅插件内部使用)。 */
   sourceLine: number;
+  sourceOffset?: number;
   /** 本图直接依据的正文段落，与图片插入位置分别记录。 */
   sourceParagraphs?: string[];
   /** danbooru 短 tag 部分(必填)。 */
@@ -164,23 +165,26 @@ function sanitizePosition(value: unknown, index: number): string {
 }
 
 export class ImageSourceValidationError extends Error {}
+export class ImagePlanFormatError extends Error {}
 
 export const IMAGE_SOURCE_RETRY_INSTRUCTION = '上次 sourceParagraphs 缺失或无效。请重新检查每张图的来源：按正文顺序填写支撑本图的实际段落编号，包含人物、动作和场景依据，不能只选独立对白、感叹或拟声词。可跳过无关对白，不必以 position 结尾，也不必压缩到三段以内；不得引用插入位置之后的事件。position 只决定插图位置。返回修正后的完整 JSON。';
 
 /** Source references are local paragraph IDs, never model-written quotations. */
 function sanitizeSourceParagraphs(value: unknown, position: string, segments: TargetSegment[], index: number): string[] | undefined {
   if (value === undefined) return undefined; // Compatibility with existing providers / saved responses.
-  const fail = () => new ImageSourceValidationError(`images[${index}].sourceParagraphs 必须包含目标正文中按顺序排列、不重复且不晚于 position 的 P编号`);
-  if (!Array.isArray(value) || !value.length || value.length > segments.length) throw fail();
+  const fail = (reason: string) => new ImageSourceValidationError(`第 ${index + 1} 张图的 sourceParagraphs：${reason}`);
+  if (!Array.isArray(value) || !value.length) throw fail('必须填写正文段落编号数组，不能为空。');
   const ids = value.map(id => typeof id === 'string' ? id.trim().toUpperCase() : '');
   const end = segments.findIndex(segment => segment.id === position);
-  let previous = -1;
   for (const id of ids) {
+    if (!/^P\d+$/.test(id)) throw fail('包含格式错误的编号，请使用 P1、P2 这样的编号。');
     const current = segments.findIndex(segment => segment.id === id);
-    if (current <= previous || current > end) throw fail();
-    previous = current;
+    if (current < 0) throw fail(`${id} 不在目标正文中，请重新核对来源。`);
+    if (current > end) throw fail(`插图位置是 ${position}，却引用了后面的 ${id}。请核对画面依据和插图位置，不得直接丢弃依据或提前画出后文。`);
   }
-  return ids;
+  // Only repair equivalent reference lists. Never drop unknown or future evidence.
+  const ordered = [...new Set(ids)].sort((a, b) => segments.findIndex(s => s.id === a) - segments.findIndex(s => s.id === b));
+  return ordered;
 }
 
 /**
@@ -197,8 +201,10 @@ export function parseImagePlan(
   maxImages: number,
   promptMode?: PromptMode,
 ): ImagePlan {
-  const parsed = parseFinalJsonObject(raw);
-  if (!Array.isArray(parsed.images)) throw new Error('AI 返回的 JSON 缺少 images 数组');
+  let parsed: Record<string, unknown>;
+  try { parsed = parseFinalJsonObject(raw); }
+  catch { throw new ImagePlanFormatError('AI 返回的内容不是有效的图片规划 JSON，可能返回了故事正文或格式不完整。请返回包含 images 和 changes 的 JSON，不复述或续写故事。'); }
+  if (!Array.isArray(parsed.images)) throw new ImagePlanFormatError('AI 返回的 JSON 缺少 images 数组，请返回图片规划，不返回故事正文。');
   const normalizedMax = Math.max(1, Math.floor(Number(maxImages)) || 1);
   const normalizedMin = Math.min(
     normalizedMax,
@@ -228,7 +234,8 @@ export function parseImagePlan(
     const characters = sanitizeCharacters(entry.characters, index);
     // 兼容模型按习惯返回 orientation / aspect 键
     const size = normalizeOrientation(entry.size ?? entry.orientation ?? entry.aspect);
-    images.push({ position, sourceLine, ...(sourceParagraphs ? { sourceParagraphs } : {}), tag: promptMode === 'krea2' ? '' : tag, nl, negative, characters, size, ...(promptMode ? { promptMode } : {}) });
+    const sourceOffset = segments.find(segment => segment.id === position)?.sourceOffset;
+    images.push({ position, sourceLine, ...(sourceOffset !== undefined ? {sourceOffset} : {}), ...(sourceParagraphs ? { sourceParagraphs } : {}), tag: promptMode === 'krea2' ? '' : tag, nl, negative, characters, size, ...(promptMode ? { promptMode } : {}) });
   }
 
   const limitedImages = images.slice(0, normalizedMax);
@@ -313,6 +320,24 @@ function parseChanges(raw: unknown, positions: Map<string, number>): CharChange[
 export function injectImageTags(source: string, images: ImageInsertion[]): string {
   if (!images.length) return source;
   const lines = sourceLines(source);
+  if (images.some(image => image.sourceOffset !== undefined)) {
+    const starts: number[] = []; let cursor = 0;
+    for (const line of lines) { starts.push(cursor); cursor += line.text.length + line.eol.length; }
+    const points = images.map(image => {
+      const line = lines[image.sourceLine];
+      if (!line) throw new Error('原始段落位置已失效。');
+      const offset = image.sourceOffset ?? starts[image.sourceLine] + line.text.length;
+      if (!Number.isInteger(offset) || offset < starts[image.sourceLine] || offset > starts[image.sourceLine] + line.text.length) throw new Error('正文标签范围内的插图位置已失效。');
+      return { image, offset };
+    }).sort((a,b) => a.offset - b.offset);
+    const eol = lines.find(line => line.eol)?.eol || '\n';
+    let output = '', start = 0;
+    for (const {image, offset} of points) {
+      output += source.slice(start, offset) + eol + serializeImageTag(image) + (offset < source.length && !/[\r\n]/.test(source[offset]) ? eol : '');
+      start = offset;
+    }
+    return output + source.slice(start);
+  }
   const byLine = new Map<number, ImageInsertion[]>();
   for (const image of images) {
     if (!Number.isInteger(image.sourceLine) || image.sourceLine < 0 || image.sourceLine >= lines.length) {

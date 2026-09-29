@@ -178,7 +178,7 @@ async function removePreview(preset: NaiArtistPreset) {
   try {
     await deleteUserImage(path);
   } catch (error) {
-    toastr.warning(`预览图引用已移除,但文件清理失败：${errorMessage(error)}`, '画师串');
+    toastr.warning(`预览图引用已移除，但文件清理失败：${errorMessage(error)}`, '画师串');
   }
 }
 
@@ -223,7 +223,7 @@ async function confirmDelete() {
   deleting.value = false;
   if (fileFailures) {
     toastr.warning(
-      `已删除 ${plan.removed.length} 条,但 ${fileFailures} 张预览图文件清理失败`,
+      `已删除 ${plan.removed.length} 条，但 ${fileFailures} 张预览图文件清理失败`,
       '画师串',
     );
   } else {
@@ -308,7 +308,7 @@ function duplicateFromEdit() {
       <div class="am-scroll">
         <p v-if="!filtered.length" class="am-empty">
           <template v-if="items.length">没有匹配「{{ search }}」的画师串。</template>
-          <template v-else>还没有画师串,点右上角「新建」开始。</template>
+          <template v-else>还没有画师串，点右上角「新建」开始。</template>
         </p>
 
         <div v-else class="am-grid">
@@ -429,7 +429,7 @@ function duplicateFromEdit() {
       </div>
 
       <footer class="bbi-modal-foot am-foot">
-        <span class="am-foot-hint">点卡片或单选圈启用/停用;勾选左上角方框可批量删除。</span>
+        <span class="am-foot-hint">点卡片或单选圈启用/停用；勾选左上角方框可批量删除。</span>
         <span class="bbi-modal-foot-spacer"></span>
         <button class="bbi-btn" type="button" @click="close">关闭</button>
       </footer>
@@ -448,10 +448,10 @@ function duplicateFromEdit() {
     @confirm="confirmDelete"
   >
     <template v-if="deleteList.length === 1">
-      确定删除画师串「{{ deleteList[0]?.name || '未命名画师串' }}」?删除后无法恢复。
+      确定删除画师串「{{ deleteList[0]?.name || '未命名画师串' }}」？删除后无法恢复。
     </template>
     <template v-else>
-      确定删除选中的 {{ deleteList.length }} 条画师串?删除后无法恢复。
+      确定删除选中的 {{ deleteList.length }} 条画师串？删除后无法恢复。
     </template>
   </ConfirmDialog>
 
@@ -513,7 +513,7 @@ function duplicateFromEdit() {
       </div>
 
       <div class="bbi-modal-field">
-        <span class="bbi-modal-label">画师串(拼在正向提示词最前面)</span>
+        <span class="bbi-modal-label">画师串（拼在正向提示词最前面）</span>
         <BbiTextarea
           v-model="editPrompt"
           :rows="4"
@@ -527,7 +527,7 @@ function duplicateFromEdit() {
       <p class="bbi-modal-label">
         绑定的正面质量词「{{ editItem.preset.quality.trim() ? '已设置' : '未设置' }}」、负面提示词「{{
           editItem.preset.negative.trim() ? '已设置' : '未设置'
-        }}」;要改它们,先在面板里把这条设为当前画师串,再点提示词区的对应行。
+        }}」；要改它们，先在面板里把这条设为当前画师串，再点提示词区的对应行。
       </p>
 
       <footer class="bbi-modal-foot">

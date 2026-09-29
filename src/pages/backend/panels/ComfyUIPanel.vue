@@ -385,7 +385,7 @@ function applyAssist() {
             <button
               class="bbi-icon-btn wf-op"
               type="button"
-              title="复制当前工作流(含开关与尺寸)"
+              title="复制当前工作流（含开关与尺寸）"
               aria-label="复制当前工作流"
               @click="duplicateWorkflow"
             >

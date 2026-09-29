@@ -308,7 +308,7 @@ export function formatPromptText(
     content.tag,
     content.nl,
     ...content.characters.map(character =>
-      [`角色: ${character.name}`, character.tag, character.nl].filter(Boolean).join('\n'),
+      [`角色： ${character.name}`, character.tag, character.nl].filter(Boolean).join('\n'),
     ),
     content.negative ? `Negative: ${content.negative}` : '',
   ]

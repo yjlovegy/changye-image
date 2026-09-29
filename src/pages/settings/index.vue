@@ -292,49 +292,6 @@ async function pullModels(ch: ApiChannel) {
   }
 }
 
-/* —— 排除角色:勾选的角色名(含重名卡)的聊天里,自动 tag 全流程停用。
-   名单与角色记忆插件共享(见 state/settings.ts 的共享存储),任一端改动自动同步。
-   按「名字」排除,同名卡是一批一起排除。列表很长时易卡,故:① 仅在弹窗打开时取/去重角色名;
-   ② 带搜索框过滤;③ 用 v-show + 子串匹配,渲染量随搜索收敛。 —— */
-const excludeOpen = ref(false);
-const excludeSearch = ref('');
-
-// 弹窗打开时一次性算出去重后的角色名(按名排序),关闭后不再持有,避免常驻大列表。
-const charNames = computed<string[]>(() => {
-  if (!excludeOpen.value) return [];
-  const chars = getContext()?.characters ?? [];
-  const seen = new Set<string>();
-  for (const c of chars) {
-    const n = c?.name?.trim();
-    if (n) seen.add(n);
-  }
-  return [...seen].sort((a, b) => a.localeCompare(b, 'zh'));
-});
-
-// 过滤:空搜索显示全部;否则大小写不敏感子串匹配
-const filteredCharNames = computed<string[]>(() => {
-  const q = excludeSearch.value.trim().toLowerCase();
-  if (!q) return charNames.value;
-  return charNames.value.filter(n => n.toLowerCase().includes(q));
-});
-
-function openExclude() {
-  excludeSearch.value = '';
-  excludeOpen.value = true;
-}
-function closeExclude() {
-  excludeOpen.value = false;
-}
-function isExcluded(name: string): boolean {
-  return settings.excludes.excludedChars.includes(name);
-}
-function toggleExcluded(name: string) {
-  const list = settings.excludes.excludedChars;
-  const idx = list.indexOf(name);
-  if (idx >= 0) list.splice(idx, 1);
-  else list.push(name);
-}
-
 /* —— 排除世界书:tag 生成副 API 不带这些整本世界书的条目。复刻排除角色的搜索+勾选弹窗;
    世界书名从 ST 的 getWorldInfoNames()(全部已加载的世界书文件)取。 —— */
 const excludeWorldOpen = ref(false);
@@ -390,15 +347,27 @@ function toggleWorldExcluded(name: string) {
 /* —— 排除世界书条目:按条目名(comment)过滤,复刻清洗标签的输入框+chips。
    规则当正则,普通名字即包含匹配;编译失败降级子串。 —— */
 const wiPatternDraft = ref('');
+const wiRuleMode = ref('keyword');
+const wiRuleError = ref('');
+const mvuRule = String.raw`\[mvu[\s\S]*?\]`;
+const mvuExcluded = computed({
+  get: () => settings.excludes.excludedWorldInfoPatterns.includes(mvuRule),
+  set: (enabled: boolean) => { if (enabled) { if (!mvuExcluded.value) settings.excludes.excludedWorldInfoPatterns.push(mvuRule); } else removeWiPattern(mvuRule); },
+});
+const visibleWiPatterns = computed(() => settings.excludes.excludedWorldInfoPatterns.filter(p => p !== mvuRule));
+function removeWiKeyword(word: string) { settings.worldInfoKeywords = settings.worldInfoKeywords.filter(value => value !== word); }
+
 function addWiPattern() {
   const pat = wiPatternDraft.value.trim();
   if (!pat) {
     wiPatternDraft.value = '';
     return;
   }
-  if (!settings.excludes.excludedWorldInfoPatterns.includes(pat)) {
-    settings.excludes.excludedWorldInfoPatterns.push(pat);
-  }
+  wiRuleError.value = '';
+  if (wiRuleMode.value === 'regex') {
+    try { new RegExp(pat, 'i'); } catch { wiRuleError.value = '正则表达式无效，请检查后再添加。'; return; }
+    if (!settings.excludes.excludedWorldInfoPatterns.includes(pat)) settings.excludes.excludedWorldInfoPatterns.push(pat);
+  } else if (!settings.worldInfoKeywords.includes(pat)) settings.worldInfoKeywords.push(pat);
   wiPatternDraft.value = '';
 }
 function removeWiPattern(pat: string) {
@@ -406,21 +375,20 @@ function removeWiPattern(pat: string) {
   if (idx >= 0) settings.excludes.excludedWorldInfoPatterns.splice(idx, 1);
 }
 
-/* —— 自定义清洗标签:用户填标签名(如 snow),清洗正文时把 <snow>…</snow> 整块删掉。
-   与角色记忆插件同名单共享(角色记忆插件配的清洗标签,绘里同样生效)。 —— */
+/* 全局保留范围，与旧删除名单独立。 */
 const stripTagDraft = ref('');
 function addStripTag() {
-  const tag = sanitizeTagName(stripTagDraft.value);
+  const tag = sanitizeTagName(stripTagDraft.value).toLowerCase();
   if (!tag) {
     stripTagDraft.value = '';
     return;
   }
-  if (!settings.excludes.customStripTags.includes(tag)) settings.excludes.customStripTags.push(tag);
+  if (!settings.storyTags.includes(tag)) settings.storyTags.push(tag);
   stripTagDraft.value = '';
 }
 function removeStripTag(tag: string) {
-  const idx = settings.excludes.customStripTags.indexOf(tag);
-  if (idx >= 0) settings.excludes.customStripTags.splice(idx, 1);
+  const idx = settings.storyTags.indexOf(tag);
+  if (idx >= 0) settings.storyTags.splice(idx, 1);
 }
 
 /* —— 模型可搜索下拉(combobox):输入框既是当前值也是过滤词,聚焦弹出过滤列表 —— */
@@ -441,9 +409,9 @@ async function confirmUpdate() {
   const toastr = (globalThis as Record<string, any>).toastr;
   try {
     await performUpdate();
-    toastr?.success?.('更新成功,正在刷新页面…', '长夜的绘图器');
+    toastr?.success?.('更新成功，正在刷新页面…', '长夜的绘图器');
   } catch (error) {
-    toastr?.error?.(`更新失败:${error instanceof Error ? error.message : String(error)}`, '长夜的绘图器');
+    toastr?.error?.(`更新失败：${error instanceof Error ? error.message : String(error)}`, '长夜的绘图器');
   }
 }
 </script>
@@ -513,7 +481,7 @@ async function confirmUpdate() {
           <input v-model="settings.storage.saveAsJpeg" type="checkbox" class="bbi-checkbox" />
         </label>
         <p class="bbi-field-hint">
-          体积约为 PNG 的一到两成;代价是图片不再内嵌生成参数(提示词与种子仍留在聊天记录里)。
+          体积约为 PNG 的一到两成；代价是图片不再内嵌生成参数（提示词与种子仍留在聊天记录里）。
         </p>
 
         <label class="bbi-switch-row">
@@ -521,14 +489,14 @@ async function confirmUpdate() {
           <input v-model="settings.ui.autoCollapseImages" type="checkbox" class="bbi-checkbox" />
         </label>
         <p class="bbi-field-hint">
-          开启后图片默认收成一条细条,点击才展开,适合在外面玩时防窥。在卡片上手动展开/折叠过的以手动状态为准(刷新页面后重置)。
+          开启后图片默认收成一条细条，点击才展开，适合在外面玩时防窥。在卡片上手动展开/折叠过的以手动状态为准（刷新页面后重置）。
         </p>
 
         <label class="bbi-switch-row">
           <span class="bbi-field-label">移动端点当前页导航关窗</span>
           <input v-model="ui.navTapClose" type="checkbox" class="bbi-checkbox" />
         </label>
-        <p class="bbi-field-hint">移动端再点一下当前所在页的导航按钮即可关闭整个窗口,省得去够右上角的 ×。怕误触可关。</p>
+        <p class="bbi-field-hint">移动端再点一下当前所在页的导航按钮即可关闭整个窗口，省得去够右上角的 ×。怕误触可关。</p>
 
         <label class="bbi-switch-row">
           <span class="bbi-field-label">在 ST 顶栏显示按钮</span>
@@ -563,7 +531,7 @@ async function confirmUpdate() {
               <span class="bbi-field-value">{{ ui.orbOpacity }}%</span>
             </div>
             <input class="bbi-range" type="range" min="20" max="100" step="1" v-model.number="ui.orbOpacity" />
-            <p class="bbi-field-hint">悬浮球静止时的不透明度;唤起 / 拖动时一律全显。</p>
+            <p class="bbi-field-hint">悬浮球静止时的不透明度；唤起 / 拖动时一律全显。</p>
           </div>
 
           <div class="bbi-field">
@@ -581,13 +549,13 @@ async function confirmUpdate() {
           <span class="bbi-field-label">自动生成 TAG</span>
           <input v-model="settings.autoTag.enabled" type="checkbox" class="bbi-checkbox" />
         </label>
-        <p class="bbi-field-hint">AI 正文生成后自动判断该楼是否需要插图,需要就写入生图 TAG。</p>
+        <p class="bbi-field-hint">AI 正文生成后自动判断该楼是否需要插图，需要就写入生图 TAG。</p>
 
         <label class="bbi-switch-row">
           <span class="bbi-field-label">自动生成图片</span>
           <input v-model="settings.autoTag.autoGenerate" type="checkbox" class="bbi-checkbox" />
         </label>
-        <p class="bbi-field-hint">写入 TAG 后立即按当前出图渠道自动出图;关闭则只写 TAG,在卡片上手动生成。</p>
+        <p class="bbi-field-hint">写入 TAG 后立即按当前出图渠道自动出图；关闭则只写 TAG，在卡片上手动生成。</p>
 
         <label class="bbi-num-row">
           <span class="bbi-field-label">携带最近 AI 楼数</span>
@@ -600,7 +568,7 @@ async function confirmUpdate() {
             @change="normalizeAutoTagNumbers"
           />
         </label>
-        <p class="bbi-field-hint">按 AI 故事楼计数,中间的 user 楼一并携带。</p>
+        <p class="bbi-field-hint">按 AI 故事楼计数，中间的 user 楼一并携带。</p>
 
         <label class="bbi-num-row">
           <span class="bbi-field-label">单楼最少图片数</span>
@@ -626,7 +594,7 @@ async function confirmUpdate() {
             @change="normalizeAutoTagNumbers('maxImages')"
           />
         </label>
-        <p class="bbi-field-hint">最少设为 0 时允许不出图;最多数量始终受插件硬限制。</p>
+        <p class="bbi-field-hint">最少设为 0 时允许不出图；最多数量始终受插件硬限制。</p>
 
         <label class="bbi-num-row">
           <span class="bbi-field-label">失败自动重试次数</span>
@@ -643,30 +611,10 @@ async function confirmUpdate() {
         <p class="bbi-field-hint">副 API 请求失败或返回无法解析时自动重试；0 = 不重试，最多 5 次。</p>
       </Collapsible>
 
-      <!-- 排除角色:名单与角色记忆插件共享(见 state/settings.ts 的共享存储),任一端改动自动同步 -->
-      <Collapsible title="排除角色" :open="false">
-        <p class="bbi-field-hint">名单内角色的聊天里不自动生成生图 TAG。名单与角色记忆插件共享,任一端改动自动同步。</p>
-        <div class="bbi-channel-bar">
-          <span class="bbi-field-label">已排除 {{ settings.excludes.excludedChars.length }} 个</span>
-          <button class="bbi-btn bbi-btn-primary bbi-btn-sm" type="button" @click="openExclude">
-            <Icon name="edit" /> 编辑名单
-          </button>
-        </div>
-        <ul v-if="settings.excludes.excludedChars.length" class="bbi-exclude-chips">
-          <li v-for="name in settings.excludes.excludedChars" :key="name" class="bbi-exclude-chip">
-            <span class="bbi-exclude-chip-name">{{ name }}</span>
-            <button class="bbi-exclude-chip-x" type="button" title="移出名单" @click="toggleExcluded(name)">
-              <Icon name="close" />
-            </button>
-          </li>
-        </ul>
-        <p v-else class="bbi-field-hint">名单为空,所有角色都启用自动 TAG。</p>
-      </Collapsible>
-
       <!-- 排除世界书内容:与角色记忆插件同名单共享 -->
       <Collapsible title="排除世界书内容" :open="false">
         <p class="bbi-field-hint">
-          从生成 TAG 参考的世界书里剔除对画面无用的条目,省 token 也避免干扰。名单与角色记忆插件共享;仅影响副 API。
+          排除生成 TAG 时不需要参考的世界书内容。整本名单与正则规则沿用共享设置。
         </p>
 
         <!-- 整本排除:复刻排除角色的搜索+勾选弹窗 -->
@@ -684,33 +632,39 @@ async function confirmUpdate() {
             </button>
           </li>
         </ul>
-        <p v-else class="bbi-field-hint">未排除任何世界书,全部激活条目都会进 TAG 生成参考。</p>
+        <p v-else class="bbi-field-hint">未整本排除世界书，仍按下方条目规则过滤。</p>
 
         <hr class="bbi-rule" />
 
-        <!-- 按条目名过滤:复刻清洗标签的输入框 + chips -->
+        <!-- 按条目名称排除:复刻清洗标签的输入框 + chips -->
         <div class="bbi-field-head">
-          <span class="bbi-field-label">按条目名过滤</span>
+          <span class="bbi-field-label">按条目名称排除</span>
         </div>
-        <p class="bbi-field-hint">
-          按条目备注名<strong>包含</strong>匹配(不分大小写),支持正则(如 <code>^规则</code>)。
-          预置的 <code>\[mvu[\s\S]*?\]</code> 用于过滤 MVU 机制条目,不需要可删。
-        </p>
+        <label class="bbi-field-label"><input v-model="mvuExcluded" type="checkbox" /> 排除 MVU 条目</label>
+        <p class="bbi-field-hint">按条目名称中的 [MVU…] 标记匹配。</p>
+        <select v-model="wiRuleMode" class="bbi-input" aria-label="条目匹配方式">
+          <option value="keyword">关键词</option><option value="regex">正则表达式</option>
+        </select>
         <div class="bbi-striptag-bar">
           <input
             v-model="wiPatternDraft"
             class="bbi-input"
             type="text"
-            placeholder="条目名或正则,如 附加 或 ^规则"
+            :placeholder="wiRuleMode === 'keyword' ? '条目名称关键词' : '正则表达式，例如 ^规则'"
             @keydown.enter.prevent="addWiPattern"
           />
           <button class="bbi-btn bbi-btn-primary bbi-btn-sm" type="button" @click="addWiPattern">
             <Icon name="plus" /> 添加
           </button>
         </div>
-        <ul v-if="settings.excludes.excludedWorldInfoPatterns.length" class="bbi-exclude-chips">
-          <li v-for="pat in settings.excludes.excludedWorldInfoPatterns" :key="pat" class="bbi-exclude-chip">
-            <span class="bbi-exclude-chip-name">{{ pat }}</span>
+        <p v-if="wiRuleError" role="alert" class="bbi-field-hint">{{ wiRuleError }}</p>
+        <ul v-if="visibleWiPatterns.length || settings.worldInfoKeywords.length" class="bbi-exclude-chips">
+          <li v-for="word in settings.worldInfoKeywords" :key="'keyword:' + word" class="bbi-exclude-chip">
+            <span class="bbi-exclude-chip-name">关键词：{{ word }}</span>
+            <button class="bbi-exclude-chip-x" type="button" title="移除关键词" @click="removeWiKeyword(word)"><Icon name="close" /></button>
+          </li>
+          <li v-for="pat in visibleWiPatterns" :key="pat" class="bbi-exclude-chip">
+            <span class="bbi-exclude-chip-name">正则：{{ pat }}</span>
             <button class="bbi-exclude-chip-x" type="button" title="移除" @click="removeWiPattern(pat)">
               <Icon name="close" />
             </button>
@@ -719,32 +673,32 @@ async function confirmUpdate() {
         <p v-else class="bbi-field-hint">暂无条目名规则。</p>
       </Collapsible>
 
-      <!-- 自定义清洗标签:与角色记忆插件同名单共享 -->
-      <Collapsible title="自定义清洗标签" :open="false">
+      <!-- 全局正文标签范围独立保存，不与旧删除名单互换 -->
+      <Collapsible title="自定义标签范围" :open="false">
         <p class="bbi-field-hint">
-          填入标签名(如 <code>snow</code>),正文与世界书扫描时会把 <code>&lt;snow&gt;…&lt;/snow&gt;</code> 整块删掉。名单与角色记忆插件共享。
+          添加标签名，例如 <code>game</code>。仅从匹配标签内部选取正文，所有角色卡通用。
         </p>
         <div class="bbi-striptag-bar">
           <input
             v-model="stripTagDraft"
             class="bbi-input"
             type="text"
-            placeholder="标签名,如 snow"
+            placeholder="标签名，例如 game"
             @keydown.enter.prevent="addStripTag"
           />
           <button class="bbi-btn bbi-btn-primary bbi-btn-sm" type="button" @click="addStripTag">
             <Icon name="plus" /> 添加
           </button>
         </div>
-        <ul v-if="settings.excludes.customStripTags.length" class="bbi-exclude-chips">
-          <li v-for="tag in settings.excludes.customStripTags" :key="tag" class="bbi-exclude-chip">
+        <ul v-if="settings.storyTags.length" class="bbi-exclude-chips">
+          <li v-for="tag in settings.storyTags" :key="tag" class="bbi-exclude-chip">
             <span class="bbi-exclude-chip-name">&lt;{{ tag }}&gt;</span>
             <button class="bbi-exclude-chip-x" type="button" title="移除" @click="removeStripTag(tag)">
               <Icon name="close" />
             </button>
           </li>
         </ul>
-        <p v-else class="bbi-field-hint">暂无自定义标签。仅内置清洗(思维链、注释、物品旁注等)生效。</p>
+        <p v-else class="bbi-field-hint">未设置标签范围，使用普通正文识别。</p>
       </Collapsible>
 
       <!-- 自定义提示词(与角色记忆插件同款入口,独立成区) -->
@@ -784,7 +738,7 @@ async function confirmUpdate() {
             <BbiSelect v-model="settings.assignments.tagGen" style="width:100%" aria-label="生成 TAG 使用" :options="[{ value: '', label: '跟随主 API' }, ...settings.channels.map(c => ({ value: c.id, label: c.name }))]" />
           </div>
         </div>
-        <p class="bbi-field-hint">不指派渠道时跟随主 API:直接借用你主界面当前正在用的 API(聊天补全/文本补全)来生成画图 TAG,无需额外配置。想用不同模型再在下方建副渠道指派。渠道列表与角色记忆插件共享,任一端改动都会自动同步到另一端。</p>
+        <p class="bbi-field-hint">不指派渠道时跟随主API，想用不同模型再在下方建副渠道指派。</p>
 
         <hr class="bbi-rule" />
 
@@ -807,44 +761,6 @@ async function confirmUpdate() {
         <p v-else class="bbi-field-hint">还没有渠道。点「添加渠道」配置生成 TAG 要用的 API。</p>
       </Collapsible>
     </div>
-
-    <!-- ===== 排除角色弹窗:搜索 + 勾选列表 ===== -->
-    <ModalMask :open="excludeOpen" @close="closeExclude">
-      <div class="bbi-modal" role="dialog" aria-modal="true" aria-label="编辑排除名单">
-        <header class="bbi-modal-head">
-          <span class="bbi-modal-title">排除角色</span>
-          <button class="bbi-icon-mini" type="button" title="关闭" @click="closeExclude"><Icon name="close" /></button>
-        </header>
-
-        <input
-          v-model="excludeSearch"
-          class="bbi-input"
-          type="search"
-          placeholder="搜索角色名…"
-          spellcheck="false"
-        />
-
-        <div class="bbi-exclude-list">
-          <label v-for="name in filteredCharNames" :key="name" class="bbi-exclude-row">
-            <input
-              type="checkbox"
-              class="bbi-checkbox"
-              :checked="isExcluded(name)"
-              @change="toggleExcluded(name)"
-            />
-            <span class="bbi-exclude-row-name">{{ name }}</span>
-          </label>
-          <p v-if="!charNames.length" class="bbi-field-hint">未读取到角色列表。请先在 ST 里加载角色卡。</p>
-          <p v-else-if="!filteredCharNames.length" class="bbi-field-hint">没有匹配「{{ excludeSearch }}」的角色。</p>
-        </div>
-
-        <footer class="bbi-modal-foot">
-          <span class="bbi-exclude-count">共 {{ charNames.length }} 个角色 · 已排除 {{ settings.excludes.excludedChars.length }}</span>
-          <span class="bbi-modal-foot-spacer"></span>
-          <button class="bbi-btn bbi-btn-primary" type="button" @click="closeExclude">完成</button>
-        </footer>
-      </div>
-    </ModalMask>
 
     <!-- ===== 排除世界书弹窗:搜索 + 勾选列表(复刻排除角色) ===== -->
     <ModalMask :open="excludeWorldOpen" @close="closeExcludeWorld">
@@ -945,7 +861,7 @@ async function confirmUpdate() {
             <input v-model.number="editingChannel.maxTokens" class="bbi-input" type="number" step="256" min="256" />
           </label>
           <label class="bbi-mini-field">
-            <span>超时(秒)</span>
+            <span>超时（秒）</span>
             <input v-model.number="editingChannel.timeoutSec" class="bbi-input" type="number" step="10" min="1" />
           </label>
           <!-- 思考强度用 BbiSelect(纯选择,不唤起输入法);它自带 180px 固定宽,
@@ -968,16 +884,16 @@ async function confirmUpdate() {
           <span class="bbi-modal-label">发送预填充</span>
           <input v-model="editingChannel.prefill" type="checkbox" class="bbi-checkbox" />
         </label>
-        <span class="bbi-field-hint">默认开。若副 API 报错信息里出现 prefill 字样,关掉它即可。</span>
+        <span class="bbi-field-hint">默认开。若副 API 报错信息里出现 prefill 字样，关掉它即可。</span>
         <label class="bbi-modal-field">
           <span class="bbi-modal-label">排除参数</span>
           <input
             v-model="excludeParamsText"
             class="bbi-input"
             type="text"
-            placeholder="逗号分隔,如 temperature, max_tokens"
+            placeholder="逗号分隔，如 temperature, max_tokens"
           />
-          <span class="bbi-field-hint">这些参数会在发请求前从请求体里删除,用于规避不接受该参数的兼容端点报错。逗号分隔,留空则不排除。</span>
+          <span class="bbi-field-hint">这些参数会在发请求前从请求体里删除，用于规避不接受该参数的兼容端点报错。逗号分隔，留空则不排除。</span>
         </label>
         <p v-if="testing[editingChannel.id]" class="bbi-channel-test">{{ testing[editingChannel.id] }}</p>
 
@@ -1006,7 +922,7 @@ async function confirmUpdate() {
           top-layer
           @confirm="confirmRemoveChannel"
         >
-          确定删除渠道「{{ editingChannel.name || '未命名渠道' }}」吗?此操作不可撤销,已指派该渠道的任务会被清空。
+          确定删除渠道「{{ editingChannel.name || '未命名渠道' }}」吗？此操作不可撤销，已指派该渠道的任务会被清空。
         </ConfirmDialog>
       </div>
     </ModalMask>
@@ -1029,7 +945,7 @@ async function confirmUpdate() {
 
         <!-- 可用宏:点一下插入到光标处(仅 ComfyUI 规范有 {{nl}};无宏的条目不显示这一栏) -->
         <div v-if="editingTagPrompt.macros.length" class="bbi-macro-bar">
-          <span class="bbi-macro-tip">点击插入宏:</span>
+          <span class="bbi-macro-tip">点击插入宏：</span>
           <button
             v-for="mac in editingTagPrompt.macros"
             :key="mac.token"
@@ -1070,8 +986,8 @@ async function confirmUpdate() {
       :busy="updateState.updating"
       @confirm="confirmUpdate"
     >
-      当前版本 v{{ updateState.current || '—' }},最新版本 v{{ updateState.latest }}。<br />
-      现在更新吗?更新完成后会自动刷新页面生效。
+      当前版本 v{{ updateState.current || '—' }}，最新版本 v{{ updateState.latest }}。<br />
+      现在更新吗？更新完成后会自动刷新页面生效。
     </ConfirmDialog>
   </section>
 </template>
