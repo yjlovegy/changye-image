@@ -1,3 +1,4 @@
+import { ACCESSORY_EVIDENCE_RULE } from './appearancePolicy';
 import { ANIMA_CONTENT_RULE } from './animaPrompt';
 import { normalizePromptMode, assertNaturalPrompt, KREA2_VISUAL_CONTRACT, DEFAULT_KREA2_THINKING } from '@/promptMode';
 import { requestCompletion, type ChatMsg } from '@/api/client';
@@ -76,7 +77,7 @@ ${krea2 ? (settings.autoTag.prompts.krea2Thinking?.trim() || DEFAULT_KREA2_THINK
 ${!negativeRequired ? '本次未启用 AI 生成负面词：不编写或修改 negative，不因缺少 negative 而补写。可省略该字段，原负面内容由插件保留。此项覆盖自定义规范中的旧要求。' : ''}
 输出形状示例：${JSON.stringify({ images: [{ position: 'P1', ...example }] })}`;
   const messages: ChatMsg[] = [
-    { role: 'system', content: [spec, contract].filter(Boolean).join('\n\n') },
+    { role: 'system', content: [spec, ACCESSORY_EVIDENCE_RULE, '本次用户明确提出新增配饰时允许采用，未要求的配饰不得增添。', contract].filter(Boolean).join('\n\n') },
     { role: 'user', content: JSON.stringify({ currentPrompt: original, revisionInstruction: edit }) },
   ];
   const parsed: { value: ImageTagContent | null } = { value: null };

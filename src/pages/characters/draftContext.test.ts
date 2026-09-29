@@ -6,6 +6,7 @@ import ts from 'typescript';
 import * as CharTags from '@/state/charTags';
 import { appearanceContextKey, type AppearanceCompletion } from '@/autoTag/charCompletion';
 import type { STContext } from '@/st/context';
+import { CURRENT_FIELDS, CURRENT_LABELS } from '@/autoTag/currentAppearance';
 
 // Exercise the real SFC setup functions without a browser or any model/storage implementation.
 const descriptor = parse(readFileSync(new URL('./index.vue', import.meta.url), 'utf8')).descriptor;
@@ -37,6 +38,7 @@ interface Controller {
   openEntry: (entry: CharTags.CharTagEntry, scope: 'chat' | 'global') => void;
   confirmEntry: () => void;
   completeFromReferences: () => Promise<void>;
+  useSuggestions: () => void;
   askRemove: () => void;
   confirmRemove: () => void;
   askPromote: () => void;
@@ -50,6 +52,8 @@ function createController(): Controller {
   const modules: Record<string, unknown> = {
     vue: { ...Vue, onUnmounted: (callback: () => void) => { unmount = callback; } },
     '@/autoTag/charCompletion': { appearanceContextKey, completeCharacterAppearance: completion },
+    '@/autoTag/currentAppearance': { CURRENT_FIELDS, CURRENT_LABELS, cachedCurrentAppearance: () => ({}), syncCurrentAppearance: async () => ({}), saveCurrentAppearance: vi.fn() },
+    '@/state/promptTasks': { trackPromptTask: () => () => {} },
     '@/state/charTags': { ...CharTags, ...writes },
     '@/state/globalCharTags': { globalCharTagLib: Vue.reactive({ entries: [] }), ...writes },
     '@/st/context': { getContext: () => currentContext },
@@ -78,6 +82,8 @@ describe('character draft context ownership', () => {
     const controller = createController();
     controller.openEntry(entry(), 'chat');
     await controller.completeFromReferences();
+    expect(controller.draft.value?.fields.nose).toBe('');
+    controller.useSuggestions();
     expect(controller.draft.value?.fields.nose).toBe('straight nose');
     currentContext = { ...originalContext, characterId: 1, getCurrentChatId: () => 'chat-b' };
     controller.confirmEntry();

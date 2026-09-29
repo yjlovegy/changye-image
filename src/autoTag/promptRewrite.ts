@@ -1,4 +1,5 @@
 import { requestCompletion, requestViaMainApi } from '@/api/client';
+import { syncCurrentAppearance, currentAppearanceText } from './currentAppearance';
 import { buildAutoTagMessages } from './prompt';
 import { prepareTargetText } from './clean';
 import { readBookMemory } from './bookMemory';
@@ -27,6 +28,7 @@ export async function rewriteImagePrompt(context: STContext, floor: number, sour
   const locked = lockedCharTagNames();
   const state = prepareSelectionCharState(charTagsBeforeFloor(floor), readCharTagFloorDelta(context.chat[floor]), context.chat[floor].swipe_id ?? 0, locked);
   const anchors = resolveCharAnchors(state.entries, locked);
+  anchors.text = ((anchors.text ?? '') + currentAppearanceText(await syncCurrentAppearance(context, charTagsBeforeFloor(floor), floor, signal))) || null;
   const messages = await buildAutoTagMessages(context, floor, {...settings.autoTag,minImages:1,maxImages:1},
     readBookMemory(floor, context.chat[floor].mes, context.name1), prepared, anchors.text, negativeOn, mode);
   const index = messages.findLastIndex(m=>m.role==='user');

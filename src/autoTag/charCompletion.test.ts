@@ -39,6 +39,20 @@ beforeEach(() => {
 });
 
 describe('appearance reference completion', () => {
+  it('offers corrections to populated fields only in explicit correction mode', () => {
+    const raw = JSON.stringify({ fields: { eyes: 'brown eyes' }, evidence: { eyes: { source: 'card', quote: '棕色眼睛' } } });
+    const references = [{ id: 'card', label: '角色资料', text: '小雪有棕色眼睛。' }];
+    expect(parseAppearanceCompletion(raw, { eyes: 'blue eyes' }, references).fields).toEqual({});
+    expect(parseAppearanceCompletion(raw, { eyes: 'blue eyes' }, references, 'check').fields.eyes).toBe('brown eyes');
+  });
+  it.each(['hairclip', 'silver earrings', 'hair ribbon', 'necklace'])('rejects unsupported %s even with a real but irrelevant source quote', value => {
+    const raw = JSON.stringify({ fields: { accessories: value }, evidence: { accessories: { source: 'card', quote: '长长的黑发' } } });
+    expect(parseAppearanceCompletion(raw, {}, [{ id: 'card', label: '角色资料', text: '她有长长的黑发。' }]).fields).toEqual({});
+  });
+  it('accepts a hair clip only when explicitly supported by the quote', () => {
+    const raw = JSON.stringify({ fields: { accessories: 'silver hairclip' }, evidence: { accessories: { source: 'card', quote: '银色发卡' } } });
+    expect(parseAppearanceCompletion(raw, {}, [{ id: 'card', label: '角色资料', text: '固定配饰是银色发卡。' }]).fields.accessories).toBe('silver hairclip');
+  });
   it.each([false, true])('validates JSON inside the request before success can be recorded (channel=%s)', async useChannel => {
     mocks.channel.mockReturnValue(useChannel ? { id: 'configured' } : null);
     const succeeded = vi.fn();

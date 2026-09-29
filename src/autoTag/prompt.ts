@@ -1,4 +1,5 @@
 import { ANIMA_CONTENT_RULE, ANIMA_EXAMPLES } from './animaPrompt';
+import { ACCESSORY_EVIDENCE_RULE } from './appearancePolicy';
 import { DEFAULT_KREA2_SPEC, DEFAULT_KREA2_THINKING, KREA2_CONTENT_RULE, KREA2_VISUAL_CONTRACT, normalizePromptMode, type PromptMode } from '@/promptMode';
 import type { ChatMsg } from '@/api/client';
 import { supportsSceneNegative } from '@/autoTag/negative';
@@ -234,7 +235,7 @@ export async function buildAutoTagMessages(
    ${multiCharacterBindingRule}
    - 库中已有角色发生**永久外貌变化**（染发、剪发、留疤、长大、永久变身、固定造型改变等）时，必须通过 changes 报告：{"name":"角色名","field":"hair","value":"short red hair","position":"P4","reason":"在此处染发并剪短"}；结构化档案的 field 只能是 ${CHAR_TAG_FIELDS.join('/')}，旧整串档案按上述规则使用 raw 提交完整新外貌串；不能将一次表情、视线或动作误报为 face/eyes/mouth/body 的永久变化。
    - 已建档角色被判定为同人、但档案里没有 fandom 的，必须补一条 changes：{"name":"角色名","field":"fandom","value":"character name (copyright name)","reason":"判定为同人，补身份 tag"}；档案已有 fandom 的直接照抄，不重复报告。
-   - 库中带 [locked] 标记的角色是全局锁定档案：无论剧情如何发展，其固定外貌永不变化，**不得为其报告任何 changes**（报了也会被丢弃），画面中始终照抄锁定字段值。
+   - 库中带 [locked] 标记的角色是全局锁定档案：**不得为其报告任何基础档案 changes**（报了也会被丢弃）。锁定只保护基础资料；本聊天“当前造型”中有据的临时发型、服装与配饰必须覆盖相应基础值，未涉及的身份特征仍按基础值。本楼新变化按其发生时点应用，不能把高马尾与已经生效的披发同时写入画面。
    - 永久变化的 position 是新状态开始生效的位置：该位置之前的图片使用旧档案，该位置及之后使用新档案；多次变化按正文先后分别报告。
    - 假发、美瞳、湿身/污渍、临时发型、包扎、光照导致的颜色变化、姿势等临时状态不写 changes，但连续场景中仍须保持，直到正文明确解除或发生时间/场景跳跃。静态角色卡/世界书中的初始设定不得覆盖角色库里已经发生的后期变化。
    - 即使 images 为空也要完成建档与变化检查；没有任何变化时省略 changes 或返回空数组。`;
@@ -277,6 +278,7 @@ ${characterRule}
   // 解析端(protocol.ts)会先剥掉 think 块再取 JSON,二者配套;按后端取对应的那一份。
   const thinking = backendThinkingPrompt(options, naiCharPromptsOn, promptMode);
   if (thinking) messages.push({ role: 'system', content: thinking });
+  messages.push({ role: 'system', content: ACCESSORY_EVIDENCE_RULE });
   // 旧自定义规范/思维链仍保留，但不能重新关闭本轮精度要求或强迫模型编造档案。
   messages.push({ role: 'system', content: krea2 ? `${KREA2_VISUAL_CONTRACT}${negativeRule}` : anima ? `【人物精度与最终输出约束】
 ${facialDetailContract({ mixed: true, characterPrompts: false, allowDesign: true })}

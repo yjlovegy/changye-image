@@ -1,4 +1,5 @@
 import { trackPromptTask } from '@/state/promptTasks';
+import { syncCurrentAppearance, currentAppearanceText, currentAppearanceRevision } from './currentAppearance';
 import { reportPromptFailure } from '@/state/promptFailures';
 import { PROMPT_SOURCES_KEY, rememberPromptSources, sourceForPlannedImage } from '@/floor/promptSource';
 import { requestCompletion, requestViaMainApi } from '@/api/client';
@@ -319,10 +320,12 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
   try {
     const memory = readBookMemory(floor, context.chat[floor]?.mes ?? '', context.name1);
     const entriesBefore = charTagsBeforeFloor(floor);
+    const appearanceRevision = currentAppearanceRevision(context, floor);
     // 锁定名(全局库 ⊖ 本聊天基线):AI 的 changes 对这些名字一律无效,库文本里带 [locked] 标记
     const lockedNames = lockedCharTagNames();
     // 纯本地渲染:建档由主请求在同一次输出里完成(changes 的 field="new")
     const anchors = resolveCharAnchors(entriesBefore, lockedNames);
+    anchors.text = ((anchors.text ?? '') + currentAppearanceText(await syncCurrentAppearance(context, entriesBefore, floor, controller.signal))) || null;
     const negativeRequired = snapshotSceneNegative();
     const promptMode = settings.defaultBackend === 'comfyui' ? normalizePromptMode(activeComfyPreset().promptMode) : undefined;
     const messages = await buildAutoTagMessages(
@@ -418,6 +421,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
       return;
     }
 
+    if (currentAppearanceRevision(context, floor) !== appearanceRevision) throw new Error('此前正文或当前造型已变化，请重新生成提示词');
     const planOps = planChangeOps(plan);
     // 锁定角色(全局库)不接受 AI changes:丢弃,不写入楼层、不参与 @替换。
     // 重放侧 applyCharTagOps 也会按锁定名再拦一次(旧消息里可能已存这类 ops)。
@@ -507,7 +511,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
     const result = await applyMessageText(
       floor,
       currentText => {
-        if (controller.signal.aborted) return null;
+        if (controller.signal.aborted || currentAppearanceRevision(context, floor) !== appearanceRevision) return null;
         // replace 路径同样以当前正文为基底剔除旧 tag,不能用旧快照
         const base = opts.replace ? stripImageTags(currentText) : currentText;
         if (!plan.images.length) return base;
@@ -661,6 +665,7 @@ export async function requestSelectionImage(
     const entriesBefore = charTagsBeforeFloor(floor);
     const previousDelta = readCharTagFloorDelta(context.chat[floor]);
     const characterStateKey = () => JSON.stringify({
+      appearance: currentAppearanceRevision(context, floor),
       entries: charTagsBeforeFloor(floor),
       delta: getContext()?.chat[floor]?.extra?.[BBI_CHAR_EXTRA_KEY] ?? null,
       locked: [...lockedCharTagNames()].sort(),
@@ -670,6 +675,7 @@ export async function requestSelectionImage(
       entriesBefore, previousDelta, snapshot.swipeId, locked,
     );
     const anchors = resolveCharAnchors(selectionState.entries, locked);
+    anchors.text = ((anchors.text ?? '') + currentAppearanceText(await syncCurrentAppearance(context, entriesBefore, floor, controller.signal))) || null;
     const options = { ...settings.autoTag, minImages: 1, maxImages: 1 };
     const negativeRequired = snapshotSceneNegative();
     const promptMode = settings.defaultBackend === 'comfyui' ? normalizePromptMode(activeComfyPreset().promptMode) : undefined;

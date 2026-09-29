@@ -1,4 +1,5 @@
 import { requestCompletion, requestViaMainApi, type ChatMsg } from '@/api/client';
+import { ACCESSORY_EVIDENCE_RULE } from './appearancePolicy';
 import {
   CHAR_TAG_FIELD_LABELS,
   CHAR_TAG_FIELDS,
@@ -64,7 +65,7 @@ export function buildLibraryText(entries: CharTagEntry[], lockedNames?: Readonly
   if (!entries.length) return '';
   const lines = entries.map(entry => formatEntryForPrompt(entry, lockedNames?.has(entry.name) ?? false));
   const lockedNote = lockedNames?.size
-    ? '; entries marked [locked] are global and immutable: never report changes for them, always copy their fields as-is'
+    ? '; entries marked [locked] have immutable base profiles: never report base changes for them; explicit chat-local current appearance overrides only the affected visual fields without altering the base profile'
     : '';
   return `【角色固定外貌库】[system-maintained; reuse selected fixed fields accurately in character prompts${lockedNote}]\n结构字段是完整外貌依据；nl 仅作不冲突的补充，旧 nl 没写出的已知五官仍以结构字段为准。本图如何选择、分配外貌细节遵守当前模式与景别规则，不能因本图省略而删除档案字段。脸部五组核对：face（轮廓）、eyebrows（眉形）、eyeShape/eyes（眼型和瞳色）、nose（鼻形）、mouth（唇形）；未列出的键可能尚未建档，先从旧 eyes/raw/nl 和参考资料提取，剩余缺项按本轮五官补全设计规则补空。可选表现偏好只在当前剧情未明确且不冲突时参考，不得照抄进固定外貌，也不得由 AI 修改。\n${lines.join('\n')}`;
 }
@@ -166,7 +167,7 @@ export async function generateCharTags(
 ): Promise<ConvertedChar[]> {
   if (!chars.length) return [];
   const messages: ChatMsg[] = [
-    { role: 'system', content: CONVERT_SPEC },
+    { role: 'system', content: CONVERT_SPEC + '\n' + ACCESSORY_EVIDENCE_RULE },
     {
       role: 'user',
       content: chars.map(c => `- ${c.name}: ${c.desc}`).join('\n'),

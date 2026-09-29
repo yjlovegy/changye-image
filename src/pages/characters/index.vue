@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { cachedCurrentAppearance, syncCurrentAppearance, saveCurrentAppearance, forgetCurrentAppearance, CURRENT_FIELDS, CURRENT_LABELS, type CurrentField, type CurrentLook } from '@/autoTag/currentAppearance';
+import { trackPromptTask } from '@/state/promptTasks';
 import BbiTextarea from '@/components/BbiTextarea.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import Icon from '@/components/Icon.vue';
 import ModalMask from '@/components/ModalMask.vue';
-import { appearanceContextKey, completeCharacterAppearance, type AppearanceCompletion } from '@/autoTag/charCompletion';
+import { appearanceContextKey, completeCharacterAppearance, type AppearanceCompletion, type AppearanceMode } from '@/autoTag/charCompletion';
 import {
   CHAR_PREFERENCE_FIELDS,
   CHAR_PREFERENCE_FIELD_LABELS,
@@ -31,7 +33,7 @@ import {
   upsertGlobalCharTag,
 } from '@/state/globalCharTags';
 import { getContext } from '@/st/context';
-import { computed, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onUnmounted, ref } from 'vue';
 
 /**
  * 角色管理 —— 两层固定外貌库:
@@ -57,6 +59,18 @@ const editingName = ref<string | null>(null);
 const editingScope = ref<Scope>('chat');
 const draftScope = ref<Scope>('chat');
 const draft = ref<Draft | null>(null);
+const editorElement = ref<HTMLElement | null>(null);
+let opener: HTMLElement | null = null;
+function editorKeys(event: KeyboardEvent) {
+  if (confirmDeleteOpen.value || confirmPromoteOpen.value || confirmRollbackOpen.value || confirmRawTransitionOpen.value) return;
+  if (event.key === 'Escape') { event.preventDefault(); closeEntry(); return; }
+  if (event.key !== 'Tab') return;
+  const elements = [...(editorElement.value?.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select,summary,[tabindex="0"]') ?? [])].filter(e => e.getClientRects().length);
+  const first = elements[0], last = elements.at(-1);
+  const active = editorElement.value?.getRootNode() as Document | ShadowRoot | undefined;
+  if (event.shiftKey && active?.activeElement === first) { event.preventDefault(); last?.focus(); }
+  else if (!event.shiftKey && active?.activeElement === last) { event.preventDefault(); first?.focus(); }
+}
 const draftContextKey = ref<string | null>(null);
 // 从整串改成字段时,保存前展示实际生效内容;相同预览在本次编辑中只确认一次。
 const draftStartedWithFields = ref(false);
@@ -67,10 +81,55 @@ const draftSource = ref<CharTagEntry['source']>('manual');
 const draftDesc = ref('');
 const regenerating = ref(false);
 let completionController: AbortController | null = null;
+function stopAppearance() { completionController?.abort(); }
 const completionSummary = ref('');
 const completionEvidence = ref<AppearanceCompletion['evidence']>({});
 // 弹窗内历史面板开关
 const historyOpen = ref(false);
+const editorTab = ref<'base' | 'current' | 'ai'>('base');
+const moreOpen = ref(false);
+const appearanceMode = ref<AppearanceMode>('fill');
+const currentDraft = ref<Record<CurrentField, string>>({ hair: '', outfit: '', accessories: '', other: '' });
+let initialCurrent: Record<CurrentField, string> = { hair: '', outfit: '', accessories: '', other: '' };
+const currentEvidence = ref<CurrentLook>({});
+interface Suggestion { target: 'base' | 'current'; field: CharTagField | CurrentField; before: string; value: string; source: string; quote: string; selected: boolean; }
+const suggestions = ref<Suggestion[]>([]);
+const currentCount = computed(() => CURRENT_FIELDS.filter(f => currentDraft.value[f]).length);
+const currentPreview = computed(() => {
+  if (!draft.value) return '';
+  const fields = { ...draft.value.fields };
+  for (const f of ['hair', 'outfit', 'accessories'] as const) if (currentDraft.value[f]) fields[f] = currentDraft.value[f];
+  return [buildEntryTag({ fields, raw: draft.value.raw }), currentDraft.value.other].filter(Boolean).join(', ');
+});
+function initCurrent(name: string) {
+  if (typeof document !== 'undefined') {
+    const root = document.activeElement?.shadowRoot;
+    opener = (root?.activeElement ?? document.activeElement) as HTMLElement | null;
+    void nextTick(() => editorElement.value?.querySelector<HTMLInputElement>('input')?.focus());
+  }
+  editorTab.value = 'base'; moreOpen.value = false; suggestions.value = [];
+  const ctx = getContext();
+  currentEvidence.value = ctx ? cachedCurrentAppearance(ctx, charTagLib.entries)[name] ?? {} : {};
+  currentDraft.value = Object.fromEntries(CURRENT_FIELDS.map(f => [f, currentEvidence.value[f]?.value ?? ''])) as Record<CurrentField, string>;
+  initialCurrent = { ...currentDraft.value };
+}
+function baseCurrentValue(field: CurrentField): string {
+  return field === 'other' ? '' : draft.value?.fields[field] || '';
+}
+function useSuggestions() {
+  if (!draft.value || !guardDraftContext()) return;
+  let used = 0, skipped = 0;
+  for (const item of suggestions.value.filter(s => s.selected)) {
+    const live = item.target === 'base' ? draft.value.fields[item.field as CharTagField] : currentDraft.value[item.field as CurrentField];
+    if (live !== item.before) { skipped++; continue; }
+    if (item.target === 'base') draft.value.fields[item.field as CharTagField] = item.value;
+    else currentDraft.value[item.field as CurrentField] = item.value;
+    item.selected = false; used++;
+  }
+  if (used) markManual();
+  completionSummary.value = `已采用 ${used} 项，请保存角色。${skipped ? `另有 ${skipped} 项因草稿已修改而保留原值。` : ''}`;
+}
+
 // 回滚确认
 const confirmRollbackOpen = ref(false);
 const pendingRollback = ref<{ name: string; record: CharTagChangeRecord } | null>(null);
@@ -97,9 +156,9 @@ const FIELD_PLACEHOLDERS: Record<CharTagField, string> = {
 
 const FIELD_GROUPS: { title: string; fields: CharTagField[] }[] = [
   { title: '身份与年龄', fields: ['fandom', 'sex', 'age'] },
-  { title: '头发与五官', fields: ['hair', 'face', 'eyes', 'eyeShape', 'eyebrows', 'nose', 'mouth', 'ears'] },
-  { title: '肤色、体态与标志特征', fields: ['skin', 'height', 'body', 'extra'] },
-  { title: '固定穿戴', fields: ['accessories', 'outfit'] },
+  { title: '头发与面部', fields: ['hair', 'face', 'eyes', 'eyeShape', 'accessories'] },
+  { title: '更多五官与体态', fields: ['eyebrows', 'nose', 'mouth', 'ears', 'skin', 'height', 'body', 'extra'] },
+  { title: '默认服装', fields: ['outfit'] },
 ];
 
 const PREFERENCE_PLACEHOLDERS: Record<CharPreferenceField, string> = {
@@ -175,6 +234,7 @@ function openEntry(entry: CharTagEntry, scope: Scope) {
   draftSource.value = entry.source;
   draftDesc.value = entry.desc;
   historyOpen.value = false;
+  initCurrent(entry.name);
 }
 
 function addEntry(scope: Scope = 'chat') {
@@ -195,6 +255,7 @@ function addEntry(scope: Scope = 'chat') {
   draftSource.value = 'manual';
   draftDesc.value = '';
   historyOpen.value = false;
+  initCurrent('');
 }
 
 /* —— 分区折叠(参照角色记忆插件「计划/悬念」)——
@@ -231,6 +292,7 @@ const chatFoldable = computed(() => chatEntries.value.length > 0);
 const chatShown = computed(() => !chatCollapsed.value || !chatFoldable.value);
 
 function closeEntry() {
+  opener?.focus(); opener = null;
   completionController?.abort();
   completionController = null;
   completionSummary.value = '';
@@ -286,6 +348,12 @@ function confirmEntry() {
     confirmRawTransitionOpen.value = true;
     return;
   }
+  const changes: Partial<Record<CurrentField, string>> = {};
+  for (const field of CURRENT_FIELDS) {
+    if (currentDraft.value[field] !== initialCurrent[field] || (editingName.value && editingName.value !== name && currentDraft.value[field])) changes[field] = currentDraft.value[field].trim();
+  }
+  const ctx = getContext();
+  if (Object.keys(changes).length && (!ctx || !ctx.chat.length)) { toastr.warning('请先开始聊天，再保存当前造型', '长夜的绘图器'); return; }
   const entryData: CharTagEntry = {
     name,
     fields: d.fields,
@@ -300,7 +368,11 @@ function confirmEntry() {
     draftScope.value === 'global'
       ? upsertGlobalCharTag(entryData, editingName.value ?? undefined)
       : upsertCharTag(entryData, editingName.value ?? undefined, { recordChanges: true });
-  if (ok) closeEntry();
+  if (ok) {
+    if (ctx && editingName.value && editingName.value !== name) forgetCurrentAppearance(ctx, editingName.value);
+    if (ctx && Object.keys(changes).length) saveCurrentAppearance(ctx, name, changes);
+    closeEntry();
+  }
 }
 
 function confirmRawTransition() {
@@ -320,6 +392,8 @@ function confirmRemove() {
   if (!editingName.value || !guardDraftContext()) return;
   if (editingScope.value === 'global') removeGlobalCharTag(editingName.value);
   else removeCharTag(editingName.value);
+  const context = getContext();
+  if (context) forgetCurrentAppearance(context, editingName.value);
   closeEntry();
 }
 
@@ -366,39 +440,44 @@ async function completeFromReferences() {
   const controller = new AbortController();
   completionController = controller;
   regenerating.value = true;
+  suggestions.value = [];
+  const mode = appearanceMode.value;
+  const fieldsAtStart = { ...d.fields };
+  const currentAtStart = { ...currentDraft.value };
+  const releaseTask = trackPromptTask(controller);
   try {
     const result = await completeCharacterAppearance(ctx, name, {
       fields: { ...d.fields }, raw: d.raw, nl: d.nl,
-    }, controller.signal);
+    }, controller.signal, mode);
     if (draft.value !== d || controller.signal.aborted || d.name.trim() !== name) return;
     const currentContext = getContext();
     if (!currentContext || appearanceContextKey(currentContext) !== contextKey) {
       toastr.info('角色卡或聊天已切换,本次外貌补全未应用', '长夜的绘图器');
       return;
     }
-    const added: CharTagField[] = [];
-    const evidence: AppearanceCompletion['evidence'] = {};
+    const next: Suggestion[] = [];
     for (const field of CHAR_TAG_FIELDS) {
       const value = result.fields[field]?.trim();
-      // 再次检查当前草稿，保留请求等待期间刚手填的内容。
-      if (!value || d.fields[field].trim()) continue;
-      d.fields[field] = value;
-      evidence[field] = result.evidence[field];
-      added.push(field);
+      if (!value || value === d.fields[field] || d.fields[field] !== fieldsAtStart[field]) continue;
+      if (mode === 'fill' && d.fields[field].trim()) continue;
+      const evidence = result.evidence[field];
+      next.push({ target: 'base', field, before: d.fields[field], value, source: evidence?.source ?? '', quote: evidence?.quote ?? '', selected: true });
     }
-    completionEvidence.value = evidence;
-    completionSummary.value = added.length
-      ? `已补全 ${added.map(field => CHAR_TAG_FIELD_LABELS[field]).join('、')}。原有字段与偏好已保留,可核对下方依据后点「完成」保存。`
-      : result.status === 'no-source'
-        ? '当前没有可读取的角色卡、人设、世界书或剧情资料,未改动草稿。'
-        : result.status === 'no-missing'
-          ? '固定外貌字段已填满,无需补全,未调用模型。'
-          : '本次资料没有提供可核验的缺失特征,未改动已有字段;无依据的项目继续留空。';
-    if (added.length) toastr.success(`已按资料补全 ${added.length} 项外貌,请检查后保存`, '长夜的绘图器');
-    else toastr.info(completionSummary.value, '长夜的绘图器');
+    if (mode !== 'fill') {
+      const look = (await syncCurrentAppearance(ctx, [{ name, fields: { ...d.fields }, raw: d.raw, nl: d.nl, source: 'manual', desc: '', history: [] }], ctx.chat.length, controller.signal, false))[name];
+      if (draft.value !== d || d.name.trim() !== name || controller.signal.aborted || !guardDraftContext()) return;
+      for (const field of CURRENT_FIELDS) {
+        const item = look?.[field];
+        if (!item || item.value === currentDraft.value[field] || currentDraft.value[field] !== currentAtStart[field]) continue;
+        next.push({ target: 'current', field, before: currentDraft.value[field], value: item.value, source: `第 ${item.floor} 楼`, quote: item.quote, selected: true });
+      }
+    }
+    suggestions.value = next;
+    completionSummary.value = next.length ? `找到 ${next.length} 项建议。` : '没有发现有依据的新修改。';
   } catch (error) {
     if (draft.value === d && !controller.signal.aborted) toastr.error(error instanceof Error ? error.message : String(error), '长夜的绘图器');
   } finally {
+    releaseTask();
     if (completionController === controller) {
       completionController = null;
       regenerating.value = false;
@@ -570,7 +649,7 @@ function sourceLabel(entry: CharTagEntry): string {
 
     <!-- ===== 角色编辑弹窗 ===== -->
     <ModalMask :open="!!draft" @close="closeEntry">
-      <div v-if="draft" class="bbi-modal bbi-char-modal" role="dialog" aria-modal="true" aria-label="编辑角色">
+      <div v-if="draft" ref="editorElement" class="bbi-modal bbi-char-modal" role="dialog" aria-modal="true" aria-label="编辑角色" @keydown="editorKeys">
         <header class="bbi-modal-head">
           <span class="bbi-modal-title">
             {{ editingName ? '编辑角色' : '添加角色' }}
@@ -581,184 +660,67 @@ function sourceLabel(entry: CharTagEntry): string {
           <button class="bbi-icon-mini" type="button" title="关闭" @click="closeEntry"><Icon name="close" /></button>
         </header>
 
-        <!-- 作用域:仅新建时可选;已有条目换层用底部「提升为全局 / 复制到本聊天」 -->
-        <div v-if="!editingName" class="bbi-modal-field">
-          <span class="bbi-modal-label">保存到</span>
-          <div class="bbi-segmented">
-            <button
-              class="bbi-seg"
-              :class="{ 'is-on': draftScope === 'chat' }"
-              type="button"
-              @click="draftScope = 'chat'"
-            >
-              本聊天
-            </button>
-            <button
-              class="bbi-seg"
-              :class="{ 'is-on': draftScope === 'global' }"
-              type="button"
-              @click="draftScope = 'global'"
-            >
-              全局
-            </button>
-          </div>
-          <span class="bbi-field-hint">
-            {{ draftScope === 'global' ? '全局:所有聊天生效,AI 不会修改,TAG 有问题需手动改。' : '本聊天:仅当前聊天,AI 可随剧情自动变更。' }}
-          </span>
+        <div class="bbi-char-identity">
+          <label class="bbi-modal-field"><span class="bbi-modal-label">角色名</span><input v-model="draft.name" class="bbi-input" @input="markManual" /></label>
+          <label v-if="!editingName" class="bbi-modal-field"><span class="bbi-modal-label">资料范围</span><select v-model="draftScope" class="bbi-input"><option value="chat">本聊天</option><option value="global">全局</option></select></label>
         </div>
-
-        <label class="bbi-modal-field">
-          <span class="bbi-modal-label">角色名</span>
-          <input v-model="draft.name" class="bbi-input" placeholder="与正文或角色资料中的名字一致" @input="markManual" />
-        </label>
-        <span class="bbi-field-hint">按这个名字匹配正文和角色记忆，AI 引用时也使用它（@角色名）。改名不会自动跟随。</span>
-
-        <div class="bbi-modal-field">
-          <span class="bbi-modal-label">固定外貌</span>
-          <span class="bbi-field-hint">
-            填写英文 TAG 或短语,只写设定明确的特征;不确定可留空。可点击下方「从资料补全外貌」从角色卡、世界书和剧情中提取缺项,已有字段保留。左右指角色自身的左右。
-          </span>
-          <p v-if="completionSummary" class="bbi-field-hint" role="status">{{ completionSummary }}</p>
-          <fieldset v-for="group in FIELD_GROUPS" :key="group.title" class="bbi-char-field-group">
-            <legend class="bbi-char-group-label">{{ group.title }}</legend>
-            <div class="bbi-char-form">
-              <label
-                v-for="f in group.fields"
-                :key="f"
-                class="bbi-char-form-row"
-                :class="{ 'is-wide': f === 'fandom' || f === 'outfit' || f === 'extra' }"
-              >
-                <span class="bbi-char-form-label">{{ CHAR_TAG_FIELD_LABELS[f] }}</span>
-                <BbiTextarea
-                  v-model="draft.fields[f]"
-                  :rows="1"
-                  :max-rows="4"
-                  :placeholder="FIELD_PLACEHOLDERS[f]"
-                  @update:model-value="markManual"
-                />
-                <span v-if="f === 'eyeShape'" class="bbi-field-hint">
-                  单独保存稳定的眼型、眼睑和睫毛；若「眼睛与眼型」、整串或自然语言中已有同一特征，无需重复填写。
-                </span>
-                <span v-if="completionEvidence[f]" class="bbi-field-hint">
-                  依据：{{ completionEvidence[f]?.source }} · {{ completionEvidence[f]?.quote }}
-                </span>
-              </label>
-            </div>
-          </fieldset>
+        <div class="bbi-char-tabs" role="tablist" aria-label="角色编辑内容">
+          <button v-for="tab in (['base','current','ai'] as const)" :id="`bbi-char-tab-${tab}`" :key="tab" role="tab" :aria-selected="editorTab === tab" :aria-controls="`bbi-char-panel-${tab}`" type="button" :class="{ 'is-active': editorTab === tab }" @click="editorTab = tab">{{ tab === 'base' ? '基础外貌' : tab === 'current' ? `当前造型${currentCount ? ` · ${currentCount}` : ''}` : 'AI 整理' }}</button>
         </div>
-
-        <fieldset class="bbi-char-field-group bbi-char-preferences">
-          <legend class="bbi-char-group-label">神态、动作与姿势偏好（可选）</legend>
-          <p class="bbi-field-hint">
-            剧情优先:本次剧情有明确描述时按剧情生成;没有说明时才参考偏好。留空则完全随剧情。偏好由你手动维护,不会拼进固定外貌 TAG。
-          </p>
-          <div class="bbi-char-form">
-            <label v-for="f in CHAR_PREFERENCE_FIELDS" :key="f" class="bbi-char-form-row">
-              <span class="bbi-char-form-label">{{ CHAR_PREFERENCE_FIELD_LABELS[f] }}</span>
-              <BbiTextarea
-                v-model="draft.preferences[f]"
-                :rows="2"
-                :max-rows="5"
-                :placeholder="PREFERENCE_PLACEHOLDERS[f]"
-                @update:model-value="markManual"
-              />
-            </label>
-          </div>
-        </fieldset>
-
-        <label class="bbi-modal-field">
-          <span class="bbi-modal-label">整串模式（可选）</span>
-          <BbiTextarea
-            v-model="draft.raw"
-            :rows="2"
-            :max-rows="6"
-            mono
-            placeholder="上方字段全部留空时,以这段整串 TAG 为准;填写字段后,整串仅作为备份保留"
-            @update:model-value="markManual"
-          />
-          <span class="bbi-field-hint">有字段时使用字段;字段全部留空时使用整串。下方预览显示保存后实际生效的外貌 TAG。</span>
-        </label>
-        <p v-if="draftHasInactiveRaw" class="bbi-char-raw-notice" role="status">
-          当前使用上方字段，旧整串仅保留为备份；请把原有外貌中仍需保留的特征移入字段，或将上方字段留空继续使用整串。
-        </p>
-
-        <label class="bbi-modal-field">
-          <span class="bbi-modal-label">自然语言外貌(可选)</span>
-          <BbiTextarea
-            v-model="draft.nl"
-            :rows="2"
-            :max-rows="4"
-            mono
-            placeholder="一句连贯英文外貌描述,自然语言模式下替换 nl 里的 @角色名 用;留空则用 TAG 串替换"
-            @update:model-value="markManual"
-          />
-          <span class="bbi-field-hint">只写固定外貌,神态与动作请填上方偏好。外貌字段或整串改变后,若此处仍是原文,保存时会清空旧描述以免冲突;需要保留时请同步更新。</span>
-        </label>
-
-        <div class="bbi-char-preview">
-          <span class="bbi-field-label">固定外貌 TAG 预览</span>
-          <code class="bbi-char-preview-tag">{{ previewTag || '(空)' }}</code>
-          <span v-if="draftIsRaw" class="bbi-char-preview-mode">整串模式</span>
-          <span v-else-if="draftHasFields" class="bbi-char-preview-mode">字段模式</span>
-        </div>
-
-        <!-- 变更历史:仅本聊天条目;全局条目无历史(AI 不可改,手动编辑不留痕) -->
-        <div v-if="editingHistory.length" class="bbi-char-history">
-          <button class="bbi-char-history-toggle" type="button" @click="historyOpen = !historyOpen">
-            <span class="bbi-char-history-caret" :class="{ 'is-open': historyOpen }"><Icon name="chevron" /></span>
-            变更历史({{ editingHistory.length }})
-          </button>
-          <ul v-if="historyOpen" class="bbi-char-history-list">
-            <li v-for="(record, i) in [...editingHistory].reverse()" :key="i" class="bbi-char-history-item">
-              <div class="bbi-char-history-main">
-                <span class="bbi-char-history-field">{{ fieldLabel(record.field) }}</span>
-                <span class="bbi-char-history-change">
-                  <template v-if="record.from">{{ record.from }} → {{ record.to }}</template>
-                  <template v-else>{{ record.to }}</template>
-                </span>
-                <span v-if="record.reason" class="bbi-char-history-reason">{{ record.reason }}</span>
-                <span class="bbi-char-history-meta">{{ record.floor >= 0 ? `第${record.floor}楼` : '手动' }}·{{ new Date(record.at).toLocaleString() }}</span>
+        <div class="bbi-char-editor-body">
+        <section v-show="editorTab === 'base'" id="bbi-char-panel-base" class="bbi-char-panel" role="tabpanel" aria-labelledby="bbi-char-tab-base">
+          <template v-for="group in FIELD_GROUPS" :key="group.title">
+            <component :is="group.title === '更多五官与体态' ? 'details' : 'fieldset'" class="bbi-char-field-group">
+              <component :is="group.title === '更多五官与体态' ? 'summary' : 'legend'" class="bbi-char-group-label">{{ group.title }}</component>
+              <div class="bbi-char-form">
+                <label v-for="f in group.fields" :key="f" class="bbi-char-form-row" :class="{ 'is-wide': f === 'hair' || f === 'outfit' || f === 'extra' }">
+                  <span class="bbi-char-form-label">{{ CHAR_TAG_FIELD_LABELS[f] }}</span>
+                  <BbiTextarea v-model="draft.fields[f]" :rows="1" :max-rows="4" :placeholder="FIELD_PLACEHOLDERS[f]" @update:model-value="markManual" />
+                </label>
               </div>
-              <button class="bbi-btn bbi-btn-sm" type="button" title="把该字段回滚到变更前的值" @click="askRollback(record)">
-                回滚
-              </button>
-            </li>
-          </ul>
+            </component>
+          </template>
+          <details class="bbi-char-field-group"><summary>表情与姿势偏好</summary><div class="bbi-char-form"><label v-for="f in CHAR_PREFERENCE_FIELDS" :key="f" class="bbi-char-form-row"><span class="bbi-char-form-label">{{ CHAR_PREFERENCE_FIELD_LABELS[f] }}</span><BbiTextarea v-model="draft.preferences[f]" :rows="2" :max-rows="5" :placeholder="PREFERENCE_PLACEHOLDERS[f]" @update:model-value="markManual" /></label></div></details>
+          <details class="bbi-char-field-group"><summary>高级：整串 TAG 与自然语言外貌</summary>
+            <label class="bbi-modal-field"><span class="bbi-modal-label">整串 TAG</span><BbiTextarea v-model="draft.raw" :rows="2" :max-rows="6" mono @update:model-value="markManual" /></label>
+            <p v-if="draftHasInactiveRaw" class="bbi-field-hint">当前使用结构字段，整串仅作备份保留。</p>
+            <label class="bbi-modal-field"><span class="bbi-modal-label">自然语言外貌</span><BbiTextarea v-model="draft.nl" :rows="2" :max-rows="4" mono @update:model-value="markManual" /></label>
+          </details>
+          <div class="bbi-char-preview"><span class="bbi-field-label">基础外貌 TAG</span><code class="bbi-char-preview-tag">{{ previewTag || '(空)' }}</code><span class="bbi-char-preview-mode">{{ draftIsRaw ? '整串模式' : '字段模式' }}</span></div>
+          <details v-if="editingHistory.length" class="bbi-char-history"><summary>基础资料变更记录</summary><ul class="bbi-char-history-list"><li v-for="(record, i) in [...editingHistory].reverse()" :key="i" class="bbi-char-history-item"><div class="bbi-char-history-main"><span>{{ fieldLabel(record.field) }}：{{ record.from }} → {{ record.to }}</span><span class="bbi-char-history-meta">{{ record.reason }}</span></div><button class="bbi-btn bbi-btn-sm" type="button" @click="askRollback(record)">回滚</button></li></ul></details>
+        </section>
+        <section v-show="editorTab === 'current'" id="bbi-char-panel-current" class="bbi-char-panel" role="tabpanel" aria-labelledby="bbi-char-tab-current">
+          <div class="bbi-char-current-title"><strong>当前造型</strong><span class="bbi-char-pill">仅本聊天</span></div>
+          <div v-for="field in CURRENT_FIELDS" :key="field" class="bbi-char-current-row">
+            <strong>{{ CURRENT_LABELS[field] }}</strong><div class="bbi-char-current-value">
+              <span v-if="baseCurrentValue(field)" class="bbi-field-hint">基础：{{ baseCurrentValue(field) }}</span>
+              <label class="bbi-modal-field"><span class="bbi-modal-label">当前使用</span><BbiTextarea v-model="currentDraft[field]" :rows="2" :max-rows="5" :placeholder="field === 'other' ? '未填写' : '留空则沿用基础设定'" /></label>
+              <blockquote v-if="currentEvidence[field] && currentDraft[field] === initialCurrent[field]" class="bbi-char-evidence">{{ currentEvidence[field]?.quote === '手动设置' ? '手动设置' : `第 ${currentEvidence[field]?.floor} 楼 · ${currentEvidence[field]?.quote}` }}</blockquote>
+              <button v-if="currentDraft[field]" class="bbi-btn bbi-btn-sm bbi-char-restore" type="button" @click="currentDraft[field] = ''">恢复基础{{ CURRENT_LABELS[field] }}</button>
+            </div>
+          </div>
+          <div class="bbi-char-preview"><span class="bbi-field-label">当前生图外貌 TAG</span><code class="bbi-char-preview-tag">{{ currentPreview || '(空)' }}</code></div>
+        </section>
+        <section v-show="editorTab === 'ai'" id="bbi-char-panel-ai" class="bbi-char-panel" role="tabpanel" aria-labelledby="bbi-char-tab-ai">
+          <div class="bbi-char-ai-tools"><button v-for="mode in (['fill','check','extract'] as const)" :key="mode" class="bbi-btn" :class="{ 'bbi-btn-primary': appearanceMode === mode }" :aria-pressed="appearanceMode === mode" :disabled="regenerating" type="button" @click="appearanceMode = mode">{{ mode === 'fill' ? '补全空项' : mode === 'check' ? '检查纠错' : '重新提取' }}</button></div>
+          <div class="bbi-char-ai-tools"><button class="bbi-btn" type="button" :disabled="regenerating" @click="completeFromReferences">{{ regenerating ? '整理中…' : '开始整理' }}</button><button v-if="regenerating" class="bbi-btn" type="button" @click="stopAppearance">停止</button><span class="bbi-field-hint" role="status">{{ completionSummary }}</span></div>
+          <article v-for="(item, index) in suggestions" :key="index" class="bbi-char-suggestion">
+            <header><label><input v-model="item.selected" type="checkbox" /> {{ item.target === 'base' ? CHAR_TAG_FIELD_LABELS[item.field as CharTagField] : CURRENT_LABELS[item.field as CurrentField] }}</label><span class="bbi-char-pill">{{ item.target === 'base' ? '基础外貌' : '当前造型' }}</span></header>
+            <div class="bbi-char-form"><div><span class="bbi-modal-label">当前内容</span><p>{{ item.before || '未填写' }}</p></div><label class="bbi-modal-field"><span class="bbi-modal-label">建议内容</span><BbiTextarea v-model="item.value" :rows="2" :max-rows="6" /></label></div>
+            <blockquote class="bbi-char-evidence">{{ item.source }} · {{ item.quote }}</blockquote>
+          </article>
+          <button v-if="suggestions.length" class="bbi-btn bbi-btn-primary bbi-char-restore" :disabled="!suggestions.some(s => s.selected)" type="button" @click="useSuggestions">采用选中项</button>
+          <p v-else-if="!regenerating && !completionSummary" class="bbi-field-hint">整理后可逐项核对，采用到草稿后再保存。</p>
+        </section>
         </div>
-
+        <div v-if="moreOpen" class="bbi-char-ai-tools">
+          <button v-if="editingName" class="bbi-btn bbi-btn-danger" type="button" @click="askRemove"><Icon name="trash" /> 删除角色</button>
+          <button v-if="editingName && editingScope === 'chat'" class="bbi-btn" type="button" @click="askPromote">提升为全局</button>
+          <button v-if="editingName && editingScope === 'global'" class="bbi-btn" type="button" @click="copyToChat">复制到本聊天</button>
+        </div>
         <footer class="bbi-modal-foot">
-          <button v-if="editingName" class="bbi-btn bbi-btn-danger" type="button" @click="askRemove">
-            <Icon name="trash" /> 删除
-          </button>
-          <span class="bbi-modal-foot-spacer"></span>
-          <button
-            v-if="editingName && editingScope === 'chat'"
-            class="bbi-btn"
-            type="button"
-            title="把当前外貌快照进全局库,所有聊天生效;本聊天副本与变更记录将清除"
-            @click="askPromote"
-          >
-            <Icon name="star" /> 提升为全局
-          </button>
-          <button
-            v-if="editingName && editingScope === 'global'"
-            class="bbi-btn"
-            type="button"
-            title="复制为本聊天副本:之后本聊天以副本为准,AI 可对其变更"
-            @click="copyToChat"
-          >
-            <Icon name="copy" /> 复制到本聊天
-          </button>
-          <button
-            class="bbi-btn"
-            type="button"
-            title="读取角色卡、人设、世界书、角色记忆插件与最近剧情,只补有明确依据的空字段;点击后调用当前提示词渠道"
-            :disabled="regenerating"
-            @click="completeFromReferences"
-          >
-            <Icon name="refresh" /> {{ regenerating ? '补全中…' : '从资料补全外貌' }}
-          </button>
-          <button class="bbi-btn bbi-btn-primary" type="button" @click="confirmEntry">完成</button>
+          <button class="bbi-btn" type="button" :aria-expanded="moreOpen" @click="moreOpen = !moreOpen">更多操作</button><span class="bbi-modal-foot-spacer"></span>
+          <button class="bbi-btn" type="button" @click="closeEntry">取消</button><button class="bbi-btn bbi-btn-primary" type="button" :disabled="regenerating" @click="confirmEntry">保存角色</button>
         </footer>
 
         <ConfirmDialog
@@ -1052,7 +1014,32 @@ function sourceLabel(entry: CharTagEntry): string {
 
 /* —— 弹窗加宽,容纳两列字段表单 —— */
 .bbi-char-modal {
-  max-width: 600px;
+  max-width: 900px;
+  overflow: hidden;
+}
+.bbi-char-modal > * { flex-shrink: 0; }
+.bbi-char-editor-body { overflow: auto; min-height: 0; flex: 1 1 auto; padding: 2px; }
+.bbi-char-panel { display: flex; flex-direction: column; gap: 18px; }
+.bbi-char-identity { display: grid; grid-template-columns: 1fr auto; gap: 16px; }
+.bbi-char-tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--bbi-line); }
+.bbi-char-tabs button { border: 0; border-bottom: 3px solid transparent; background: none; color: var(--bbi-ink-muted); padding: 10px 0; font: inherit; cursor: pointer; }
+.bbi-char-tabs button.is-active { color: var(--bbi-accent); border-bottom-color: var(--bbi-accent); }
+.bbi-char-field-group summary { cursor: pointer; font-size: 13px; }
+.bbi-char-field-group[open] > summary { margin-bottom: 14px; }
+.bbi-char-current-title,.bbi-char-suggestion header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.bbi-char-current-row { display: grid; grid-template-columns: 90px 1fr; gap: 18px; padding: 12px 0; border-bottom: 1px solid var(--bbi-line); }
+.bbi-char-current-value { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.bbi-char-evidence { margin: 0; border-left: 2px solid var(--bbi-accent); padding: 10px 12px; background: var(--bbi-surface-2); color: var(--bbi-ink-muted); font-size: 12px; overflow-wrap: anywhere; }
+.bbi-char-restore { align-self: flex-end; }
+.bbi-char-ai-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.bbi-char-suggestion { border: 1px solid var(--bbi-line); border-radius: var(--bbi-radius-sm); padding: 14px; display: grid; gap: 14px; }
+.bbi-char-suggestion label { display: flex; gap: 8px; align-items: center; }
+.bbi-char-suggestion .bbi-modal-field { align-items: stretch; }
+.bbi-char-suggestion p { overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .bbi-char-current-row { grid-template-columns: 1fr; gap: 10px; }
+  .bbi-char-tabs { gap: 18px; }
+
 }
 
 /* —— 按外貌部位分组,延续现有浅边框与两列表单 —— */
