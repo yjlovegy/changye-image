@@ -14,7 +14,7 @@ export async function decodePixels(blob: Blob): Promise<Pixels> {
   } finally { bitmap.close(); }
 }
 
-export function maskBounds(mask: Pixels): { width: number; height: number } {
+export function maskBounds(mask: Pixels): { x: number; y: number; width: number; height: number } {
   let left = mask.width, top = mask.height, right = -1, bottom = -1;
   for (let y = 0; y < mask.height; y++) for (let x = 0; x < mask.width; x++) {
     if (mask.data[(y * mask.width + x) * 4] > 0) {
@@ -22,7 +22,7 @@ export function maskBounds(mask: Pixels): { width: number; height: number } {
     }
   }
   if (right < 0) throw new Error('请先涂选要修改的区域');
-  return { width: right - left + 1, height: bottom - top + 1 };
+  return { x: left, y: top, width: right - left + 1, height: bottom - top + 1 };
 }
 
 /** Feather inward only. Zero-mask pixels retain all four source channels exactly. */

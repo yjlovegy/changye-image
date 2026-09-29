@@ -43,6 +43,8 @@ export interface InpaintGraphOptions {
   context?: number; targetSize?: number; thinkingSteps?: number;
   denoise?: number; steps?: number | null; cfg?: number | null;
   promptMode?: 'Image First' | 'Prompt First';
+  referenceRect?: import('./inpaintReference').InpaintRect;
+  referenceSize?: { width: number; height: number };
 }
 
 /** API graph shared by Krea2 and Anima; retain the model/CLIP/LoRA graph without editing the saved workflow. */
@@ -58,7 +60,17 @@ export function buildInpaintGraph(source: ComfyWorkflow, o: InpaintGraphOptions)
   };
   const image=add('LoadImage',{image:o.image}), maskImage=add('LoadImage',{image:o.mask});
   const mask=add('ImageToMask',{image:maskImage,channel:'red'});
-  const crop=add('InpaintCropImproved',{
+  let crop:Link|undefined, croppedImage:Link, croppedMask:Link;
+  if(o.referenceRect && o.referenceSize) {
+    const rect=o.referenceRect, size=o.referenceSize;
+    const region=add('ImageCrop',{image,...rect});
+    const regionMask=add('CropMask',{mask,...rect});
+    croppedImage=add('ImageScale',{image:region,upscale_method:'lanczos',...size,crop:'disabled'});
+    const maskPixels=add('MaskToImage',{mask:regionMask});
+    const scaledMask=add('ImageScale',{image:maskPixels,upscale_method:'nearest-exact',...size,crop:'disabled'});
+    croppedMask=add('ImageToMask',{image:scaledMask,channel:'red'});
+  } else {
+  crop=add('InpaintCropImproved',{
     image,mask,downscale_algorithm:'bilinear',upscale_algorithm:'bicubic',
     preresize:false,preresize_mode:'ensure minimum resolution',preresize_min_width:1024,preresize_min_height:1024,
     preresize_max_width:16384,preresize_max_height:16384,mask_fill_holes:false,mask_expand_pixels:0,
@@ -67,7 +79,8 @@ export function buildInpaintGraph(source: ComfyWorkflow, o: InpaintGraphOptions)
     context_from_mask_extend_factor:o.context??1.5,output_resize_to_target_size:true,
     output_target_width:o.targetSize??1024,output_target_height:o.targetSize??1024,output_padding:'32',device_mode:'cpu (compatible)',
   });
-  const croppedImage:Link=[crop[0],1], croppedMask:Link=[crop[0],2];
+  croppedImage=[crop[0],1]; croppedMask=[crop[0],2];
+  }
   const latent=add('LanPaint_ImageEncode',{image:croppedImage,mask:croppedMask,vae});
   const positive=add('CLIPTextEncode',{clip,text:o.positive}), negative=add('CLIPTextEncode',{clip,text:o.negative});
   const sample=add('LanPaint_KSampler',{
@@ -76,7 +89,13 @@ export function buildInpaintGraph(source: ComfyWorkflow, o: InpaintGraphOptions)
     LanPaint_NumSteps:o.thinkingSteps??5,LanPaint_PromptMode:o.promptMode??'Image First',LanPaint_Info:'',Inpainting_mode:'🖼️ Image Inpainting',
   });
   const decoded=add('LanPaint_ImageDecode',{samples:sample,vae,image:croppedImage,mask:croppedMask,blend_overlap:1});
-  const stitched=add('InpaintStitchImproved',{stitcher:crop,inpainted_image:decoded});
+  let stitched:Link;
+  if(o.referenceRect && o.referenceSize) {
+    const {x,y,width,height}=o.referenceRect;
+    const restored=add('ImageScale',{image:decoded,upscale_method:'lanczos',width,height,crop:'disabled'});
+    // The browser composites through the original full-resolution mask once, after download.
+    stitched=add('ImageCompositeMasked',{destination:image,source:restored,x,y,resize_source:false});
+  } else stitched=add('InpaintStitchImproved',{stitcher:crop!,inpainted_image:decoded});
   const output=add('SaveImage',{images:stitched,filename_prefix:'changye/inpaint'});
   return dependencyGraph(graph,[output[0]]);
 }

@@ -5,16 +5,17 @@ import type { ComfyRunConn } from '@/state/settings';
 import { muteWorkflowNegative } from './comfyNegativePolicy';
 import { defaultInpaintTuning, inpaintTargetSize, validateInpaintTuning, type InpaintTuning } from './inpaintTuning';
 import { decodePixels, maskBounds, protectedInpaintResult } from './inpaintComposite';
+import { inpaintReferenceRect, inpaintReferenceSize } from './inpaintReference';
 
 const endpoint=(url:string,path:string)=>`${url.trim().replace(/\/+$/,'')}/${path}`;
 async function request(url:string, init?:RequestInit):Promise<Response>{
   try {const r=await fetch(url,init);if(!r.ok)throw new Error(`ComfyUI 请求失败 (${r.status})：${(await r.text()).slice(0,250)}`);return r;}
   catch(e){if(e instanceof TypeError)throw new Error('局部重绘需要直连 ComfyUI，请检查服务地址与 CORS 设置');throw e;}
 }
-export async function checkInpaintSupport(conn:ComfyRunConn, automatic=false, signal?:AbortSignal) {
+export async function checkInpaintSupport(conn:ComfyRunConn, automatic=false, signal?:AbortSignal, explicitReference=false) {
   signal = signal ? AbortSignal.any([signal,AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000);
   inspectInpaintSource(parseWorkflowTemplate(conn.workflow));
-  const types=['LanPaint_KSampler','LanPaint_ImageEncode','LanPaint_ImageDecode','InpaintCropImproved','InpaintStitchImproved',...(automatic?['SAM3_Detect','CheckpointLoaderSimple']:[])];
+  const types=['LanPaint_KSampler','LanPaint_ImageEncode','LanPaint_ImageDecode',...(explicitReference?['ImageCrop','CropMask','ImageScale','ImageToMask','MaskToImage','ImageCompositeMasked']:['InpaintCropImproved','InpaintStitchImproved']),...(automatic?['SAM3_Detect','CheckpointLoaderSimple']:[])];
   const nodes=Object.assign({},...await Promise.all(types.map(async name=>{
     const r=await request(endpoint(conn.url,`object_info/${name}`),{signal});return r.json();
   })));
@@ -44,19 +45,21 @@ async function hasWhitePixels(blob:Blob):Promise<boolean>{
     for(let i=0;i<data.length;i+=4)if(data[i]>25)return true;return false;
   }finally{bitmap.close();}
 }
-export interface InpaintRequest { source:string; mask:Blob; instruction:string; negative?:string; seed:number; context?:number; tuning?:InpaintTuning }
+export interface InpaintRequest { source:string; mask:Blob; instruction:string; preparedPrompt?:boolean; negative?:string; seed:number; context?:number; tuning?:InpaintTuning }
 export async function inpaintImage(conn:ComfyRunConn,input:InpaintRequest,signal?:AbortSignal,hooks?:ComfyProgressHooks):Promise<ComfyImageResult>{
   const tuning=input.tuning??{...defaultInpaintTuning(),context:input.context??1.5};
   validateInpaintTuning(tuning);
-  await checkInpaintSupport(conn,false,signal);
+  await checkInpaintSupport(conn,false,signal,true);
   const maskPixels=await decodePixels(input.mask),bounds=maskBounds(maskPixels);
   const source=await imageBlob(input.source,signal);
   const sourcePixels=await decodePixels(source);
   if(maskPixels.width!==sourcePixels.width||maskPixels.height!==sourcePixels.height)throw new Error('选区尺寸与原图不一致');
+  const referenceRect=inpaintReferenceRect(bounds,sourcePixels.width,sourcePixels.height,tuning.context,tuning.reference==='full');
+  const target=inpaintTargetSize({...tuning,context:1},referenceRect.width,referenceRect.height);
   const [image,mask]=await Promise.all([uploadInpaintImage(conn.url,source,signal),uploadInpaintImage(conn.url,input.mask,signal)]);
   const fixed=normalizeComfyFixedPrompts(conn.fixedPrompts);
-  const graph=buildInpaintGraph(parseWorkflowTemplate(conn.workflow),{image,mask,seed:input.seed,...tuning,targetSize:inpaintTargetSize(tuning,bounds.width,bounds.height),
-    positive:composeComfyPositive(input.instruction,fixed),negative:conn.negativeEnabled === false ? '' : composeComfyNegative(input.negative??'',fixed)});
+  const graph=buildInpaintGraph(parseWorkflowTemplate(conn.workflow),{image,mask,seed:input.seed,...tuning,referenceRect,referenceSize:inpaintReferenceSize(referenceRect,target),
+    positive:input.preparedPrompt?input.instruction:composeComfyPositive(input.instruction,fixed),negative:conn.negativeEnabled === false ? '' : composeComfyNegative(input.negative??'',fixed)});
   const result=await runComfyWorkflow(conn,conn.negativeEnabled === false ? muteWorkflowNegative(graph) : graph,signal,hooks);
   const protectedResult=await protectedInpaintResult(sourcePixels,maskPixels,result,tuning.feather,signal);
   protectedResult.workflowId=conn.workflowId;return protectedResult;

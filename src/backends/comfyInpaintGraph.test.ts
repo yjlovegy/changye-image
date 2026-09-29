@@ -10,6 +10,20 @@ const source=():ComfyWorkflow=>({
 });
 const opts={image:'source.png',mask:'mask.png',positive:'blue sleeves',negative:'blur',seed:123};
 describe('shared inpaint graph',()=>{
+ it('uses the explicit reference rectangle for both image and mask and pastes at original coordinates',()=>{
+  const g=buildInpaintGraph(source(),{...opts,referenceRect:{x:123,y:456,width:400,height:700},referenceSize:{width:576,height:1024}});
+  const nodes=Object.values(g);
+  expect(nodes.find(n=>n.class_type==='ImageCrop')?.inputs).toMatchObject({x:123,y:456,width:400,height:700});
+  expect(nodes.find(n=>n.class_type==='CropMask')?.inputs).toMatchObject({x:123,y:456,width:400,height:700});
+  expect(nodes.filter(n=>n.class_type==='ImageScale').map(n=>n.inputs)).toEqual(expect.arrayContaining([
+   expect.objectContaining({width:576,height:1024,upscale_method:'lanczos',crop:'disabled'}),
+   expect.objectContaining({width:576,height:1024,upscale_method:'nearest-exact'}),
+   expect.objectContaining({width:400,height:700}),
+  ]));
+  expect(nodes.find(n=>n.class_type==='ImageCompositeMasked')?.inputs).toMatchObject({x:123,y:456,resize_source:false});
+  expect(nodes.some(n=>n.class_type==='InpaintCropImproved')).toBe(false);
+  expect(g.lora).toEqual(source().lora);
+ });
  it('applies independent repair quality settings and disables outward mask blending',()=>{
   const g=buildInpaintGraph(source(),{...opts,denoise:0.4,steps:18,cfg:0,thinkingSteps:7,targetSize:1536,context:1.2,promptMode:'Prompt First'});
   expect(Object.values(g).find(n=>n.class_type==='LanPaint_KSampler')?.inputs).toMatchObject({denoise:0.4,steps:18,cfg:0,LanPaint_NumSteps:7,LanPaint_PromptMode:'Prompt First'});

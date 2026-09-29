@@ -11,6 +11,8 @@ import { saveImageResult, type BbiImageEntry } from './storage';
 import { hydrateMessage } from './hydrate';
 import type { PromptEditorAt } from './promptEditor';
 import { beginImage, finishImage, failImage, safeHistory } from '@/state/history';
+import { composeInpaintDescription } from '@/autoTag/inpaintPrompt';
+import { composeComfyPositive, normalizeComfyFixedPrompts } from '@/backends/comfyFixedPrompts';
 
 let active=false;
 export function openInpaintEditor(options:{at:PromptEditorAt;entry:BbiImageEntry}):void{
@@ -36,7 +38,7 @@ export function openInpaintEditor(options:{at:PromptEditorAt;entry:BbiImageEntry
     const release=trackGenerationOperation(at.chatId,at.messageId);
     const id=safeHistory(()=>beginImage({backend:'comfyui',model:`局部重绘 · ${selectedPreset.name}`,prompt:args.instruction,nl:'',negative:content.negative,characters:[],seed:resultSeed,size:content.size,floor:at.messageId,seq:at.seq}));
     try{
-      const result=await inpaintImage(selectedPreset.conn,{source:options.entry.path,mask:args.mask,instruction:args.instruction,negative:content.negative,seed:resultSeed,context:args.context,tuning:args.tuning},signal);
+      const result=await inpaintImage(selectedPreset.conn,{source:options.entry.path,mask:args.mask,instruction:args.instruction,preparedPrompt:true,negative:content.negative,seed:resultSeed,context:args.context,tuning:args.tuning},signal);
       if(signal.aborted){result.revoke();throw new DOMException('已停止','AbortError');}
       if(id!==null)safeHistory(()=>finishImage(id));return result;
     }catch(e){if(id!==null)safeHistory(()=>failImage(id,e instanceof Error?e.message:String(e),signal.aborted));throw e;}
@@ -49,6 +51,12 @@ export function openInpaintEditor(options:{at:PromptEditorAt;entry:BbiImageEntry
     }finally{release();}
   };
   render(h(InpaintEditor,{source:options.entry.path,workflowId:selected,workflowOptions:presets.map(p=>({value:p.id,label:p.name})),
+    promptModes:Object.fromEntries(presets.map(p=>[p.id,p.conn.promptMode??'anima'])),
+    compose:async(id:string,instruction:string,signal:AbortSignal)=>{
+      check();const preset=presets.find(p=>p.id===id);if(!preset)throw new Error('请选择有效的工作流');
+      const text=await composeInpaintDescription({instruction,original:[content.tag,content.nl].filter(Boolean).join('\n\n'),promptMode:preset.conn.promptMode},signal);
+      signal.throwIfAborted();check();return composeComfyPositive(text,normalizeComfyFixedPrompts(preset.conn.fixedPrompts));
+    },
     profiles:Object.fromEntries(presets.map(p=>[p.id,normalizeInpaintTuning(settings.inpaintProfiles?.[p.id])])),
     saveDefaults:(id:string,tuning:InpaintTuning)=>{validateInpaintTuning(tuning);settings.inpaintProfiles={...settings.inpaintProfiles,[id]:{...tuning}};},
     missingWorkflow:!options.entry.workflowId,run,save,onClose:close}),container);

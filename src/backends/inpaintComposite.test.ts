@@ -24,7 +24,7 @@ describe('strict inpaint compositing',()=>{
   expect(out.data[(1*9+4)*4]).toBe(67);
   expect(out.data[(0*9+4)*4]).toBe(0);
   expect([out.width,out.height]).toEqual([9,9]);
-  expect(maskBounds(mask)).toEqual({width:7,height:7});
+  expect(maskBounds(mask)).toEqual({x:1,y:1,width:7,height:7});
  });
  it('rejects wrong output dimensions and empty selections',()=>{
   expect(()=>blendProtectedPixels(pixels(3,3,0),pixels(2,3,0),pixels(3,3,255),6)).toThrow('尺寸');
