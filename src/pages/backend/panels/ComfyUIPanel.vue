@@ -8,6 +8,10 @@ import {
 import ComfyLoraControls from './ComfyLoraControls.vue';
 import ComfyModelControls from './ComfyModelControls.vue';
 import ComfyAutoRepair from './ComfyAutoRepair.vue';
+import ComfyPostProcess from './ComfyPostProcess.vue';
+import { checkPostSupport } from '@/backends/comfyPost';
+import { checkInpaintSupport } from '@/backends/comfyInpaint';
+import { readWorkflowFileOptions } from '@/backends/comfyWorkflowFile';
 import ComfyWorkflowJson from './ComfyWorkflowJson.vue';
 import WorkflowResolution from './WorkflowResolution.vue';
 import WorkflowExample from './WorkflowExample.vue';
@@ -54,16 +58,17 @@ const modelEditor = ref<InstanceType<typeof ComfyModelControls>>();
 const loraEditor = ref<InstanceType<typeof ComfyLoraControls>>();
 const jsonEditor = ref<InstanceType<typeof ComfyWorkflowJson>>();
 const sizeEditor = ref<InstanceType<typeof WorkflowResolution>>();
+const postEditor = ref<InstanceType<typeof ComfyPostProcess>>();
 const repairEditor = ref<InstanceType<typeof ComfyAutoRepair>>();
 const exampleEditor = ref<InstanceType<typeof WorkflowExample>>();
 const saving = ref(false), saveStatus = ref(''), saveError = ref('');
 const dirty = computed(() => comfyWorkflowDrafts.dirty(active.value.id) || renaming.value
   || modelEditor.value?.dirty || loraEditor.value?.dirty || jsonEditor.value?.dirty
-  || sizeEditor.value?.dirty || repairEditor.value?.dirty);
-function formEditors(){return {json:jsonEditor.value,model:modelEditor.value,lora:loraEditor.value,size:sizeEditor.value,repair:repairEditor.value};}
-watch(() => [modelEditor.value?.draftSignature,loraEditor.value?.draftSignature,sizeEditor.value?.draftSignature,repairEditor.value?.draftSignature], () => {
+  || sizeEditor.value?.dirty || repairEditor.value?.dirty || postEditor.value?.dirty);
+function formEditors(){return {json:jsonEditor.value,model:modelEditor.value,lora:loraEditor.value,size:sizeEditor.value,repair:repairEditor.value,post:postEditor.value};}
+watch(() => [modelEditor.value?.draftSignature,loraEditor.value?.draftSignature,sizeEditor.value?.draftSignature,repairEditor.value?.draftSignature,postEditor.value?.draftSignature], () => {
   if (saving.value || jsonEditor.value?.dirty) return;
-  if (!modelEditor.value?.dirty && !loraEditor.value?.dirty && !sizeEditor.value?.dirty && !repairEditor.value?.dirty) return;
+  if (!modelEditor.value?.dirty && !loraEditor.value?.dirty && !sizeEditor.value?.dirty && !repairEditor.value?.dirty && !postEditor.value?.dirty) return;
   try { const patch=prepareWorkflowForm(active.value,formEditors(),false); Object.assign(active.value,patch); }
   catch { /* Keep incomplete input in its editor; saving/leave validates it explicitly. */ }
 }, {flush:'post'});
@@ -73,10 +78,11 @@ const configDisclosure=ref<InstanceType<typeof Collapsible>>();
 const workflowDisclosure=ref<InstanceType<typeof Collapsible>>();
 const activeJump=ref('当前工作流');
 let jumpTimer: ReturnType<typeof setTimeout> | undefined;
-const jumps=[['配置','.wf-connection'],['当前工作流','.wf-row'],['示例图','.workflow-example'],['模型与采样','.model-controls'],['自动修复','.repair'],['尺寸','.workflow-resolution'],['固定提示词','.wf-group'],['LoRA','.lora-controls'],['JSON','.json-editor']];
+const jumps=[['配置','.wf-connection'],['当前工作流','.wf-row'],['示例图','.workflow-example'],['模型与采样','.model-controls'],['高清与后期','.post-process'],['自动修复','.repair'],['尺寸','.workflow-resolution'],['固定提示词','.wf-group'],['LoRA','.lora-controls'],['JSON','.json-editor']];
 async function jumpTo(label:string,selector:string){
  activeJump.value=label;
  if(label==='配置')configDisclosure.value?.expand();else workflowDisclosure.value?.expand();
+ if(label==='高清与后期')postEditor.value?.expand();
  if(label==='自动修复')repairEditor.value?.expand();
  await nextTick();
  clearTimeout(jumpTimer);
@@ -95,7 +101,10 @@ async function applyTemporary(): Promise<void> {
   const target = active.value;
   const patch = prepareWorkflowForm(target, formEditors(), true);
   if (patch.workflow.trim()) getWorkflowPlaceholders(patch.workflow);
-  const autoRepair = await repairEditor.value?.prepare(patch.workflow) ?? target.autoRepair;
+  const autoRepair = patch.autoRepair;
+  const conn = {...effectiveComfyConn(target),workflow:patch.workflow};
+  if(autoRepair?.enabled)await checkInpaintSupport(conn,true);
+  if(patch.postProcessing)await checkPostSupport(conn,patch.postProcessing);
   if (active.value !== target) throw new Error('当前工作流已变化，请重新操作');
   Object.assign(target, { ...patch, autoRepair });
   revision.value++;
@@ -231,6 +240,13 @@ const fixedNegativeIssue = computed(() => {
   try { return getWorkflowPlaceholders(active.value.workflow).includes('negative_prompt') ? '' : '此工作流没有 %negative_prompt% 输入。填写固定负面后需先配置该占位符，才能生效。'; }
   catch { return ''; }
 });
+
+function applyJsonFile(workflow:string) {
+  if(modelEditor.value?.dirty || loraEditor.value?.dirty) throw new Error('请先保存模型与 LoRA 修改，再应用 JSON');
+  const options=readWorkflowFileOptions(workflow);
+  active.value.workflow=workflow;
+  if(Object.keys(options).length){Object.assign(active.value,options);revision.value++;}
+}
 
 function errorMessage(error: unknown): string {
   if (error instanceof DOMException && error.name === 'AbortError') return '操作已取消';
@@ -411,6 +427,7 @@ function applyAssist() {
         <WorkflowExample ref="exampleEditor" :preset="active" />
 
         <ComfyModelControls ref="modelEditor" v-model:workflow="active.workflow" v-model:prompt-mode="active.promptMode" :url="settings.comfyui.url" />
+        <ComfyPostProcess ref="postEditor" :preset="active" />
         <ComfyAutoRepair ref="repairEditor" :preset="active" />
         <WorkflowResolution ref="sizeEditor" :preset="active" />
 
@@ -434,7 +451,7 @@ function applyAssist() {
         </section>
 
         <ComfyLoraControls ref="loraEditor" :workflow-id="active.id" v-model:workflow="active.workflow" v-model:backup="active.loraWorkflowBackup" v-model:favorites="settings.comfyui.loraFavorites" />
-        <ComfyWorkflowJson ref="jsonEditor" v-model="active.workflow" :name="active.name" :configuring="configuring" @assist="onAutoConfigure" />
+        <ComfyWorkflowJson ref="jsonEditor" :model-value="active.workflow" :preset="active" :apply="applyJsonFile" :name="active.name" :configuring="configuring" @assist="onAutoConfigure" />
         </div>
         </fieldset>
       </Collapsible>

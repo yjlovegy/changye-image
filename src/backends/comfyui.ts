@@ -1,3 +1,4 @@
+import { postEnabled } from './comfyPostSettings';
 import type { PromptMode } from '@/promptMode';
 import { muteWorkflowNegative } from './comfyNegativePolicy';
 import { preparePose, type ComfyPose } from '@/backends/comfyPose';
@@ -134,7 +135,7 @@ function collectPlaceholders(value: unknown, found: Set<string>): void {
     value.forEach(item => collectPlaceholders(item, found));
     return;
   }
-  if (isObject(value)) Object.values(value).forEach(item => collectPlaceholders(item, found));
+  if (isObject(value)) Object.entries(value).filter(([key])=>key!=='_meta').forEach(([,item]) => collectPlaceholders(item, found));
 }
 
 export function getWorkflowPlaceholders(template: string): string[] {
@@ -170,7 +171,9 @@ function replacePlaceholders(
   }
   if (Array.isArray(value)) return value.map(item => replacePlaceholders(item, replacements, fixedPrompts));
   if (isObject(value)) {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, replacePlaceholders(item, replacements, fixedPrompts)]));
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, key==='_meta' && isObject(item)
+      ? Object.fromEntries(Object.entries(item).filter(([name])=>name!=='changye'))
+      : replacePlaceholders(item, replacements, fixedPrompts)]));
   }
   return value;
 }
@@ -612,9 +615,10 @@ export async function generateComfyImage(
 
   const original = await runComfyWorkflow(conn, workflow, signal, hooks);
   original.workflowId = conn.workflowId;
-  if (conn.autoRepair?.enabled) {
-    const { autoRepairImage } = await import('./comfyInpaint');
-    return autoRepairImage(conn, workflow, original, signal, hooks, combinePromptParts(values.prompt, values.nl));
+  original.seed = values.seed;
+  if (conn.autoRepair?.enabled || postEnabled(conn.postProcessing)) {
+    const { postProcessImage } = await import('./comfyPost');
+    return postProcessImage(conn, workflow, original, signal, hooks, combinePromptParts(values.prompt, values.nl));
   }
   return original;
 }

@@ -33,7 +33,8 @@ describe('unified workflow form',()=>{
   expect(()=>prepareWorkflowForm(saved(),e,true)).toThrow('同时有未应用修改');
  });
  it('allows explicit saving of valid JSON when other editors are clean',()=>{
-  expect(prepareWorkflowForm(saved(),{json:{dirty:true,prepare:()=> 'new JSON'}},true).workflow).toBe('new JSON');
+  const json='{"n":{"class_type":"SaveImage","inputs":{}}}';
+  expect(prepareWorkflowForm(saved(),{json:{dirty:true,prepare:()=> json}},true).workflow).toBe(json);
  });
  it('discards temporary control edits back to the committed preset',()=>{
   const original=saved(),store=createWorkflowDrafts<ComfyWorkflowPreset>();

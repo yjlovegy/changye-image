@@ -1,3 +1,4 @@
+import { normalizeComfyPost, type ComfyPostSettings } from '@/backends/comfyPostSettings';
 import { ANIMA_CONTENT_RULE, ANIMA_EXAMPLES } from '@/autoTag/animaPrompt';
 import { normalizeAutoRepair, type AutoRepairSettings } from '@/backends/comfyInpaintGraph';
 import { normalizeInpaintTuning, type InpaintTuning } from '@/backends/inpaintTuning';
@@ -73,6 +74,7 @@ export interface ComfyWorkflowPreset extends SizePair {
   negativeEnabled?: boolean;
   generateNegative?: boolean;
   autoRepair?: AutoRepairSettings;
+  postProcessing?: ComfyPostSettings;
   promptMode?: PromptMode;
   /** 本工作流示例图的酒馆本地路径；图片不写入工作流 JSON 或生成请求。 */
   exampleImage?: string;
@@ -110,6 +112,7 @@ export interface ComfyWorkflowPreset extends SizePair {
 export interface ComfyRunConn extends SizePair {
   negativeEnabled?: boolean;
   autoRepair?: AutoRepairSettings;
+  postProcessing?: ComfyPostSettings;
   workflowId?: string;
   promptMode?: PromptMode;
   defaultSize?: string;
@@ -1180,6 +1183,7 @@ export function effectiveComfyConn(preset = activeComfyPreset()): ComfyRunConn {
     workflow: preset.workflow,
     workflowId: preset.id,
     autoRepair: normalizeAutoRepair(preset.autoRepair),
+    ...(preset.postProcessing ? { postProcessing: normalizeComfyPost(preset.postProcessing) } : {}),
     promptMode: normalizePromptMode(preset.promptMode),
     fixedPrompts: normalizeComfyFixedPrompts(preset.fixedPrompts),
     negativeEnabled: preset.negativeEnabled !== false,
@@ -1260,6 +1264,7 @@ function normalizeWorkflowPreset(raw: unknown, seq: number): ComfyWorkflowPreset
   return {
     exampleImage: normalizeWorkflowExample(o.exampleImage),
     autoRepair: normalizeAutoRepair(o.autoRepair),
+    ...(o.postProcessing ? { postProcessing: normalizeComfyPost(o.postProcessing) } : {}),
     promptMode: normalizePromptMode(o.promptMode),
     negativeEnabled: o.negativeEnabled !== false,
     generateNegative: o.generateNegative !== false,
