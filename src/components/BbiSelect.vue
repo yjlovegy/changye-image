@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Icon from '@/components/Icon.vue';
 import { modalHost } from '@/state/ui';
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
 
 /**
  * 自绘下拉选择(替代原生 <select>):触发器与弹出菜单都跟随 --bbi-* 主题,
@@ -21,8 +21,9 @@ const props = defineProps<{
   /** 无障碍名称(行标题是纯文本 span,与控件无 label 关联,靠它补上) */
   ariaLabel?: string;
   disabled?: boolean;
+  reorderable?: boolean;
 }>();
-const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>();
+const emit = defineEmits<{ (e: 'update:modelValue', v: string): void; (e: 'reorder', ids: string[]): void }>();
 
 const open = ref(false);
 const trigger = ref<HTMLElement | null>(null);
@@ -30,6 +31,68 @@ const menu = ref<HTMLElement | null>(null);
 const menuStyle = ref<Record<string, string>>({});
 /** 键盘/悬停高亮项索引 */
 const activeIndex = ref(0);
+const dragId = ref('');
+const dragOrder = ref<string[]>([]);
+const displayedOptions = computed(() => dragId.value
+  ? dragOrder.value.map(id => props.options.find(o => o.value === id)).filter((o): o is typeof props.options[number] => !!o)
+  : props.options);
+let press: { id: string; pointer: number; x: number; y: number; lastY: number; element: HTMLElement; scrolling: boolean } | undefined;
+let holdTimer: ReturnType<typeof setTimeout> | undefined;
+let scrollFrame = 0;
+let suppressPick = false;
+
+function cancelDrag() {
+  clearTimeout(holdTimer); cancelAnimationFrame(scrollFrame);
+  const previous = press; press = undefined;
+  if (previous?.element.hasPointerCapture(previous.pointer)) previous.element.releasePointerCapture(previous.pointer);
+  dragId.value = ''; dragOrder.value = [];
+}
+function positionDrag(y: number) {
+  if (!dragId.value || !menu.value) return;
+  const rows = [...menu.value.querySelectorAll<HTMLElement>('.bbi-select-option')];
+  const over = rows.find(row => { const r = row.getBoundingClientRect(); return y >= r.top && y <= r.bottom; });
+  if (!over?.dataset.value || over.dataset.value === dragId.value) return;
+  const next = [...dragOrder.value], from = next.indexOf(dragId.value), to = next.indexOf(over.dataset.value);
+  if (from < 0 || to < 0) return;
+  next.splice(to, 0, ...next.splice(from, 1)); dragOrder.value = next;
+}
+function scrollDrag() {
+  if (!press || !dragId.value || !menu.value) return;
+  const box = menu.value.getBoundingClientRect(), y = press.lastY;
+  if (y < box.top + 24) menu.value.scrollTop -= 5;
+  else if (y > box.bottom - 24) menu.value.scrollTop += 5;
+  positionDrag(Math.max(box.top + 5, Math.min(box.bottom - 5, y)));
+  scrollFrame = requestAnimationFrame(scrollDrag);
+}
+function pointerDown(event: PointerEvent, id: string) {
+  if (!props.reorderable || props.disabled || event.button !== 0) return;
+  cancelDrag(); suppressPick = false;
+  const element = menu.value!;
+  press = { id, pointer: event.pointerId, x: event.clientX, y: event.clientY, lastY: event.clientY, element, scrolling: false };
+  element.setPointerCapture(event.pointerId);
+  holdTimer = setTimeout(() => {
+    if (!press) return;
+    dragOrder.value = props.options.map(o => o.value); dragId.value = id; suppressPick = true;
+    scrollFrame = requestAnimationFrame(scrollDrag);
+  }, 400);
+}
+function pointerMove(event: PointerEvent) {
+  if (!press || press.pointer !== event.pointerId) return;
+  const previousY = press.lastY; press.lastY = event.clientY;
+  if (dragId.value) { event.preventDefault(); positionDrag(event.clientY); return; }
+  if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > 8) {
+    clearTimeout(holdTimer); suppressPick = true; press.scrolling = true;
+  }
+  if (press.scrolling && menu.value) menu.value.scrollTop += previousY - event.clientY;
+}
+function pointerUp(event: PointerEvent) {
+  if (!press || press.pointer !== event.pointerId) return;
+  const picked = !dragId.value && !press.scrolling ? press.id : undefined;
+  const ids = dragId.value ? [...dragOrder.value] : undefined;
+  cancelDrag();
+  if (ids && ids.some((id, i) => id !== props.options[i]?.value)) emit('reorder', ids);
+  if (picked) { suppressPick = true; emit('update:modelValue', picked); closeMenu(true); }
+}
 
 const current = computed(() => props.options.find(o => o.value === props.modelValue) ?? null);
 
@@ -68,6 +131,7 @@ function openMenu() {
 }
 
 function closeMenu(restoreFocus = false) {
+  cancelDrag();
   if (!open.value) return;
   open.value = false;
   document.removeEventListener('mousedown', onDocMousedown, true);
@@ -88,6 +152,7 @@ function toggle() {
 }
 
 function pick(option: { value: string }) {
+  if (suppressPick) { suppressPick = false; return; }
   emit('update:modelValue', option.value);
   closeMenu(true);
 }
@@ -118,6 +183,12 @@ function onDocKeydown(event: KeyboardEvent) {
     if (!count) return;
     event.preventDefault();
     const delta = event.key === 'ArrowDown' ? 1 : -1;
+    if (props.reorderable && event.altKey) {
+      const to = Math.max(0, Math.min(count - 1, activeIndex.value + delta));
+      const ids = props.options.map(o => o.value);
+      ids.splice(to, 0, ...ids.splice(activeIndex.value, 1));
+      emit('reorder', ids); activeIndex.value = to; void nextTick(scrollActiveIntoView); return;
+    }
     activeIndex.value = (activeIndex.value + delta + count) % count;
     scrollActiveIntoView();
   } else if (event.key === 'Home' || event.key === 'End') {
@@ -127,7 +198,7 @@ function onDocKeydown(event: KeyboardEvent) {
   } else if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault();
     const option = props.options[activeIndex.value];
-    if (option) pick(option);
+      if (option) { suppressPick = false; pick(option); }
   }
 }
 
@@ -166,16 +237,21 @@ onBeforeUnmount(() => closeMenu());
     </button>
 
     <Teleport :to="modalHost" :disabled="!modalHost">
-      <ul v-if="open" ref="menu" class="bbi-select-menu" role="listbox" :style="menuStyle">
+      <ul v-if="open" ref="menu" class="bbi-select-menu" :class="{ 'is-sortable': reorderable, 'is-dragging': dragId }" role="listbox" :aria-label="ariaLabel" :style="menuStyle"
+        @pointermove="pointerMove" @pointerup="pointerUp" @pointercancel="cancelDrag" @lostpointercapture="cancelDrag">
         <li
-          v-for="(option, i) in options"
+          v-for="(option, i) in displayedOptions"
           :key="option.value"
           class="bbi-select-option"
-          :class="{ 'is-active': i === activeIndex, 'is-selected': option.value === modelValue }"
+          :class="{ 'is-active': i === activeIndex, 'is-selected': option.value === modelValue, 'is-grabbed': option.value === dragId }"
+          :data-value="option.value"
+          :title="reorderable ? '长按拖动排序，或按 Alt＋方向键调整' : undefined"
           role="option"
           :aria-selected="option.value === modelValue"
           @mouseenter="activeIndex = i"
           @click="pick(option)"
+          @pointerdown="pointerDown($event, option.value)"
+          @contextmenu="reorderable && $event.preventDefault()"
         >
           <Icon v-if="option.icon" :name="option.icon" :size="14" />
           <span class="bbi-select-option-label">{{ option.label }}</span>
@@ -289,4 +365,7 @@ onBeforeUnmount(() => closeMenu());
   flex: none;
   color: var(--bbi-accent);
 }
+.is-sortable .bbi-select-option { touch-action: none; user-select: none; -webkit-user-select: none; }
+.is-dragging .bbi-select-option { cursor: grabbing; }
+.bbi-select-option.is-grabbed { outline: 2px solid var(--bbi-accent); outline-offset: -2px; background: var(--bbi-surface-2); }
 </style>

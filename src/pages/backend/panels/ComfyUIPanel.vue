@@ -11,7 +11,8 @@ import ComfyAutoRepair from './ComfyAutoRepair.vue';
 import ComfyPostProcess from './ComfyPostProcess.vue';
 import { checkPostSupport } from '@/backends/comfyPost';
 import { checkInpaintSupport } from '@/backends/comfyInpaint';
-import { readWorkflowFileOptions } from '@/backends/comfyWorkflowFile';
+import { exportWorkflowFile, readWorkflowFileExample, readWorkflowFileOptions, stripWorkflowFileOptions, workflowExportName } from '@/backends/comfyWorkflowFile';
+import { exportPortableWorkflow, importPortableWorkflowExample } from '@/st/workflowTransfer';
 import ComfyWorkflowJson from './ComfyWorkflowJson.vue';
 import WorkflowResolution from './WorkflowResolution.vue';
 import WorkflowExample from './WorkflowExample.vue';
@@ -62,6 +63,9 @@ const postEditor = ref<InstanceType<typeof ComfyPostProcess>>();
 const repairEditor = ref<InstanceType<typeof ComfyAutoRepair>>();
 const exampleEditor = ref<InstanceType<typeof WorkflowExample>>();
 const saving = ref(false), saveStatus = ref(''), saveError = ref('');
+const exporting = ref(false);
+const downloads = new Map<string, ReturnType<typeof setTimeout>>();
+let disposed = false;
 const dirty = computed(() => comfyWorkflowDrafts.dirty(active.value.id) || renaming.value
   || modelEditor.value?.dirty || loraEditor.value?.dirty || jsonEditor.value?.dirty
   || sizeEditor.value?.dirty || repairEditor.value?.dirty || postEditor.value?.dirty);
@@ -106,7 +110,11 @@ async function applyTemporary(): Promise<void> {
   if(autoRepair?.enabled)await checkInpaintSupport(conn,true);
   if(patch.postProcessing)await checkPostSupport(conn,patch.postProcessing);
   if (active.value !== target) throw new Error('当前工作流已变化，请重新操作');
-  Object.assign(target, { ...patch, autoRepair });
+  const example = jsonEditor.value?.dirty ? await importPortableWorkflowExample(patch.workflow) : {};
+  if (disposed) { await cleanUnusedWorkflowExample(example.exampleImage, comfyExampleOwners); throw new Error('页面已关闭，导入已取消'); }
+  const previousImage = target.exampleImage;
+  Object.assign(target, { ...patch, autoRepair, ...example, workflow:patch.workflow.trim()?stripWorkflowFileOptions(patch.workflow):'' });
+  await cleanUnusedWorkflowExample(previousImage, comfyExampleOwners);
   revision.value++;
   await nextTick();
 }
@@ -156,11 +164,38 @@ function beforeUnload(event: BeforeUnloadEvent) {
   if (dirty.value || comfyWorkflowDrafts.values().some(p=>comfyWorkflowDrafts.dirty(p.id))) { event.preventDefault(); event.returnValue = ''; }
 }
 onMounted(() => window.addEventListener('beforeunload', beforeUnload));
-onBeforeUnmount(() => { clearTimeout(jumpTimer); unregisterLeave(); finishLeave(false); window.removeEventListener('beforeunload', beforeUnload); });
+onBeforeUnmount(() => { disposed = true; for(const [url,timer] of downloads){clearTimeout(timer);URL.revokeObjectURL(url);} clearTimeout(jumpTimer); unregisterLeave(); finishLeave(false); window.removeEventListener('beforeunload', beforeUnload); });
 
 const workflowOptions = computed(() =>
   settings.comfyui.workflows.map(w => ({ value: w.id, label: `${comfyWorkflowDrafts.current(w).name || '未命名工作流'}${comfyWorkflowDrafts.dirty(w.id) ? ' · 未保存' : ''}` })),
 );
+
+function reorderWorkflows(ids:string[]) {
+  const list=settings.comfyui.workflows;
+  if(saving.value || ids.length!==list.length || new Set(ids).size!==list.length)return;
+  const byId=new Map(list.map(w=>[w.id,w]));
+  if(ids.some(id=>!byId.has(id)))return;
+  settings.comfyui.workflows=ids.map(id=>byId.get(id)!);
+}
+
+async function exportCurrent() {
+  if(exporting.value || saving.value)return;
+  exporting.value=true;
+  try {
+    if(exampleEditor.value?.busy || configuring.value)throw new Error('图片或工作流正在处理，请完成后再导出');
+    const patch=prepareWorkflowForm(active.value,formEditors(),true);
+    const snapshot=JSON.parse(JSON.stringify({...active.value,...patch,name:renaming.value?renameDraft.value.trim():patch.name??active.value.name}));
+    // An un-applied imported JSON already contains its portable image. Preserve it as-is.
+    const embedded=jsonEditor.value?.dirty?readWorkflowFileExample(patch.workflow):undefined;
+    const json=embedded!==undefined?exportWorkflowFile(snapshot,embedded):await exportPortableWorkflow(snapshot);
+    if(disposed)return;
+    const url=URL.createObjectURL(new Blob([json],{type:'application/json'}));
+    const link=document.createElement('a');link.href=url;link.download=workflowExportName(snapshot.name);
+    document.body.appendChild(link);link.click();link.remove();
+    downloads.set(url,setTimeout(()=>{URL.revokeObjectURL(url);downloads.delete(url);},1000));
+  }catch(error){toastr.error(errorMessage(error),'导出工作流失败');}
+  finally{exporting.value=false;}
+}
 
 /**
  * 下拉的值取「实际生效的那一套」而非存的 id:存的 id 悬空时
@@ -241,11 +276,18 @@ const fixedNegativeIssue = computed(() => {
   catch { return ''; }
 });
 
-function applyJsonFile(workflow:string) {
+async function applyJsonFile(workflow:string) {
   if(modelEditor.value?.dirty || loraEditor.value?.dirty) throw new Error('请先保存模型与 LoRA 修改，再应用 JSON');
   const options=readWorkflowFileOptions(workflow);
-  active.value.workflow=workflow;
-  if(Object.keys(options).length){Object.assign(active.value,options);revision.value++;}
+  const target=active.value,previousImage=target.exampleImage;
+  saving.value=true;
+  try{
+    const example=await importPortableWorkflowExample(workflow);
+    if(disposed){await cleanUnusedWorkflowExample(example.exampleImage,comfyExampleOwners);throw new Error('页面已关闭，导入已取消');}
+    Object.assign(target,options,example,{workflow:stripWorkflowFileOptions(workflow)});
+    if(Object.keys(options).length)revision.value++;
+    await cleanUnusedWorkflowExample(previousImage,comfyExampleOwners);
+  }finally{saving.value=false;}
 }
 
 function errorMessage(error: unknown): string {
@@ -377,6 +419,9 @@ function applyAssist() {
             class="wf-select"
             v-model="activeId"
             :options="workflowOptions"
+            reorderable
+            :disabled="saving"
+            @reorder="reorderWorkflows"
             aria-label="当前工作流"
           />
           <span v-if="!renaming" class="wf-ops">
@@ -406,6 +451,16 @@ function applyAssist() {
               @click="duplicateWorkflow"
             >
               <Icon name="copy" :size="14" />
+            </button>
+            <button
+              class="bbi-icon-btn wf-op"
+              type="button"
+              title="导出当前工作流"
+              aria-label="导出当前工作流"
+              :disabled="exporting || configuring || exampleEditor?.busy"
+              @click="exportCurrent"
+            >
+              <Icon name="upload" :size="14" />
             </button>
             <button
               class="bbi-icon-btn wf-op wf-remove"
@@ -451,7 +506,7 @@ function applyAssist() {
         </section>
 
         <ComfyLoraControls ref="loraEditor" :workflow-id="active.id" v-model:workflow="active.workflow" v-model:backup="active.loraWorkflowBackup" v-model:favorites="settings.comfyui.loraFavorites" />
-        <ComfyWorkflowJson ref="jsonEditor" :model-value="active.workflow" :preset="active" :apply="applyJsonFile" :name="active.name" :configuring="configuring" @assist="onAutoConfigure" />
+        <ComfyWorkflowJson ref="jsonEditor" :model-value="active.workflow" :preset="active" :apply="applyJsonFile" :export-current="exportCurrent" :name="active.name" :configuring="configuring" @assist="onAutoConfigure" />
         </div>
         </fieldset>
       </Collapsible>

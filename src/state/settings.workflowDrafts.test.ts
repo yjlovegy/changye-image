@@ -5,6 +5,16 @@ vi.mock('@/st/context',()=>({getContext:()=>host.context}));
 beforeEach(()=>{vi.resetModules();vi.stubGlobal('window',{addEventListener:vi.fn(),dispatchEvent:vi.fn()});host.context={extensionSettings:{baibai_image:{comfyui:{activeWorkflowId:'a',workflows:[{id:'a',name:'Saved',workflow:'{"1":{"class_type":"CLIPTextEncode","inputs":{"text":"%prompt%"}}}'}]}}},saveSettingsDebounced:vi.fn()};});
 afterEach(()=>vi.unstubAllGlobals());
 describe('workflow draft persistence boundary',()=>{
+  it('persists workflow ordering without switching the active item or committing its draft',async()=>{
+    const m=await import('./settings');await m.hydrateSettings();
+    const first=m.savedComfyPreset(),second=m.newComfyWorkflow('Second');m.settings.comfyui.workflows.push(second);
+    m.comfyWorkflowDrafts.edit(first).name='Temporary';
+    m.settings.comfyui.workflows=[second,first];await nextTick();
+    expect(host.context.extensionSettings.baibai_image.comfyui.workflows.map((w:any)=>w.id)).toEqual([second.id,first.id]);
+    expect(host.context.extensionSettings.baibai_image.comfyui.workflows[1].name).toBe('Saved');
+    expect(m.settings.comfyui.activeWorkflowId).toBe(first.id);expect(m.activeComfyPreset().name).toBe('Temporary');
+    m.saveComfyWorkflow(first.id);expect(m.settings.comfyui.workflows[1].name).toBe('Temporary');
+  });
   it('roundtrips explicit per-workflow inpaint defaults without saving a generation draft',async()=>{
     host.context.extensionSettings.baibai_image.inpaintProfiles={a:{mode:'touchup',denoise:0.35,resolution:'1024',feather:4,context:1.2,steps:16,cfg:0,thinkingSteps:5,promptMode:'Image First'}};
     const m=await import('./settings');await m.hydrateSettings();

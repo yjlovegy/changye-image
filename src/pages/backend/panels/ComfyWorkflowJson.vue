@@ -3,9 +3,9 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { validateWorkflowJson } from '@/backends/comfyWorkflowControls';
 import { getWorkflowPlaceholders } from '@/backends/comfyui';
 import type { ComfyWorkflowPreset } from '@/state/settings';
-import { exportWorkflowFile } from '@/backends/comfyWorkflowFile';
+import { exportWorkflowFile, workflowExportName } from '@/backends/comfyWorkflowFile';
 import BbiTextarea from '@/components/BbiTextarea.vue';
-const props = defineProps<{ modelValue: string; name: string; configuring: boolean; preset?: ComfyWorkflowPreset; apply?: (workflow:string)=>void }>();
+const props = defineProps<{ modelValue: string; name: string; configuring: boolean; preset?: ComfyWorkflowPreset; apply?: (workflow:string)=>void|Promise<void>; exportCurrent?:()=>Promise<void> }>();
 const emit = defineEmits<{ (event: 'update:modelValue', value: string): void; (event: 'assist'): void }>();
 const draft = ref(props.modelValue), baseline = ref(props.modelValue), open = ref(!props.modelValue.trim());
 const error = ref(''), saved = ref(!!props.modelValue.trim()), importing = ref(false);
@@ -27,7 +27,7 @@ async function save() {
   try {
     if (stale.value) throw new Error('其他设置已更新工作流，请载入最新工作流后再编辑，避免覆盖这些修改。');
     const next = validateWorkflowJson(draft.value);
-    if(props.apply)props.apply(next);else emit('update:modelValue', next);
+    if(props.apply)await props.apply(next);else emit('update:modelValue', next);
     await nextTick();
     draft.value = props.modelValue; baseline.value = props.modelValue; saved.value = true; error.value = ''; open.value = false;
   } catch (e) { error.value = e instanceof Error ? e.message : String(e); }
@@ -51,11 +51,12 @@ async function upload(event: Event) {
   finally { if (seq === importSequence) importing.value = false; }
 }
 function download() {
+  if(props.exportCurrent){void props.exportCurrent();return;}
   try {
     const json = props.preset ? exportWorkflowFile(props.preset) : validateWorkflowJson(props.modelValue);
     const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
     const link = document.createElement('a'); link.href = url;
-    link.download = `${props.name.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_') || 'workflow'}.json`;
+    link.download = workflowExportName(props.name);
     document.body.appendChild(link); link.click(); link.remove();
     downloads.set(url, setTimeout(() => { URL.revokeObjectURL(url); downloads.delete(url); }, 1000));
   } catch (e) { error.value = e instanceof Error ? e.message : String(e); }
