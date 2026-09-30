@@ -10,6 +10,18 @@ const source=():ComfyWorkflow=>({
 });
 const opts={image:'source.png',mask:'mask.png',positive:'blue sleeves',negative:'blur',seed:123};
 describe('shared inpaint graph',()=>{
+ it('uses original-image masked sampling for automatic details without scene conditioning or LanPaint',()=>{
+  const s=source(),before=JSON.stringify(s);
+  const g=buildInpaintGraph(s,{...opts,positive:'existing face detail',sampling:'masked-img2img',denoise:0.2,referenceRect:{x:32,y:64,width:128,height:160},referenceSize:{width:768,height:960}});
+  const nodes=Object.values(g);
+  expect(nodes.some(n=>String(n.class_type).startsWith('LanPaint'))).toBe(false);
+  expect(nodes.find(n=>n.class_type==='VAEEncode')).toBeDefined();
+  expect(nodes.find(n=>n.class_type==='SetLatentNoiseMask')).toBeDefined();
+  expect(nodes.find(n=>n.class_type==='ImageBlur')).toBeDefined();
+  expect(nodes.find(n=>n.class_type==='KSampler')?.inputs).toMatchObject({steps:8,cfg:1,sampler_name:'euler',scheduler:'simple',denoise:0.2});
+  expect(nodes.filter(n=>n.class_type==='CLIPTextEncode').map(n=>(n.inputs as any).text)).toEqual(['existing face detail','blur']);
+  expect(g.positive).toBeUndefined();expect(g.lora).toEqual(s.lora);expect(JSON.stringify(s)).toBe(before);
+ });
  it('uses the explicit reference rectangle for both image and mask and pastes at original coordinates',()=>{
   const g=buildInpaintGraph(source(),{...opts,referenceRect:{x:123,y:456,width:400,height:700},referenceSize:{width:576,height:1024}});
   const nodes=Object.values(g);

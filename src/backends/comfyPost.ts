@@ -1,12 +1,12 @@
 import type { ComfyRunConn } from '@/state/settings';
-import { parseWorkflowTemplate, runComfyWorkflow, type ComfyWorkflow, type ComfyImageResult, type ComfyProgressHooks } from './comfyui';
-import { checkInpaintSupport, uploadInpaintImage, imageBlob, autoRepairImage } from './comfyInpaint';
-import { buildInpaintGraph, inspectInpaintSource, dependencyGraph, isLink } from './comfyInpaintGraph';
+import { parseWorkflowTemplate, runComfyWorkflow, runComfyWorkflowBatch, type ComfyWorkflow, type ComfyImageResult, type ComfyProgressHooks } from './comfyui';
+import { uploadInpaintImage, imageBlob, autoRepairImage } from './comfyInpaint';
+import { buildInpaintGraph, inspectInpaintSource } from './comfyInpaintGraph';
 import { buildPostGraph, buildFinishGraph, buildDetailDetection } from './comfyPostGraph';
 import { normalizeComfyPost, postEnabled, postTargetSize, validateComfyPost, type ComfyPostSettings } from './comfyPostSettings';
 import { decodePixels, protectedInpaintResult } from './inpaintComposite';
-import { inpaintReferenceRect, inpaintReferenceSize } from './inpaintReference';
-import { detailRegions, regionMask } from './detailRegions';
+import { inpaintReferenceSize } from './inpaintReference';
+import { planDetailRegions, detailMaskBlob, detailPrompt } from './detailRegions';
 
 const endpoint=(url:string,path:string)=>`${url.trim().replace(/\/+$/,'')}/${path}`;
 const choices=(field:unknown):string[]=>{const f=field as any;return (Array.isArray(f?.[0])?f[0]:f?.[1]?.options)??[];};
@@ -18,6 +18,16 @@ async function nodeInfo(url:string,name:string,signal?:AbortSignal){
 export async function upscaleModels(url:string,signal?:AbortSignal):Promise<string[]>{
   return choices((await nodeInfo(url,'UpscaleModelLoader',signal??AbortSignal.timeout(15000))).input?.required?.model_name);
 }
+async function checkDetailSupport(conn:ComfyRunConn,signal?:AbortSignal) {
+  const bounded=signal?AbortSignal.any([signal,AbortSignal.timeout(15000)]):AbortSignal.timeout(15000);
+  const types=['VAEEncode','VAEDecode','SetLatentNoiseMask','KSampler','ImageBlur','ImageCrop','CropMask','ImageScale','ImageToMask','MaskToImage','ImageCompositeMasked'];
+  await Promise.all(types.map(name=>nodeInfo(conn.url,name,bounded)));
+  const detector=await nodeInfo(conn.url,'SAM3_Detect',bounded);
+  if(!detector.input?.required?.individual_masks && !detector.input?.optional?.individual_masks)throw new Error('SAM3 节点不支持独立选区，请更新 ComfyUI');
+  const checkpoint=choices((await nodeInfo(conn.url,'CheckpointLoaderSimple',bounded)).input?.required?.ckpt_name).find(name=>/sam3(?:[._-]|$)/i.test(name));
+  if(!checkpoint)throw new Error('未找到 SAM3 模型');
+  return checkpoint;
+}
 export async function checkPostSupport(conn:ComfyRunConn,p:ComfyPostSettings,signal?:AbortSignal){
   validateComfyPost(p);if(!postEnabled(p))return;
   const timeout=AbortSignal.timeout(15000),bounded=signal?AbortSignal.any([signal,timeout]):timeout;
@@ -25,7 +35,7 @@ export async function checkPostSupport(conn:ComfyRunConn,p:ComfyPostSettings,sig
   await Promise.all(types.map(name=>nodeInfo(conn.url,name,bounded)));
   if(p.upscale.enabled && !(await upscaleModels(conn.url,bounded)).includes(p.upscale.model))throw new Error(`未找到放大模型：${p.upscale.model}`);
   if(p.hires.enabled)inspectInpaintSource(parseWorkflowTemplate(conn.workflow));
-  if(p.detail.enabled)await checkInpaintSupport(conn,true,bounded,true);
+  if(p.detail.enabled){inspectInpaintSource(parseWorkflowTemplate(conn.workflow));await checkDetailSupport(conn,bounded);}
 }
 
 /** Execute optional stages independently. A failed stage never destroys a successful base image. */
@@ -60,29 +70,31 @@ export async function postProcessImage(conn:ComfyRunConn,source:ComfyWorkflow,or
       if(repaired!==borrowed){delete repaired.original;adopt(repaired);}
     });
     if(p.detail.enabled)await stage('局部细节',async()=>{
-      const {checkpoint}=await checkInpaintSupport(conn,true,signal,true);
-      const base=inspectInpaintSource(source);
-      const text=(link:unknown)=>isLink(link)?Object.values(dependencyGraph(source,[link[0]])).filter(n=>n.class_type==='CLIPTextEncode').map(n=>String((n.inputs as Record<string,unknown>).text??'')).join('\n'):'';
-      const positive=text(base.sampler.positive)||scene,negative=conn.negativeEnabled===false?'':text(base.sampler.negative);
-      for(const part of ['face','eyes'] as const){
-        if(!p.detail[part])continue;
-        const input=await upload();
-        const detection=await runComfyWorkflow(conn,buildDetailDetection(input,checkpoint!,part),signal,hooks);
-        let mask;
-        try{mask=await decodePixels(await imageBlob(detection.url,signal));}finally{detection.revoke();}
-        const regions=detailRegions(mask);
-        if(!regions.regions.length){notices.push(`未检测到${part==='face'?'脸部':'眼睛'}，已跳过`);continue;}
-        if(regions.skipped)notices.push(`检测区域较多，仅处理面积最大的 6 处${part==='face'?'脸部':'眼睛'}`);
-        for(const region of regions.regions){
-          abort();const sourcePixels=await decodePixels(await imageBlob(current.url,signal));
-          if(mask.width!==sourcePixels.width||mask.height!==sourcePixels.height)throw new Error('细节选区尺寸不一致');
-          const blob=await regionMask(mask,regions.labels,region.id),maskPixels=await decodePixels(blob);
-          const rect=inpaintReferenceRect(region,mask.width,mask.height,part==='face'?2:3,false);
-          const [image,maskName]=await Promise.all([upload(),uploadInpaintImage(conn.url,blob,signal)]);
-          const graph=buildInpaintGraph(source,{image,mask:maskName,seed,denoise:p.detail.denoise,thinkingSteps:3,promptMode:'Image First',referenceRect:rect,referenceSize:inpaintReferenceSize(rect,p.detail.resolution),positive:`Refine the existing ${part==='face'?'face':'eyes'} with clean natural details. Preserve the same identity, expression, gaze, colors, lighting and art style. Do not add accessories. ${positive}`,negative});
-          const raw=await runComfyWorkflow(conn,graph,signal,hooks);
-          adopt(await protectedInpaintResult(sourcePixels,maskPixels,raw,6,signal));
-        }
+      const checkpoint=await checkDetailSupport(conn,signal);
+      const baseline=await imageBlob(current.url,signal),pixels=await decodePixels(baseline);
+      const image=await uploadInpaintImage(conn.url,baseline,signal);
+      const detect=async(part:'face'|'eyes')=>{
+        const masks=await runComfyWorkflowBatch(conn,buildDetailDetection(image,checkpoint,part),'output',signal,hooks);
+        try {
+          if(masks.length*pixels.width*pixels.height>24_000_000)throw new Error('检测选区过多或过大，已跳过细节处理');
+          const decoded=[];
+          for(const mask of masks)decoded.push(await decodePixels(await imageBlob(mask.url,signal)));
+          return decoded;
+        }finally{masks.forEach(mask=>mask.revoke());}
+      };
+      const faces=await detect('face');
+      const eyes=p.detail.eyes&&faces.length?await detect('eyes'):[];
+      const plan=planDetailRegions(faces,eyes,pixels,p.detail);
+      if(plan.rejected)notices.push(`已跳过 ${plan.rejected} 处范围异常或归属不明确的细节选区`);
+      if(plan.skipped)notices.push('检测区域较多，仅处理前 6 张脸');
+      if(!plan.regions.length){notices.push('未找到可安全处理的细节选区，已保留处理前图片');return;}
+      for(const region of plan.regions){
+        abort();const sourcePixels=await decodePixels(await imageBlob(current.url,signal));
+        const mask=await uploadInpaintImage(conn.url,await detailMaskBlob(region.mask),signal);
+        // Every crop sees the unchanged baseline; final compositing keeps previous faces intact.
+        const graph=buildInpaintGraph(source,{image,mask,seed,denoise:p.detail.denoise,sampling:'masked-img2img',referenceRect:region.reference,referenceSize:inpaintReferenceSize(region.reference,p.detail.resolution),positive:detailPrompt(region.part),negative:conn.negativeEnabled===false?'':'blurry facial features, distorted face, duplicate facial features, extra eyes'});
+        const raw=await runComfyWorkflow(conn,graph,signal,hooks);
+        adopt(await protectedInpaintResult(sourcePixels,region.mask,raw,8,signal));
       }
     });
     if(p.sharpen.enabled||p.color.enabled)await stage('锐化与调色',async()=>{

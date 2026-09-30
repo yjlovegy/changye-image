@@ -44,8 +44,9 @@ export function buildFinishGraph(image:string, p:ComfyPostSettings):ComfyWorkflo
 export function buildDetailDetection(image:string,checkpoint:string,part:'face'|'eyes'):ComfyWorkflow {
   return {
     load:{class_type:'LoadImage',inputs:{image}},sam:{class_type:'CheckpointLoaderSimple',inputs:{ckpt_name:checkpoint}},
-    text:{class_type:'CLIPTextEncode',inputs:{clip:['sam',1],text:part}},
-    detect:{class_type:'SAM3_Detect',inputs:{model:['sam',0],image:['load',0],conditioning:['text',0],threshold:0.35,refine_iterations:2,individual_masks:false}},
+    // ComfyUI SAM3's tokenizer defaults to one detection; :N sets an explicit cap.
+    text:{class_type:'CLIPTextEncode',inputs:{clip:['sam',1],text:part==='face'?'face:6':'eyes:12'}},
+    detect:{class_type:'SAM3_Detect',inputs:{model:['sam',0],image:['load',0],conditioning:['text',0],threshold:0.5,refine_iterations:2,individual_masks:true}},
     pixels:{class_type:'MaskToImage',inputs:{mask:['detect',0]}},
     output:{class_type:'PreviewImage',inputs:{images:['pixels',0]}},
   };

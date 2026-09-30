@@ -288,18 +288,18 @@ interface ComfyOutputFile {
   type?: string;
 }
 
-function findOutputFile(item: unknown): ComfyOutputFile | null {
-  if (!isObject(item) || !isObject(item.outputs)) return null;
-  for (const output of Object.values(item.outputs)) {
+function findOutputFiles(item: unknown, outputNode?: string): ComfyOutputFile[] {
+  if (!isObject(item) || !isObject(item.outputs)) return [];
+  const found: ComfyOutputFile[] = [];
+  for (const output of outputNode ? [item.outputs[outputNode]] : Object.values(item.outputs)) {
     if (!isObject(output)) continue;
     for (const key of ['images', 'gifs']) {
       const files = output[key];
       if (!Array.isArray(files)) continue;
-      const file = files.find(x => isObject(x) && typeof x.filename === 'string');
-      if (file) return file as unknown as ComfyOutputFile;
+      found.push(...files.filter(x => isObject(x) && typeof x.filename === 'string') as ComfyOutputFile[]);
     }
   }
-  return null;
+  return found;
 }
 
 function executionError(item: unknown): string | null {
@@ -513,13 +513,14 @@ export interface ComfyProgressHooks {
   onQueue?(ahead: number | null): void;
 }
 
-async function pollDirectResult(
+async function pollDirectResults(
   conn: ComfyRunConn,
   promptId: string,
   workflow: ComfyWorkflow,
   signal?: AbortSignal,
   hooks?: ComfyProgressHooks,
-): Promise<ComfyImageResult> {
+  outputNode?: string,
+): Promise<ComfyImageResult[]> {
   const onAbort = () => {
     void cancelPrompt(conn, promptId);
   };
@@ -531,10 +532,10 @@ async function pollDirectResult(
       throw new DOMException('已停止生图', 'AbortError');
     }
     const startedAt = Date.now();
-    let file: ComfyOutputFile | null = null;
+    let files: ComfyOutputFile[] = [];
     // 一旦观察到自己在执行就不再查队列:位置信息已无意义,省掉每轮一次请求
     let watchQueue = !!hooks?.onQueue;
-    while (!file) {
+    while (!files.length) {
       if (Date.now() - startedAt > POLL_TIMEOUT_MS) throw new ComfyUIError('等待 ComfyUI 结果超时（10 分钟）');
       const historyResponse = await fetch(endpoint(conn.url, `history/${encodeURIComponent(promptId)}`), { signal });
       if (!historyResponse.ok) throw await responseError(historyResponse, '读取 ComfyUI 任务状态失败');
@@ -542,11 +543,13 @@ async function pollDirectResult(
       const item = history[promptId];
       const error = executionError(item);
       if (error) throw new ComfyUIError(error);
-      file = findOutputFile(item);
-      if (!file && executionCompleted(item)) {
+      files = findOutputFiles(item, outputNode);
+      if (!files.length && executionCompleted(item)) {
+        // An instance detector may successfully find zero objects.
+        if (outputNode) return [];
         throw new ComfyUIError(noImageOutputError(item, workflow));
       }
-      if (file) break;
+      if (files.length) break;
       if (watchQueue) {
         const position = await fetchQueuePosition(conn, promptId, signal);
         hooks?.onQueue?.(position?.ahead ?? null);
@@ -555,21 +558,32 @@ async function pollDirectResult(
       await abortableDelay(POLL_INTERVAL_MS, signal);
     }
 
-    const query = new URLSearchParams({
-      filename: file.filename,
-      subfolder: file.subfolder ?? '',
-      type: file.type ?? 'output',
-    });
-    const imageResponse = await fetch(`${endpoint(conn.url, 'view')}?${query}`, { signal });
-    if (!imageResponse.ok) throw await responseError(imageResponse, '读取 ComfyUI 输出图片失败');
-    const blob = await imageResponse.blob();
-    const url = URL.createObjectURL(blob);
-    return {
-      url,
-      filename: file.filename,
-      format: fileFormat(file.filename, blob.type),
-      revoke: () => URL.revokeObjectURL(url),
-    };
+    if (outputNode && files.length > 32) throw new ComfyUIError('检测区域过多，已跳过局部细节处理');
+    const results: ComfyImageResult[] = [];
+    try {
+      for (const file of outputNode ? files : files.slice(0, 1)) {
+        const query = new URLSearchParams({
+          filename: file.filename,
+          subfolder: file.subfolder ?? '',
+          type: file.type ?? 'output',
+        });
+        const imageResponse = await fetch(`${endpoint(conn.url, 'view')}?${query}`, { signal });
+        if (!imageResponse.ok) throw await responseError(imageResponse, '读取 ComfyUI 输出图片失败');
+        const blob = await imageResponse.blob();
+        if (signal?.aborted) throw new DOMException('已停止生图', 'AbortError');
+        const url = URL.createObjectURL(blob);
+        results.push({
+          url,
+          filename: file.filename,
+          format: fileFormat(file.filename, blob.type),
+          revoke: () => URL.revokeObjectURL(url),
+        });
+      }
+      return results;
+    } catch (error) {
+      results.forEach(result => result.revoke());
+      throw error;
+    }
   } finally {
     signal?.removeEventListener('abort', onAbort);
   }
@@ -630,9 +644,15 @@ export async function runComfyWorkflow(conn: ComfyRunConn, workflow: ComfyWorkfl
   try {
     const promptId = await queueDirect(conn, workflow, signal);
     queued = true;
-    return await pollDirectResult(conn, promptId, workflow, signal, hooks);
+    return (await pollDirectResults(conn, promptId, workflow, signal, hooks))[0];
   } catch (error) {
     if (queued || signal?.aborted || !isNetworkError(error)) throw error;
     return generateViaServer(conn, workflow, signal);
   }
+}
+
+/** Read every instance mask from one detector output; the normal image path remains single-result. */
+export async function runComfyWorkflowBatch(conn: ComfyRunConn, workflow: ComfyWorkflow, outputNode: string, signal?: AbortSignal, hooks?: ComfyProgressHooks): Promise<ComfyImageResult[]> {
+  const promptId = await queueDirect(conn, workflow, signal);
+  return pollDirectResults(conn, promptId, workflow, signal, hooks, outputNode);
 }

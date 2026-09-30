@@ -45,6 +45,8 @@ export interface InpaintGraphOptions {
   promptMode?: 'Image First' | 'Prompt First';
   referenceRect?: import('./inpaintReference').InpaintRect;
   referenceSize?: { width: number; height: number };
+  /** Automatic detail enhancement preserves the crop with ordinary masked img2img. */
+  sampling?: 'masked-img2img';
 }
 
 /** API graph shared by Krea2 and Anima; retain the model/CLIP/LoRA graph without editing the saved workflow. */
@@ -81,14 +83,21 @@ export function buildInpaintGraph(source: ComfyWorkflow, o: InpaintGraphOptions)
   });
   croppedImage=[crop[0],1]; croppedMask=[crop[0],2];
   }
-  const latent=add('LanPaint_ImageEncode',{image:croppedImage,mask:croppedMask,vae});
+  let latent:Link;
+  if(o.sampling==='masked-img2img') {
+    const encoded=add('VAEEncode',{pixels:croppedImage,vae});
+    const maskPixels=add('MaskToImage',{mask:croppedMask});
+    const softPixels=add('ImageBlur',{image:maskPixels,blur_radius:5,sigma:2});
+    const softMask=add('ImageToMask',{image:softPixels,channel:'red'});
+    latent=add('SetLatentNoiseMask',{samples:encoded,mask:softMask});
+  } else latent=add('LanPaint_ImageEncode',{image:croppedImage,mask:croppedMask,vae});
   const positive=add('CLIPTextEncode',{clip,text:o.positive}), negative=add('CLIPTextEncode',{clip,text:o.negative});
-  const sample=add('LanPaint_KSampler',{
+  const sample=add(o.sampling==='masked-img2img'?'KSampler':'LanPaint_KSampler',{
     model,positive,negative,latent_image:latent,seed:o.seed,steps:o.steps??sampler.steps,cfg:o.cfg??sampler.cfg,
     sampler_name:sampler.sampler_name,scheduler:sampler.scheduler,denoise:o.denoise??0.7,
-    LanPaint_NumSteps:o.thinkingSteps??5,LanPaint_PromptMode:o.promptMode??'Image First',LanPaint_Info:'',Inpainting_mode:'🖼️ Image Inpainting',
+    ...(o.sampling==='masked-img2img'?{}:{LanPaint_NumSteps:o.thinkingSteps??5,LanPaint_PromptMode:o.promptMode??'Image First',LanPaint_Info:'',Inpainting_mode:'🖼️ Image Inpainting'}),
   });
-  const decoded=add('LanPaint_ImageDecode',{samples:sample,vae,image:croppedImage,mask:croppedMask,blend_overlap:1});
+  const decoded=o.sampling==='masked-img2img'?add('VAEDecode',{samples:sample,vae}):add('LanPaint_ImageDecode',{samples:sample,vae,image:croppedImage,mask:croppedMask,blend_overlap:1});
   let stitched:Link;
   if(o.referenceRect && o.referenceSize) {
     const {x,y,width,height}=o.referenceRect;

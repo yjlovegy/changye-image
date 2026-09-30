@@ -12,7 +12,7 @@ export function defaultComfyPost(): ComfyPostSettings {
     scale: 1.5,
     upscale: { enabled: false, model: 'RealESRGAN_x4plus_anime_6B.pth' },
     hires: { enabled: false, denoise: 0.25, steps: 0 },
-    detail: { enabled: false, face: true, eyes: false, denoise: 0.3, resolution: 1024 },
+    detail: { enabled: false, face: true, eyes: false, denoise: 0.2, resolution: 1024 },
     sharpen: { enabled: false, strength: 0.1 },
     color: { enabled: false, brightness: 1, contrast: 1, saturation: 1 },
   };
