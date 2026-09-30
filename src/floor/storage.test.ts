@@ -324,18 +324,23 @@ describe('prepareImageForStorage', () => {
 });
 
 describe('saveImageResult', () => {
-  it('keeps original and repaired images as separate versions with actual seeds', async () => {
+  it('publishes only the final result from a processing chain and preserves earlier generations', async () => {
     settings.storage.saveAsJpeg=false;
     const message=fakeMessage(), tag='<bbi_image>a</bbi_image>', saveChat=vi.fn(async()=>undefined);
     const ctx={chat:[message],saveChat,getRequestHeaders:()=>({}),getCurrentChatId:()=>'test'};
     vi.stubGlobal('window',{SillyTavern:{getContext:()=>ctx}});
     vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({path:'/user/images/test.png'}))));
+    const previous=fakeEntry();
+    message.extra = { [BBI_IMAGE_EXTRA_KEY]: appendEntry({},0,promptHash(tag),previous) };
     const original={url:'data:image/png;base64,AAAA',filename:'base.png',format:'png',workflowId:'wf',revoke(){}};
-    const repaired={...original,filename:'repair.png',seed:999,original};
+    const intermediate={...original,filename:'upscale.png',original};
+    const repaired={...original,url:'data:image/png;base64,BBBB',filename:'final.png',seed:999,original:intermediate};
     const entry=await saveImageResult(0,0,0,tag,123,repaired);
     const versions=historyEntries(readStore(message),0,promptHash(tag),0);
-    expect(versions).toHaveLength(2);expect(versions[0].seed).toBe(123);expect(versions[1].seed).toBe(999);
-    expect(entry.originalGenerationId).toBe(versions[0].generationId);expect(entry.workflowId).toBe('wf');expect(saveChat).toHaveBeenCalledTimes(2);
+    expect(versions).toEqual([previous,entry]);expect(entry.seed).toBe(999);
+    expect(entry.originalGenerationId).toBeUndefined();expect(entry.workflowId).toBe('wf');expect(saveChat).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledTimes(2); // One image and its sidecar, no processing inputs.
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body)).image).toBe('BBBB');
   });
   it('does not attach an uploaded image after switching chats', async () => {
     settings.storage.saveAsJpeg=false;
@@ -476,6 +481,18 @@ describe('saveImageResult', () => {
 });
 
 describe('saveExternalImage', () => {
+  it('uploads only the final image even when processing inputs are linked', async () => {
+    settings.storage.saveAsJpeg=false;
+    const fetchMock=vi.fn(async()=>new Response(JSON.stringify({path:'/user/images/final.png'})));
+    vi.stubGlobal('fetch',fetchMock);
+    vi.stubGlobal('window',{SillyTavern:{getContext:()=>({getRequestHeaders:()=>({})})}});
+    const base={url:'data:image/png;base64,AAAA',filename:'base.png',format:'png',revoke(){}};
+    const middle={...base,original:base};
+    const final={...base,url:'data:image/png;base64,BBBB',original:middle};
+    expect(await saveExternalImage('test','<bbi_image>a</bbi_image>',123,final)).toBe('/user/images/final.png');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body)).image).toBe('BBBB');
+  });
   beforeEach(() => {
     settings.storage.saveAsJpeg = false;
   });

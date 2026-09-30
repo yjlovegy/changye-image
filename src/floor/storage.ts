@@ -409,7 +409,7 @@ export async function saveExternalImage(
   result: ComfyImageResult,
 ): Promise<string> {
   const name = characterName.trim() || '未命名角色';
-  if (result.original) await saveExternalImage(name, tag, seed, result.original);
+  // Processing inputs are retained for resource ownership, not separate gallery results.
   seed = result.seed ?? seed;
   const { path } = await uploadImageWithSidecar(name, 0, promptHash(tag), tag, seed, result);
   return path;
@@ -440,7 +440,7 @@ export async function saveImageResult(
       || originalMessage.mes !== originalText || (originalMessage.swipe_id ?? 0) !== swipeId) throw new Error('聊天或楼层已变化，图片已留在图库，请回到原聊天重试');
   };
 
-  const originalEntry = result.original ? await saveImageResult(messageId, swipeId, seq, tag, seed, result.original) : undefined;
+  // Publish once, after all processing stages. Never attach the original/intermediate chain.
   unchanged();
   seed = result.seed ?? seed;
   const hash = promptHash(tag);
@@ -456,7 +456,6 @@ export async function saveImageResult(
 
   const entry: BbiImageEntry = {
     ...(result.workflowId ? { workflowId: result.workflowId } : {}),
-    ...(originalEntry ? { originalGenerationId: originalEntry.generationId } : {}),
     generationId: genId,
     path,
     prompt: tag,
