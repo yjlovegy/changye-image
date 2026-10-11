@@ -5,7 +5,7 @@
 1. **读角色库** —— 拿到长夜的绘图器已记录的角色和可直接出图的 tag
 2. **调生图** —— 让长夜的绘图器出一张图，**图显示在哪里由你决定**
 
-入口只有一个 JavaScript 全局对象：`globalThis.STBaiBaiImage`。
+公开入口是 JavaScript 全局对象：`globalThis.STChangYeImage`。
 
 ## 这个接口解决什么
 
@@ -15,6 +15,7 @@
 
 ## 兼容约定
 
+- 旧入口 `globalThis.STBaiBaiImage` 仍作为同一接口的兼容别名保留。旧事件 `st-baibai-image:ready`、`st-baibai-image:changed` 也继续发送；新脚本使用 `st-changye-image:ready`、`st-changye-image:changed`。同一用途只监听一套事件，避免重复处理。
 - `apiVersion` 当前固定为 `1`。它是**公开数据结构**的版本，与插件自身的 `pluginVersion` 分开——后者天天涨，前者不涨。请按 `apiVersion` 判兼容，不要去解析 `pluginVersion` 的语义。
 - 结构只增不改不删：新增可选字段是安全的；改字段含义或删字段一律会升 `apiVersion`。
 - 所有返回值都是**普通可克隆对象**的深拷贝：不含函数、不含 Vue 响应式代理、不含类实例。你怎么改返回值都不会影响长夜的绘图器。
@@ -26,14 +27,14 @@
 插件加载顺序不固定，两条路都要写：
 
 ```js
-function useBaiBaiImage(callback) {
-  if (globalThis.STBaiBaiImage) {
-    callback(globalThis.STBaiBaiImage);
+function useChangYeImage(callback) {
+  if (globalThis.STChangYeImage) {
+    callback(globalThis.STChangYeImage);
     return;
   }
   window.addEventListener(
-    'st-baibai-image:ready',
-    () => callback(globalThis.STBaiBaiImage),
+    'st-changye-image:ready',
+    () => callback(globalThis.STChangYeImage),
     { once: true },
   );
 }
@@ -42,7 +43,7 @@ function useBaiBaiImage(callback) {
 就绪后可检查能力：
 
 ```js
-const api = globalThis.STBaiBaiImage;
+const api = globalThis.STChangYeImage;
 
 console.log(api.apiVersion);     // 1
 console.log(api.pluginVersion);  // 长夜的绘图器插件版本
@@ -53,7 +54,7 @@ console.log(api.capabilities);
 ## 读角色库
 
 ```js
-const list = globalThis.STBaiBaiImage.getCharacters();
+const list = globalThis.STChangYeImage.getCharacters();
 
 for (const character of list.characters) {
   console.log(character.name, character.tag);
@@ -101,13 +102,13 @@ for (const character of list.characters) {
 
 ```js
 // 第 42 楼**之前**的角色库快照（不含该楼）
-const atFloor = globalThis.STBaiBaiImage.getCharacters({ floor: 42 });
+const atFloor = globalThis.STChangYeImage.getCharacters({ floor: 42 });
 ```
 
 ## 出图前先问后端
 
 ```js
-const status = globalThis.STBaiBaiImage.getBackendStatus();
+const status = globalThis.STChangYeImage.getBackendStatus();
 
 if (!status.configured) {
   toastr.warning(status.reason);   // reason 是人话，可直接展示给用户
@@ -136,7 +137,7 @@ if (!status.configured) {
 ## 调生图
 
 ```js
-const api = globalThis.STBaiBaiImage;
+const api = globalThis.STChangYeImage;
 
 const result = await api.generate({
   prompt: '1girl, silver hair, moonlight, night sky',
@@ -168,7 +169,7 @@ myPanel.querySelector('img').src = result.dataUrl;   // 想显示在哪就显示
   pluginVersion: "0.2.5",
   dataUrl: "data:image/png;base64,...",   // 可直接 <img src>
   format: "png",
-  path: "/user/images/柏宝绘_阿黛尔/bbi_....png",  // 落盘路径；save=false 或落盘失败为 null
+  path: "/user/images/长夜绘图器_阿黛尔/changye_....png",  // 落盘路径；save=false 或落盘失败为 null
   seed: 3847562910,       // 本次实际使用的种子；想复现就把它填回 seed
   backend: "nai",
   charactersApplied: true,
@@ -179,7 +180,7 @@ myPanel.querySelector('img').src = result.dataUrl;   // 想显示在哪就显示
 
 ### 关于 `save`
 
-- `true`（默认）：图存进 `user/images/柏宝绘_<character>/`，并写一份同名侧写 json 记下提示词和种子。于是用户能在**长夜的绘图器图库页**里按角色分组看到它、连提示词一起。
+- `true`（默认）：图存进 `user/images/长夜绘图器_<character>/`，并写一份同名侧写 json 记下提示词和种子。于是用户能在**长夜的绘图器图库页**里按角色分组看到它、连提示词一起。
 - `false`：只返回 `dataUrl`，不碰磁盘。适合「预览一下就丢」。
 
 落盘**失败不会抛错**——图已经在 `dataUrl` 里了，不能因为存不进图库就让你连图都拿不到。这种情况 `path` 是 `null`。
@@ -255,7 +256,7 @@ try {
 ## 订阅角色库变更
 
 ```js
-const unsubscribe = globalThis.STBaiBaiImage.subscribe(notice => {
+const unsubscribe = globalThis.STChangYeImage.subscribe(notice => {
   console.log(notice.type);      // 'ready' | 'changed'
   console.log(notice.revision);  // 与 getCharacters().revision 同源
   console.log(notice.chatId);
@@ -271,20 +272,20 @@ unsubscribe();
 也可以直接监听 DOM 事件（内容与 `subscribe` 的回调参数相同）：
 
 ```js
-window.addEventListener('st-baibai-image:ready', e => console.log(e.detail));
-window.addEventListener('st-baibai-image:changed', e => console.log(e.detail));
+window.addEventListener('st-changye-image:ready', e => console.log(e.detail));
+window.addEventListener('st-changye-image:changed', e => console.log(e.detail));
 ```
 
 ## 完整示例
 
 ```js
-function useBaiBaiImage(callback) {
-  if (globalThis.STBaiBaiImage) return callback(globalThis.STBaiBaiImage);
-  window.addEventListener('st-baibai-image:ready',
-    () => callback(globalThis.STBaiBaiImage), { once: true });
+function useChangYeImage(callback) {
+  if (globalThis.STChangYeImage) return callback(globalThis.STChangYeImage);
+  window.addEventListener('st-changye-image:ready',
+    () => callback(globalThis.STChangYeImage), { once: true });
 }
 
-useBaiBaiImage(async api => {
+useChangYeImage(async api => {
   if (api.apiVersion !== 1) {
     console.warn('长夜的绘图器接口版本不匹配', api.apiVersion);
     return;
@@ -304,7 +305,7 @@ useBaiBaiImage(async api => {
       prompt: `${heroine.tag}, cafe, afternoon light`,
       nl: heroine.nl,
       size: 'landscape',
-      character: heroine.name,   // 落盘归到「柏宝绘_阿黛尔」目录下
+      character: heroine.name,   // 落盘归到「长夜绘图器_阿黛尔」目录下
     });
     document.querySelector('#my-portrait').src = result.dataUrl;
   } catch (error) {
@@ -316,7 +317,7 @@ useBaiBaiImage(async api => {
 ## 接口一览
 
 ```ts
-interface STBaiBaiImageApi {
+interface STChangYeImageApi {
   readonly apiVersion: 1;
   readonly pluginVersion: string;
   readonly capabilities: PublicCapabilities;
