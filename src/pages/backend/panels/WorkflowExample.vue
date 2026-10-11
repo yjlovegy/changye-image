@@ -59,12 +59,12 @@ function download() { if (src.value && !broken.value) saveImageFile(src.value, f
       <span v-else class="example-empty"><Icon name="generate" :size="26" />{{ broken ? '图片无法加载' : '暂无示例图' }}</span>
     </button>
     <div class="example-info">
-      <h3 class="bbi-field-label">工作流示例图</h3>
-      <p class="bbi-field-hint">{{ broken ? '文件可能已移动或删除，请重新上传' : src ? '点击小图查看大图' : '上传一张图片，记录这套工作流的风格' }}</p>
+      <h3 class="changye-field-label">工作流示例图</h3>
+      <p class="changye-field-hint">{{ broken ? '文件可能已移动或删除，请重新上传' : src ? '点击小图查看大图' : '上传一张图片，记录这套工作流的风格' }}</p>
       <div class="example-actions">
-        <button type="button" class="bbi-btn" :disabled="busy" @click="pick">{{ busy ? '处理中…' : '上传图片' }}</button>
-        <button type="button" class="bbi-btn" :disabled="!src || broken" @click="download">下载图片</button>
-        <button v-if="src" type="button" class="bbi-btn" :disabled="busy" @click="remove">移除</button>
+        <button type="button" class="changye-btn" :disabled="busy" @click="pick">{{ busy ? '处理中…' : '上传图片' }}</button>
+        <button type="button" class="changye-btn" :disabled="!src || broken" @click="download">下载图片</button>
+        <button v-if="src" type="button" class="changye-btn" :disabled="busy" @click="remove">移除</button>
       </div>
       <p class="example-status" role="status">{{ status }}</p>
     </div>
@@ -74,10 +74,10 @@ function download() { if (src.value && !broken.value) saveImageFile(src.value, f
 
 <style scoped>
 .workflow-example{display:flex;align-items:center;gap:22px;padding:20px 0 12px}
-.example-thumb{display:flex;align-items:center;justify-content:center;width:110px;height:140px;flex:none;overflow:hidden;padding:0;border:1px solid var(--bbi-line);border-radius:var(--bbi-radius);background:var(--bbi-surface-2);cursor:zoom-in}
-.example-thumb:disabled{cursor:default}.example-thumb:focus-visible{outline:2px solid var(--bbi-accent);outline-offset:3px}
-.example-thumb img{width:100%;height:100%;object-fit:cover;object-position:center}.example-empty{display:flex;align-items:center;flex-direction:column;gap:10px;font-size:12px;color:var(--bbi-ink-muted)}
-.example-info{min-width:0}.example-info h3{margin:0 0 8px}.example-info .bbi-field-hint{margin:0 0 14px}.example-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.example-status{font-size:12px;color:var(--bbi-accent);min-height:18px;margin:10px 0 0}
+.example-thumb{display:flex;align-items:center;justify-content:center;width:110px;height:140px;flex:none;overflow:hidden;padding:0;border:1px solid var(--changye-line);border-radius:var(--changye-radius);background:var(--changye-surface-2);cursor:zoom-in}
+.example-thumb:disabled{cursor:default}.example-thumb:focus-visible{outline:2px solid var(--changye-accent);outline-offset:3px}
+.example-thumb img{width:100%;height:100%;object-fit:cover;object-position:center}.example-empty{display:flex;align-items:center;flex-direction:column;gap:10px;font-size:12px;color:var(--changye-ink-muted)}
+.example-info{min-width:0}.example-info h3{margin:0 0 8px}.example-info .changye-field-hint{margin:0 0 14px}.example-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.example-status{font-size:12px;color:var(--changye-accent);min-height:18px;margin:10px 0 0}
 @media(max-width:520px){.workflow-example{gap:14px}.example-thumb{width:96px;height:124px}.example-actions{gap:8px}}
 </style>

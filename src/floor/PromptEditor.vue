@@ -8,7 +8,7 @@ import type { Orientation, ImageSize } from '@/backends/size';
 import { validResolution, workflowResolution } from '@/backends/resolution';
 import ResolutionControls from '@/components/ResolutionControls.vue';
 import { saveResolutionFavorite, removeResolutionFavorite } from '@/state/resolutions';
-import BbiTextarea from '@/components/BbiTextarea.vue';
+import ChangYeTextarea from '@/components/ChangYeTextarea.vue';
 import Icon from '@/components/Icon.vue';
 import ModalMask from '@/components/ModalMask.vue';
 import { normalizePromptMode, assertNaturalPrompt } from '@/promptMode';
@@ -169,7 +169,7 @@ function validateContent(next: ImageTagContent, strict: boolean): string {
   }
   for (const [label, value] of fields) {
     if (value && containsTagMarkup(value)) {
-      return `${label}不能包含 <bbi_image> / <tag> / <nl> / <negative> / <characters> / <size> 标签`;
+      return `${label}不能包含 <changye_image> / <tag> / <nl> / <negative> / <characters> / <size> 标签`;
     }
   }
   if (strict) {
@@ -294,21 +294,21 @@ onBeforeUnmount(() => {
 <template>
   <ModalMask :open="open" top-layer @close="requestClose">
     <div
-      class="bbi-modal bbi-modal-wide"
+      class="changye-modal changye-modal-wide"
       role="dialog"
       aria-modal="true"
       aria-label="编辑提示词"
     >
-      <header class="bbi-modal-head">
-        <span class="bbi-modal-title">编辑提示词</span>
-        <button class="bbi-icon-mini" type="button" title="关闭" @click="requestClose">
+      <header class="changye-modal-head">
+        <span class="changye-modal-title">编辑提示词</span>
+        <button class="changye-icon-mini" type="button" title="关闭" @click="requestClose">
           <Icon name="close" />
         </button>
       </header>
 
-      <section class="bbi-revision-panel" aria-label="按意见修改提示词">
-        <div class="bbi-editor-tools"><button
-          class="bbi-btn bbi-revision-toggle"
+      <section class="changye-revision-panel" aria-label="按意见修改提示词">
+        <div class="changye-editor-tools"><button
+          class="changye-btn changye-revision-toggle"
           type="button"
           :aria-expanded="revisionOpen"
           :disabled="editingLocked"
@@ -317,16 +317,16 @@ onBeforeUnmount(() => {
           <Icon name="prompt" /> 按意见修改
           <Icon name="chevron" :style="revisionOpen ? 'transform: rotate(180deg)' : undefined" />
         </button>
-        <button class="bbi-btn" type="button" :disabled="editingLocked || !sourceText" @click="generateRevision('rewrite')"><Icon name="refresh" />重写提示词</button></div>
-        <p class="bbi-editor-note">{{ sourceNotice }}</p>
-        <div v-if="revisionOpen" class="bbi-revision-body">
-          <p class="bbi-editor-note">
+        <button class="changye-btn" type="button" :disabled="editingLocked || !sourceText" @click="generateRevision('rewrite')"><Icon name="refresh" />重写提示词</button></div>
+        <p class="changye-editor-note">{{ sourceNotice }}</p>
+        <div v-if="revisionOpen" class="changye-revision-body">
+          <p class="changye-editor-note">
             点击「生成修改草稿」会调用副 API，只发送当前提示词和修改意见，不读取图片像素。
             草稿可继续编辑，确认后才重新生图。
           </p>
-          <label class="bbi-modal-field">
-            <span class="bbi-modal-label">修改意见</span>
-            <BbiTextarea
+          <label class="changye-modal-field">
+            <span class="changye-modal-label">修改意见</span>
+            <ChangYeTextarea
               v-model="instruction"
               :rows="3"
               :max-rows="8"
@@ -334,9 +334,9 @@ onBeforeUnmount(() => {
               placeholder="例如：人物改为侧身坐着，右手拿书，视线看向窗外；保留脸型、发色和服装，背景改为雨天的咖啡馆。"
             />
           </label>
-          <div class="bbi-revision-actions">
+          <div class="changye-revision-actions">
             <button
-              class="bbi-btn bbi-btn-primary"
+              class="changye-btn changye-btn-primary"
               type="button"
               :disabled="editingLocked || !instruction.trim() || !(naturalOnly ? draft.nl : draft.tag)"
               @click="generateRevision('revision')"
@@ -349,17 +349,17 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <div v-if="revising" class="bbi-editor-progress" role="status"><span>{{ draftAction === 'rewrite' ? '正在根据原文重写提示词…' : '正在生成修改草稿…' }}</span><button class="bbi-btn bbi-btn-sm" type="button" @click="cancelRevision()">停止</button></div>
-      <div v-if="revisionError" class="bbi-editor-error" role="alert"><strong>提示词生成失败</strong><p>{{ revisionError }}</p><p>现有草稿与修改意见已保留。</p><div class="bbi-editor-tools"><button class="bbi-btn bbi-btn-sm" type="button" :disabled="editingLocked" @click="generateRevision(draftAction)">重试</button><button class="bbi-btn bbi-btn-sm" type="button" @click="showErrorDetails = !showErrorDetails">查看详情</button></div><pre v-if="showErrorDetails" class="bbi-error-detail">{{ revisionError }}</pre></div>
-      <p v-if="revisionNotice" class="bbi-editor-note" role="status">{{ revisionNotice }}</p>
+      <div v-if="revising" class="changye-editor-progress" role="status"><span>{{ draftAction === 'rewrite' ? '正在根据原文重写提示词…' : '正在生成修改草稿…' }}</span><button class="changye-btn changye-btn-sm" type="button" @click="cancelRevision()">停止</button></div>
+      <div v-if="revisionError" class="changye-editor-error" role="alert"><strong>提示词生成失败</strong><p>{{ revisionError }}</p><p>现有草稿与修改意见已保留。</p><div class="changye-editor-tools"><button class="changye-btn changye-btn-sm" type="button" :disabled="editingLocked" @click="generateRevision(draftAction)">重试</button><button class="changye-btn changye-btn-sm" type="button" @click="showErrorDetails = !showErrorDetails">查看详情</button></div><pre v-if="showErrorDetails" class="changye-error-detail">{{ revisionError }}</pre></div>
+      <p v-if="revisionNotice" class="changye-editor-note" role="status">{{ revisionNotice }}</p>
 
-      <fieldset class="bbi-editor-fields" :disabled="editingLocked" aria-label="提示词草稿">
-      <button v-if="naturalOnly && tag" type="button" class="bbi-btn bbi-btn-sm" @click="showLegacyTags = !showLegacyTags">{{ showLegacyTags ? '收起旧标签' : '查看旧标签' }}</button>
-      <div v-if="!naturalOnly || showLegacyTags" class="bbi-modal-field">
-        <span class="bbi-modal-label">画面 TAG（danbooru 短 TAG，逗号分隔）</span>
-        <BbiTextarea
+      <fieldset class="changye-editor-fields" :disabled="editingLocked" aria-label="提示词草稿">
+      <button v-if="naturalOnly && tag" type="button" class="changye-btn changye-btn-sm" @click="showLegacyTags = !showLegacyTags">{{ showLegacyTags ? '收起旧标签' : '查看旧标签' }}</button>
+      <div v-if="!naturalOnly || showLegacyTags" class="changye-modal-field">
+        <span class="changye-modal-label">画面 TAG（danbooru 短 TAG，逗号分隔）</span>
+        <ChangYeTextarea
           v-model="tag"
-          class="bbi-prompt-area"
+          class="changye-prompt-area"
           :rows="4"
           :max-rows="14"
           mono
@@ -367,46 +367,46 @@ onBeforeUnmount(() => {
         />
       </div>
 
-      <div class="bbi-modal-field">
-        <span class="bbi-modal-label">{{ naturalOnly ? '画面描述（英文）' : '完整英文描述（生成时必填）' }}</span>
-        <BbiTextarea
+      <div class="changye-modal-field">
+        <span class="changye-modal-label">{{ naturalOnly ? '画面描述（英文）' : '完整英文描述（生成时必填）' }}</span>
+        <ChangYeTextarea
           v-model="nl"
-          class="bbi-prompt-area"
+          class="changye-prompt-area"
           :rows="4"
           :max-rows="10"
           placeholder="Describe the visible face and features, expression and gaze, current clothing, action and posture, who touches or looks at whom, and the background and lighting. Use complete English sentences; keep unknown fixed features unspecified."
         />
       </div>
 
-      <div class="bbi-modal-field">
-        <span class="bbi-modal-label">
+      <div class="changye-modal-field">
+        <span class="changye-modal-label">
           本画面负面提示词{{ sceneNegativeOn ? '（AI 新生成提示词时必填）' : '' }}
         </span>
-        <BbiTextarea
+        <ChangYeTextarea
           v-model="negative"
-          class="bbi-prompt-area"
+          class="changye-prompt-area"
           :rows="2"
           :max-rows="10"
           mono
           placeholder="按本图内容填写需要排除的英文短词"
         />
-        <p class="bbi-editor-note">
+        <p class="changye-editor-note">
           {{ sceneNegativeOn
             ? '与当前工作流的固定负面词叠加；固定词不在此重复显示。旧图不会自动补写。'
             : activeComfyPreset().generateNegative === false ? 'AI 自动生成负面词已关闭；可以手动填写，旧内容保留。' : '当前渠道或工作流未接入本画面负面词。' }}
         </p>
-        <p v-if="comfySize && activeComfyPreset().negativeEnabled === false" class="bbi-editor-note">当前工作流已关闭“出图时使用负面词”，此处内容保留但不用于出图。</p>
+        <p v-if="comfySize && activeComfyPreset().negativeEnabled === false" class="changye-editor-note">当前工作流已关闭“出图时使用负面词”，此处内容保留但不用于出图。</p>
       </div>
 
-      <div v-if="comfySize" class="bbi-modal-field">
-        <div class="resolution-heading"><span class="bbi-modal-label">本张图片尺寸</span><button type="button" class="bbi-btn" :disabled="editingLocked" @click="resetResolution">使用工作流默认</button></div>
+      <div v-if="comfySize" class="changye-modal-field">
+        <div class="resolution-heading"><span class="changye-modal-label">本张图片尺寸</span><button type="button" class="changye-btn" :disabled="editingLocked" @click="resetResolution">使用工作流默认</button></div>
         <ResolutionControls scope="本张图片" :disabled="editingLocked" :width="displayedResolution.width" :height="displayedResolution.height" :sizes="settings.comfyui.resolutionFavorites" @change="changeResolution" @save="saveResolutionFavorite" @remove="removeResolutionFavorite" />
       </div>
-      <div v-else class="bbi-modal-field">
-        <span class="bbi-modal-label">画幅方向（具体像素在「渠道」页配置）</span>
-        <div class="bbi-segmented" role="tablist" aria-label="画幅方向">
+      <div v-else class="changye-modal-field">
+        <span class="changye-modal-label">画幅方向（具体像素在「渠道」页配置）</span>
+        <div class="changye-segmented" role="tablist" aria-label="画幅方向">
           <button
-            class="bbi-seg"
+            class="changye-seg"
             :class="{ 'is-on': size === 'portrait' }"
             type="button"
             role="tab"
@@ -416,7 +416,7 @@ onBeforeUnmount(() => {
             竖屏
           </button>
           <button
-            class="bbi-seg"
+            class="changye-seg"
             :class="{ 'is-on': size === 'landscape' }"
             type="button"
             role="tab"
@@ -429,26 +429,26 @@ onBeforeUnmount(() => {
       </div>
 
 
-      <details v-if="sourceText" class="bbi-editor-note"><summary>本图原正文或选段</summary><pre class="bbi-error-detail">{{ sourceText }}</pre></details>
+      <details v-if="sourceText" class="changye-editor-note"><summary>本图原正文或选段</summary><pre class="changye-error-detail">{{ sourceText }}</pre></details>
       </fieldset>
 
       <!-- 改提示词会换 promptHash 桶,而 stale 态只显示最新一张、翻页器不出现。
            这是既有存储设计,但手动改提示词会让它从边角情况变成日常,故明确告知。 -->
-      <p v-if="historyCount > 1" class="bbi-editor-note">
+      <p v-if="historyCount > 1" class="changye-editor-note">
         当前提示词下已有 {{ historyCount }} 张图。修改后只显示最新一张（图片没有被删除，
         把提示词改回原样即可全部找回）。
       </p>
 
-      <p v-if="error" class="bbi-editor-error">{{ error }}</p>
+      <p v-if="error" class="changye-editor-error">{{ error }}</p>
 
-      <footer class="bbi-modal-foot">
-        <span class="bbi-modal-foot-spacer"></span>
-        <button class="bbi-btn" type="button" :disabled="busy" @click="requestClose">取消</button>
-        <button class="bbi-btn" type="button" :disabled="!canApply" @click="apply(false)">
+      <footer class="changye-modal-foot">
+        <span class="changye-modal-foot-spacer"></span>
+        <button class="changye-btn" type="button" :disabled="busy" @click="requestClose">取消</button>
+        <button class="changye-btn" type="button" :disabled="!canApply" @click="apply(false)">
           应用
         </button>
         <button
-          class="bbi-btn bbi-btn-primary"
+          class="changye-btn changye-btn-primary"
           type="button"
           :disabled="!canApply || !configured"
           :title="revisionRequired ? '先生成修改草稿，再确认生图' : configured ? '保存提示词并立即出图' : '请先在「工作流」页完成配置'"
@@ -462,15 +462,15 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.bbi-editor-tools,.bbi-editor-progress{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.bbi-editor-progress{justify-content:space-between;margin:12px 0}.bbi-error-detail{white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto;font:inherit}
-.resolution-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}.resolution-heading .bbi-modal-label{margin:0}
+.changye-editor-tools,.changye-editor-progress{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.changye-editor-progress{justify-content:space-between;margin:12px 0}.changye-error-detail{white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto;font:inherit}
+.resolution-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}.resolution-heading .changye-modal-label{margin:0}
 /* —— 以下四条在 base.css 里不是全局的,scoped 过不了组件边界,各处各抄一份
       (同 ConfirmDialog.vue 的做法) —— */
-.bbi-modal-wide {
+.changye-modal-wide {
   max-width: 680px;
 }
 
-.bbi-editor-fields {
+.changye-editor-fields {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -479,50 +479,50 @@ onBeforeUnmount(() => {
   padding: 0;
   border: 0;
 }
-.bbi-revision-panel,
-.bbi-revision-body {
+.changye-revision-panel,
+.changye-revision-body {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-.bbi-revision-panel {
+.changye-revision-panel {
   padding: 12px;
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius-sm);
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius-sm);
 }
-.bbi-revision-toggle {
+.changye-revision-toggle {
   align-self: flex-start;
 }
-.bbi-revision-actions {
+.changye-revision-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.bbi-icon-mini {
+.changye-icon-mini {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: 1px solid var(--bbi-line-strong);
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface);
-  color: var(--bbi-ink-soft);
+  border: 1px solid var(--changye-line-strong);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface);
+  color: var(--changye-ink-soft);
   cursor: pointer;
   font-size: 14px;
 }
-.bbi-icon-mini:hover {
-  color: var(--bbi-accent);
-  border-color: var(--bbi-accent);
+.changye-icon-mini:hover {
+  color: var(--changye-accent);
+  border-color: var(--changye-accent);
 }
 
-.bbi-modal-foot-spacer {
+.changye-modal-foot-spacer {
   flex: 1 1 auto;
 }
 
-.bbi-prompt-area {
+.changye-prompt-area {
   line-height: 1.6;
   font-size: 12.5px;
   white-space: pre-wrap;
@@ -531,56 +531,56 @@ onBeforeUnmount(() => {
 }
 
 /* —— 角色行:名字窄、tag 与自然语言各占一半,删除钮跟在末尾 —— */
-.bbi-char-row {
+.changye-char-row {
   display: flex;
   gap: 6px;
   align-items: center;
   margin-top: 6px;
 }
-.bbi-char-name {
+.changye-char-name {
   flex: 0 0 96px;
   min-width: 0;
 }
-.bbi-char-tag,
-.bbi-char-nl {
+.changye-char-tag,
+.changye-char-nl {
   flex: 1 1 0;
   min-width: 0;
 }
-.bbi-char-add {
+.changye-char-add {
   align-self: flex-start;
   margin-top: 8px;
 }
 
-.bbi-editor-note {
+.changye-editor-note {
   margin: 0;
   padding: 8px 10px;
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface-2);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface-2);
   font-size: 12px;
   line-height: 1.7;
-  color: var(--bbi-ink-soft);
+  color: var(--changye-ink-soft);
 }
 
-.bbi-editor-error {
+.changye-editor-error {
   margin: 0;
   font-size: 12px;
   line-height: 1.7;
-  color: var(--bbi-danger);
+  color: var(--changye-danger);
 }
 
 /* 窄屏:角色行改竖排,否则三个输入框挤成条 */
 @media (max-width: 560px) {
-  .bbi-modal-foot {
+  .changye-modal-foot {
     flex-wrap: wrap;
   }
-  .bbi-char-row {
+  .changye-char-row {
     flex-wrap: wrap;
   }
-  .bbi-char-name {
+  .changye-char-name {
     flex: 1 1 100%;
   }
-  .bbi-char-tag,
-  .bbi-char-nl {
+  .changye-char-tag,
+  .changye-char-nl {
     flex: 1 1 100%;
   }
 }

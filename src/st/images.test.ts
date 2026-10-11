@@ -26,19 +26,19 @@ describe('uploadUserImage', () => {
       expect(body).toEqual({
         image: 'QUJD',
         format: 'jpg',
-        ch_name: '柏宝绘_画师串',
+        ch_name: '长夜绘图器_画师串',
         filename: 'art_1',
       });
       return Promise.resolve(
-        new Response(JSON.stringify({ path: '/user/images/柏宝绘_画师串/art_1.jpg' }), {
+        new Response(JSON.stringify({ path: '/user/images/长夜绘图器_画师串/art_1.jpg' }), {
           status: 200,
         }),
       );
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const path = await uploadUserImage('柏宝绘_画师串', 'art_1', 'QUJD', 'jpg');
-    expect(path).toBe('/user/images/柏宝绘_画师串/art_1.jpg');
+    const path = await uploadUserImage('长夜绘图器_画师串', 'art_1', 'QUJD', 'jpg');
+    expect(path).toBe('/user/images/长夜绘图器_画师串/art_1.jpg');
   });
 
   it('服务端报错 → ImageStoreError 带状态码', async () => {

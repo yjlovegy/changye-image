@@ -19,18 +19,18 @@ defineExpose({ expand: () => { expanded.value = true; } });
 </script>
 
 <template>
-  <section class="bbi-collapsible" :class="{ 'is-open': expanded }">
-    <button class="bbi-collapsible-head" type="button" :aria-expanded="expanded" @click="expanded = !expanded">
+  <section class="changye-collapsible" :class="{ 'is-open': expanded }">
+    <button class="changye-collapsible-head" type="button" :aria-expanded="expanded" @click="expanded = !expanded">
       <!-- 默认只放标题文本;需要在标题行放徽章/元信息时用 #header 插槽覆盖
            (插槽内不要放按钮等可交互元素——整个头本身就是一个 button)。 -->
       <slot name="header">
-        <span class="bbi-collapsible-title">{{ title }}</span>
+        <span class="changye-collapsible-title">{{ title }}</span>
       </slot>
-      <Icon name="chevron" class="bbi-collapsible-chevron" />
+      <Icon name="chevron" class="changye-collapsible-chevron" />
     </button>
-    <div class="bbi-collapsible-outer">
-      <div class="bbi-collapsible-inner">
-        <div class="bbi-collapsible-body">
+    <div class="changye-collapsible-outer">
+      <div class="changye-collapsible-inner">
+        <div class="changye-collapsible-body">
           <slot />
         </div>
       </div>
@@ -39,14 +39,14 @@ defineExpose({ expand: () => { expanded.value = true; } });
 </template>
 
 <style scoped>
-.bbi-collapsible {
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius);
-  background: var(--bbi-surface);
+.changye-collapsible {
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius);
+  background: var(--changye-surface);
   overflow: hidden;
 }
 
-.bbi-collapsible-head {
+.changye-collapsible-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -54,54 +54,54 @@ defineExpose({ expand: () => { expanded.value = true; } });
   padding: 14px 16px;
   border: 0;
   background: transparent;
-  color: var(--bbi-ink);
+  color: var(--changye-ink);
   cursor: pointer;
-  font-family: var(--bbi-font-sans);
+  font-family: var(--changye-font-sans);
   font-size: 15px;
   font-weight: 600;
   text-align: left;
-  transition: background var(--bbi-dur) var(--bbi-ease);
+  transition: background var(--changye-dur) var(--changye-ease);
 }
-.bbi-collapsible-head:hover {
-  background: var(--bbi-surface-2);
+.changye-collapsible-head:hover {
+  background: var(--changye-surface-2);
 }
-.bbi-collapsible-head:focus-visible {
-  outline: 2px solid var(--bbi-accent);
+.changye-collapsible-head:focus-visible {
+  outline: 2px solid var(--changye-accent);
   outline-offset: -2px;
 }
 
-.bbi-collapsible-chevron {
+.changye-collapsible-chevron {
   font-size: 18px;
-  color: var(--bbi-ink-muted);
-  transition: transform var(--bbi-dur) var(--bbi-ease);
+  color: var(--changye-ink-muted);
+  transition: transform var(--changye-dur) var(--changye-ease);
 }
 /* 用直接子代 > 限定:嵌套 Collapsible 时,外层 .is-open 不得波及内层的 outer/chevron,
    否则内层会被外层钉死在展开态、永远收不起来。 */
-.bbi-collapsible.is-open > .bbi-collapsible-head .bbi-collapsible-chevron {
+.changye-collapsible.is-open > .changye-collapsible-head .changye-collapsible-chevron {
   transform: rotate(180deg);
 }
 
 /* 高度过渡:grid 0fr -> 1fr */
-.bbi-collapsible-outer {
+.changye-collapsible-outer {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows var(--bbi-dur) var(--bbi-ease);
+  transition: grid-template-rows var(--changye-dur) var(--changye-ease);
 }
-.bbi-collapsible.is-open > .bbi-collapsible-outer {
+.changye-collapsible.is-open > .changye-collapsible-outer {
   grid-template-rows: 1fr;
 }
-.bbi-collapsible-inner {
+.changye-collapsible-inner {
   min-height: 0;
   overflow: hidden;
 }
-.bbi-collapsible-body {
+.changye-collapsible-body {
   padding: 14px 16px;
-  border-top: 1px solid var(--bbi-line);
+  border-top: 1px solid var(--changye-line);
 }
 
 /* 移动端:折叠区标题略小一号,与窄屏整体节奏更协调 */
 @media (max-width: 640px) {
-  .bbi-collapsible-head {
+  .changye-collapsible-head {
     font-size: 13px;
   }
 }

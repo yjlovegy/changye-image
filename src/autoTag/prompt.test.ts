@@ -295,7 +295,7 @@ describe('auto tag prompt', () => {
 <bbs_start>上午</bbs_start>
 上一个 AI 楼
 <snow>状态栏</snow>
-<bbi_image>1girl, long silver hair, red eyes<size>portrait</size></bbi_image>
+<changye_image>1girl, long silver hair, red eyes<size>portrait</size></changye_image>
 <bbs_end>中午</bbs_end>
 尾部状态`,
       },
@@ -324,7 +324,7 @@ describe('auto tag prompt', () => {
     const user = messages.findLast(message => message.role === 'user')!;
     expect(user.content).not.toContain('更早用户楼');
     expect(user.content).toContain('上一个 AI 楼');
-    expect(user.content).toContain('<bbi_image>1girl, long silver hair, red eyes<size>portrait</size></bbi_image>');
+    expect(user.content).toContain('<changye_image>1girl, long silver hair, red eyes<size>portrait</size></changye_image>');
     expect(user.content).toContain('中间用户楼');
     expect(user.content).not.toContain('隐藏思维');
     expect(user.content).not.toContain('状态栏');
@@ -600,7 +600,7 @@ describe('auto tag prompt', () => {
       expect(text).toContain('leave them in Base');
 
       // 编人名是有毒的:name 会随 <characters> 落进正文,而 cleanHistoryText 保留
-      // bbi_image,下一楼原样读回——一个假人名与真档案无法区分,会被误建档。
+      // changye_image,下一楼原样读回——一个假人名与真档案无法区分,会被误建档。
       expect(text).toContain('绝不为他编造人名');
       expect(text).toContain('Never invent a personal name for them');
 
@@ -802,7 +802,7 @@ describe('auto tag prompt', () => {
     expect(messages.some(m => m.content.includes('不能将一次表情、视线或动作误报'))).toBe(true);
   });
 
-  it('keeps first-appearance profiling enabled when BaiBai Book memory exists', async () => {
+  it('keeps first-appearance profiling enabled when legacy memory extension memory exists', async () => {
     const options: AutoTagSettings = {
       enabled: true,
       contextMessages: 2,

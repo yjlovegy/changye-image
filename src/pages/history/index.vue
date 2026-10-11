@@ -181,20 +181,20 @@ function copyAll(record: HistoryRecord): void {
 </script>
 
 <template>
-  <section class="bbi-page">
-    <div class="bbi-page-head">
-      <h2 class="bbi-title bbi-title-sub">请求历史</h2>
-      <span class="bbi-count" title="本次会话已记录的请求数">{{ records.length }}</span>
+  <section class="changye-page">
+    <div class="changye-page-head">
+      <h2 class="changye-title changye-title-sub">请求历史</h2>
+      <span class="changye-count" title="本次会话已记录的请求数">{{ records.length }}</span>
     </div>
-    <hr class="bbi-rule" />
+    <hr class="changye-rule" />
 
-    <div class="bbi-hist-bar">
-      <div class="bbi-segmented-wrap">
-        <div class="bbi-segmented" role="tablist" aria-label="记录类型">
+    <div class="changye-hist-bar">
+      <div class="changye-segmented-wrap">
+        <div class="changye-segmented" role="tablist" aria-label="记录类型">
           <button
             v-for="f in FILTERS"
             :key="f.value"
-            class="bbi-seg"
+            class="changye-seg"
             :class="{ 'is-on': filter === f.value }"
             type="button"
             role="tab"
@@ -205,9 +205,9 @@ function copyAll(record: HistoryRecord): void {
           </button>
         </div>
       </div>
-      <div class="bbi-history-actions">
+      <div class="changye-history-actions">
       <button
-        class="bbi-btn bbi-btn-danger bbi-btn-sm"
+        class="changye-btn changye-btn-danger changye-btn-sm"
         type="button"
         :disabled="!activeGenerationTasks"
         title="停止正在进行的提示词与图片生成"
@@ -216,7 +216,7 @@ function copyAll(record: HistoryRecord): void {
         <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor" /></svg> 停止
       </button>
       <button
-        class="bbi-btn bbi-btn-danger bbi-btn-sm"
+        class="changye-btn changye-btn-danger changye-btn-sm"
         type="button"
         :disabled="!records.length"
         @click="clearHistory"
@@ -227,89 +227,89 @@ function copyAll(record: HistoryRecord): void {
     </div>
 
     <!-- 一条请求 = 一个折叠区 -->
-    <div v-if="shown.length" class="bbi-sections">
+    <div v-if="shown.length" class="changye-sections">
       <Collapsible v-for="record in shown" :key="record.id" :open="false">
         <template #header>
-          <span class="bbi-hist-head">
-            <span class="bbi-hist-name">{{ title(record) }}</span>
-            <span class="bbi-hist-sub">{{ subtitle(record) }}</span>
+          <span class="changye-hist-head">
+            <span class="changye-hist-name">{{ title(record) }}</span>
+            <span class="changye-hist-sub">{{ subtitle(record) }}</span>
             <span
               v-if="record.kind === 'llm' && tokenLabel(record)"
-              class="bbi-hist-tok"
+              class="changye-hist-tok"
               :class="{ 'is-est': record.tokensEstimated }"
               :title="tokenTitle(record)"
             >
               {{ tokenLabel(record) }}
             </span>
-            <span class="bbi-hist-time">{{ time(record.startedAt) }}</span>
-            <span class="bbi-prompt-state" :class="`is-${record.status}`">{{ statusLabel(record) }}</span>
+            <span class="changye-hist-time">{{ time(record.startedAt) }}</span>
+            <span class="changye-prompt-state" :class="`is-${record.status}`">{{ statusLabel(record) }}</span>
           </span>
         </template>
 
-        <div class="bbi-hist-facts">
-          <span v-for="(f, i) in facts(record)" :key="i" class="bbi-hist-fact">{{ f }}</span>
+        <div class="changye-hist-facts">
+          <span v-for="(f, i) in facts(record)" :key="i" class="changye-hist-fact">{{ f }}</span>
         </div>
 
-        <p v-if="record.error" class="bbi-hist-error">{{ record.error }}</p>
-        <p v-if="responseNotice(record)" class="bbi-field-hint">{{ responseNotice(record) }}</p>
+        <p v-if="record.error" class="changye-hist-error">{{ record.error }}</p>
+        <p v-if="responseNotice(record)" class="changye-field-hint">{{ responseNotice(record) }}</p>
 
         <p
           v-if="record.kind === 'llm' && record.tokensEstimated && record.promptTokens !== null"
-          class="bbi-field-hint"
+          class="changye-field-hint"
         >
           带 ≈ 的 token 数是本地估算：上游未提供用量时，
           这里用 ST 主界面当前模型的分词器估算，与本渠道模型未必一致。
         </p>
 
         <!-- 按顺序的提示词列表:与设置页「自定义提示词」同款行 -->
-        <ul class="bbi-prompt-list">
+        <ul class="changye-prompt-list">
           <li v-for="(seg, i) in segments(record)" :key="i">
             <button
-              class="bbi-prompt-open"
+              class="changye-prompt-open"
               type="button"
               @click="viewing = { title: `${title(record)} · ${seg.label}`, segment: seg }"
             >
-              <span class="bbi-prompt-role">{{ seg.label }}</span>
-              <span class="bbi-prompt-preview">{{ inline(seg.text) }}</span>
+              <span class="changye-prompt-role">{{ seg.label }}</span>
+              <span class="changye-prompt-preview">{{ inline(seg.text) }}</span>
               <span
-                class="bbi-prompt-len"
+                class="changye-prompt-len"
                 title="本段 token 粗估（本地按字符估算，仅供段间比较，与标题行的真实用量口径不同）"
               >≈{{ roughTokens(seg.text).toLocaleString() }}</span>
-              <Icon name="eye" class="bbi-prompt-edit" />
+              <Icon name="eye" class="changye-prompt-edit" />
             </button>
           </li>
         </ul>
 
-        <div class="bbi-hist-foot">
-          <button class="bbi-btn bbi-btn-sm" type="button" @click="copyAll(record)">
+        <div class="changye-hist-foot">
+          <button class="changye-btn changye-btn-sm" type="button" @click="copyAll(record)">
             <Icon name="copy" /> 复制整条
           </button>
         </div>
       </Collapsible>
     </div>
-    <p v-else-if="records.length" class="bbi-field-hint">当前筛选下没有记录。</p>
-    <p v-else class="bbi-field-hint">
+    <p v-else-if="records.length" class="changye-field-hint">当前筛选下没有记录。</p>
+    <p v-else class="changye-field-hint">
       本次会话还没有请求记录。触发一次自动 TAG 或生成一张图，这里就会出现条目（刷新页面会清空）。
     </p>
 
     <!-- ===== 单段全文弹窗 ===== -->
     <ModalMask :open="!!viewing" @close="viewing = null">
-      <div v-if="viewing" class="bbi-modal bbi-modal-wide" role="dialog" aria-modal="true" aria-label="提示词全文">
-        <header class="bbi-modal-head">
-          <span class="bbi-modal-title">{{ viewing.title }}</span>
-          <button class="bbi-icon-mini" type="button" title="关闭" @click="viewing = null">
+      <div v-if="viewing" class="changye-modal changye-modal-wide" role="dialog" aria-modal="true" aria-label="提示词全文">
+        <header class="changye-modal-head">
+          <span class="changye-modal-title">{{ viewing.title }}</span>
+          <button class="changye-icon-mini" type="button" title="关闭" @click="viewing = null">
             <Icon name="close" />
           </button>
         </header>
 
-        <pre class="bbi-hist-text">{{ viewing.segment.text }}</pre>
+        <pre class="changye-hist-text">{{ viewing.segment.text }}</pre>
 
-        <footer class="bbi-modal-foot">
-          <span class="bbi-modal-foot-spacer"></span>
-          <button class="bbi-btn" type="button" @click="copyText(viewing!.segment.text, '已复制')">
+        <footer class="changye-modal-foot">
+          <span class="changye-modal-foot-spacer"></span>
+          <button class="changye-btn" type="button" @click="copyText(viewing!.segment.text, '已复制')">
             <Icon name="copy" /> 复制
           </button>
-          <button class="bbi-btn bbi-btn-primary" type="button" @click="viewing = null">完成</button>
+          <button class="changye-btn changye-btn-primary" type="button" @click="viewing = null">完成</button>
         </footer>
       </div>
     </ModalMask>
@@ -317,21 +317,21 @@ function copyAll(record: HistoryRecord): void {
 </template>
 
 <style scoped>
-.bbi-history-actions{display:flex;align-items:center;gap:12px;margin-left:auto;}
+.changye-history-actions{display:flex;align-items:center;gap:12px;margin-left:auto;}
 /* —— 计数药丸:与角色页/设置页同款观感 —— */
-.bbi-count {
+.changye-count {
   border: 0;
   padding: 7px 12px;
-  border-radius: var(--bbi-radius-pill);
-  background: var(--bbi-surface-2);
-  color: var(--bbi-ink-soft);
-  font-family: var(--bbi-font-mono);
+  border-radius: var(--changye-radius-pill);
+  background: var(--changye-surface-2);
+  color: var(--changye-ink-soft);
+  font-family: var(--changye-font-mono);
   font-size: 13px;
   font-weight: 600;
   line-height: 1;
 }
 
-.bbi-hist-bar {
+.changye-hist-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -342,7 +342,7 @@ function copyAll(record: HistoryRecord): void {
 /* —— 折叠区标题行:名称 + 渠道 + token + 时间 + 状态 ——
    收缩优先级(挤不下时谁先让路):渠道/模型 → 标题 → 时间;
    token 与状态药丸**永不收缩**——它们是这一行最该被读到的两个值。 */
-.bbi-hist-head {
+.changye-hist-head {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -352,7 +352,7 @@ function copyAll(record: HistoryRecord): void {
 /* 标题可收缩(min-width:0 是省略号生效的前提)。
    原先是 flex:0 0 auto 不可收缩,长标题会把后面的 token/状态整个挤出容器——
    窄屏「看不到 token」正是这么来的,不是被 media query 藏了。 */
-.bbi-hist-name {
+.changye-hist-name {
   flex: 0 1 auto;
   min-width: 0;
   font-size: 14px;
@@ -362,82 +362,82 @@ function copyAll(record: HistoryRecord): void {
   text-overflow: ellipsis;
 }
 /* 渠道/模型:最先让路的那个 */
-.bbi-hist-sub {
+.changye-hist-sub {
   flex: 1 1 auto;
   min-width: 0;
   font-size: 12px;
   font-weight: 400;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.bbi-hist-tok {
+.changye-hist-tok {
   flex: 0 0 auto;
-  font-family: var(--bbi-font-mono);
+  font-family: var(--changye-font-mono);
   font-size: 12px;
   font-weight: 600;
-  color: var(--bbi-ink);
+  color: var(--changye-ink);
 }
 /* 估算值弱化:与真实用量视觉上就分开,免得被当成权威数字 */
-.bbi-hist-tok.is-est {
-  color: var(--bbi-ink-muted);
+.changye-hist-tok.is-est {
+  color: var(--changye-ink-muted);
   font-weight: 400;
 }
-.bbi-hist-time {
+.changye-hist-time {
   flex: 0 0 auto;
   font-size: 11px;
   font-weight: 400;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   white-space: nowrap;
 }
 
-/* 状态药丸:复用全局 .bbi-prompt-state 的几何,只改配色。
+/* 状态药丸:复用全局 .changye-prompt-state 的几何,只改配色。
    成功走它自带的 .is-custom 同款强调色,失败红、取消橙(取消不是故障)。 */
-.bbi-prompt-state.is-ok {
-  color: var(--bbi-accent);
-  background: var(--bbi-accent-soft);
+.changye-prompt-state.is-ok {
+  color: var(--changye-accent);
+  background: var(--changye-accent-soft);
   border-color: transparent;
 }
-.bbi-prompt-state.is-error {
-  color: var(--bbi-danger);
-  background: var(--bbi-danger-soft);
+.changye-prompt-state.is-error {
+  color: var(--changye-danger);
+  background: var(--changye-danger-soft);
   border-color: transparent;
 }
-.bbi-prompt-state.is-aborted {
-  color: var(--bbi-warning);
-  background: var(--bbi-warning-soft);
+.changye-prompt-state.is-aborted {
+  color: var(--changye-warning);
+  background: var(--changye-warning-soft);
   border-color: transparent;
 }
 
 /* —— 展开区:事实标签条 —— */
-.bbi-hist-facts {
+.changye-hist-facts {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 12px;
 }
-.bbi-hist-fact {
+.changye-hist-fact {
   font-size: 11px;
   font-weight: 600;
   padding: 2px 9px;
-  border-radius: var(--bbi-radius-pill);
-  color: var(--bbi-ink-soft);
-  background: var(--bbi-surface-2);
+  border-radius: var(--changye-radius-pill);
+  color: var(--changye-ink-soft);
+  background: var(--changye-surface-2);
 }
 
-.bbi-hist-error {
+.changye-hist-error {
   margin: 0 0 12px;
   padding: 8px 12px;
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-danger-soft);
-  color: var(--bbi-danger);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-danger-soft);
+  color: var(--changye-danger);
   font-size: 12.5px;
   overflow-wrap: anywhere;
 }
 
 /* —— 提示词分段列表:几何照搬设置页「自定义提示词」 —— */
-.bbi-prompt-list {
+.changye-prompt-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -445,50 +445,50 @@ function copyAll(record: HistoryRecord): void {
   flex-direction: column;
   gap: 8px;
 }
-.bbi-prompt-open {
+.changye-prompt-open {
   width: 100%;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius);
-  background: var(--bbi-surface-2);
-  color: var(--bbi-ink);
-  font-family: var(--bbi-font-sans);
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius);
+  background: var(--changye-surface-2);
+  color: var(--changye-ink);
+  font-family: var(--changye-font-sans);
   cursor: pointer;
   text-align: left;
   transition:
-    border-color var(--bbi-dur) var(--bbi-ease),
-    background var(--bbi-dur) var(--bbi-ease);
+    border-color var(--changye-dur) var(--changye-ease),
+    background var(--changye-dur) var(--changye-ease);
 }
-.bbi-prompt-open:hover {
-  border-color: var(--bbi-accent);
-  background: var(--bbi-surface);
+.changye-prompt-open:hover {
+  border-color: var(--changye-accent);
+  background: var(--changye-surface);
 }
-/* 角色标签 = 这段提示词的身份,与设置页 .bbi-prompt-name 同口径:走 --bbi-ink。
+/* 角色标签 = 这段提示词的身份,与设置页 .changye-prompt-name 同口径:走 --changye-ink。
    定宽让各行预览的左边缘对齐成一条线。
    【宽度按最长标签定】ASSISTANT 是 9 个大写等宽字符 + letter-spacing,原来拍脑袋
    给的 72px 装不下,被省略成「ASSISTAN…」。用 ch 单位跟着字号走,换字号不会再截断。
-   【勿改成 --bbi-accent】它在粉彩主题下是 #ffafcc(浅粉,本就是给背景用的,
-   配套 --bbi-accent-ink 白字),当文字色压在浅色面上几乎看不见。 */
-.bbi-prompt-role {
+   【勿改成 --changye-accent】它在粉彩主题下是 #ffafcc(浅粉,本就是给背景用的,
+   配套 --changye-accent-ink 白字),当文字色压在浅色面上几乎看不见。 */
+.changye-prompt-role {
   flex: 0 0 auto;
   width: 10.5ch;
-  font-family: var(--bbi-font-mono);
+  font-family: var(--changye-font-mono);
   font-size: 12px;
   font-weight: 600;
-  color: var(--bbi-ink);
+  color: var(--changye-ink);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
 }
-.bbi-prompt-preview {
+.changye-prompt-preview {
   flex: 1 1 auto;
   min-width: 0;
-  font-family: var(--bbi-font-mono);
+  font-family: var(--changye-font-mono);
   font-size: 12px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -497,44 +497,44 @@ function copyAll(record: HistoryRecord): void {
    定宽 + 右对齐 + tabular-nums:各行个位对齐成一列,不同位数(≈400 / ≈3,700)
    才能直接比长短;不定宽的话数字随预览宽度浮动,比大小就得逐个读。
    宽度含 ≈ 前缀 + 5 位数(万级),用 ch 跟着字号走。 */
-.bbi-prompt-len {
+.changye-prompt-len {
   flex: 0 0 auto;
   width: 7ch;
   text-align: right;
-  font-family: var(--bbi-font-mono);
+  font-family: var(--changye-font-mono);
   font-size: 11px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.bbi-prompt-edit {
+.changye-prompt-edit {
   flex: 0 0 auto;
   font-size: 16px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
 }
-.bbi-prompt-open:hover .bbi-prompt-edit {
-  color: var(--bbi-accent);
+.changye-prompt-open:hover .changye-prompt-edit {
+  color: var(--changye-accent);
 }
 
-.bbi-hist-foot {
+.changye-hist-foot {
   display: flex;
   justify-content: flex-end;
   margin-top: 12px;
 }
 
 /* —— 弹窗:更宽 + 长文本限高滚动 —— */
-.bbi-modal-wide {
+.changye-modal-wide {
   max-width: 680px;
 }
-.bbi-hist-text {
+.changye-hist-text {
   margin: 0;
   padding: 12px 14px;
   max-height: 52vh;
   overflow-y: auto;
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface-2);
-  color: var(--bbi-ink);
-  font-family: var(--bbi-font-mono);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface-2);
+  color: var(--changye-ink);
+  font-family: var(--changye-font-mono);
   font-size: 12.5px;
   line-height: 1.6;
   white-space: pre-wrap;
@@ -544,62 +544,62 @@ function copyAll(record: HistoryRecord): void {
 }
 
 /* —— 危险按钮 / 图标按钮 / 底部占位:scoped 过不了组件边界,各页各抄一份 —— */
-.bbi-btn-danger {
-  color: var(--bbi-danger);
-  border-color: var(--bbi-line-strong);
+.changye-btn-danger {
+  color: var(--changye-danger);
+  border-color: var(--changye-line-strong);
 }
-.bbi-btn-danger:hover:not(:disabled) {
-  color: var(--bbi-danger);
-  border-color: var(--bbi-danger);
-  background: var(--bbi-danger-soft);
+.changye-btn-danger:hover:not(:disabled) {
+  color: var(--changye-danger);
+  border-color: var(--changye-danger);
+  background: var(--changye-danger-soft);
 }
-.bbi-icon-mini {
+.changye-icon-mini {
   width: 32px;
   height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface-2);
-  color: var(--bbi-ink-soft);
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface-2);
+  color: var(--changye-ink-soft);
   cursor: pointer;
   transition:
-    color var(--bbi-dur) var(--bbi-ease),
-    border-color var(--bbi-dur) var(--bbi-ease);
+    color var(--changye-dur) var(--changye-ease),
+    border-color var(--changye-dur) var(--changye-ease);
 }
-.bbi-icon-mini:hover {
-  color: var(--bbi-accent);
-  border-color: var(--bbi-accent);
+.changye-icon-mini:hover {
+  color: var(--changye-accent);
+  border-color: var(--changye-accent);
 }
-.bbi-modal-foot-spacer {
+.changye-modal-foot-spacer {
   flex: 1 1 auto;
 }
 
 /* —— 窄屏:标题行挤不下,让次要信息退场 ——
    token 与状态**必须留下**:token 是这页的核心信息,比渠道名/时间重要得多。 */
 @media (max-width: 640px) {
-  .bbi-hist-name {
+  .changye-hist-name {
     font-size: 13px;
   }
-  .bbi-hist-sub,
-  .bbi-hist-time {
+  .changye-hist-sub,
+  .changye-hist-time {
     display: none;
   }
   /* 窄屏:预览让位给 token 估算。估算值是判断「哪段占篇幅」的唯一依据,预览只是
      辅助辨认——两者只能留一个时留数字。预览撤走后靠 margin-left:auto 把它顶回右侧,
      否则会贴着角色标签挤在左边,离眼睛按钮老远、看着也不像一列。
      角色标签宽度不再压缩:压到 56px 会把 ASSISTANT 截断,而它正是要看的身份信息。 */
-  .bbi-prompt-preview {
+  .changye-prompt-preview {
     display: none;
   }
-  .bbi-prompt-len {
+  .changye-prompt-len {
     margin-left: auto;
     font-size: 12px;
-    color: var(--bbi-ink);
+    color: var(--changye-ink);
   }
-  .bbi-hist-text {
+  .changye-hist-text {
     font-size: 11.5px;
   }
 }

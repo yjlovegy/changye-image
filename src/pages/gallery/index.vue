@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import { galleryFolderName, readCompatibleLocal } from '@/legacyCompatibility';
 import { formatBytes } from '@/bytes';
 import Icon from '@/components/Icon.vue';
 import { confirmDialog } from '@/components/confirm';
 import { imageDownloadFileName } from '@/floor/download';
 import { openLightbox } from '@/floor/lightbox';
 import { markImagesMissing, normalizeImagePath } from '@/floor/missingImages';
-import { deleteImageFileOnly, readStore, sidecarPathFor, type BbiImageSidecar } from '@/floor/storage';
+import { deleteImageFileOnly, readStore, sidecarPathFor, type ChangYeImageSidecar } from '@/floor/storage';
 import { mapLimit } from '@/pool';
 import { getContext } from '@/st/context';
 import { openGalleryFolder } from '@/st/imageFolders';
@@ -18,10 +19,10 @@ import { computed, onMounted, ref } from 'vue';
  *
  * 分组键取**目录名**而非文件名:落盘文件名里的角色名是哈希
  * (floor/storage.ts imageFileName,防中文名被清洗成连续下划线),可读名只能从
- * `user/images/柏宝绘_<角色名>/` 的目录名还原。
+ * `user/images/长夜绘图器_<角色名>/` 的目录名还原。
  *
  * 【删除】支持多选删除,但**只删文件、不碰聊天记录**:图片路径同时被
- * message.extra.bbiImage 引用,而图库按目录列图、指针散在各个聊天里,两者之间没有反向
+ * message.extra.changyeImage 引用,而图库按目录列图、指针散在各个聊天里,两者之间没有反向
  * 索引(扫全库反查不可行,见 floor/storage.ts 顶部)。破指针由楼层卡片侧运行时降级兜底:
  * 卡片的 <img> @error 会确认 404 后把这张图记进 floor/missingImages.ts,翻页器与张数
  * 随即按存活口径重算,全删光则退回「生成图片」态。删完本页也会就地标记,免得用户
@@ -30,7 +31,7 @@ import { computed, onMounted, ref } from 'vue';
  * 提示词从两处取(见 promptFor):当前聊天的 extra 直接读,其余靠存图时写下的侧写 json。
  */
 
-const FOLDER_PREFIX = '柏宝绘_';
+
 /** 展开后先渲染一批,每次再追加一批,不一次铺开整个目录。 */
 const PREVIEW_COUNT = 24;
 /** 侧写请求超时:点图后要等它才开灯箱,不能让服务端卡住把点击拖成「点了没反应」。 */
@@ -88,7 +89,7 @@ function imageSrc(folder: string, file: string): string {
   return `/user/images/${encodeURIComponent(folder)}/${encodeURIComponent(file)}`;
 }
 
-/** 从 bbi_<nameHash>_<swipe>_<promptHash>-<genId>.<ext> 里取 genId,取不到则回退原文件名。 */
+/** 从 changye_<nameHash>_<swipe>_<promptHash>-<genId>.<ext> 里取 genId,取不到则回退原文件名。 */
 function downloadName(characterName: string, file: string): string {
   const genId = file.match(/-([^-.]+)\.[a-z0-9]+$/i)?.[1];
   return genId ? imageDownloadFileName(file, characterName, genId) : file;
@@ -150,7 +151,7 @@ async function fetchSidecarPrompt(imagePath: string): Promise<string | null> {
   try {
     const response = await fetch(sidecar, { signal: controller.signal });
     if (!response.ok) return null;
-    const data = (await response.json()) as Partial<BbiImageSidecar>;
+    const data = (await response.json()) as Partial<ChangYeImageSidecar>;
     if (!data || typeof data.prompt !== 'string' || !data.prompt) return null;
     return renderPrompt(data.prompt, typeof data.seed === 'number' ? data.seed : null);
   } catch {
@@ -170,7 +171,7 @@ async function load(): Promise<void> {
     // 只列 /folders 报上来的目录:/api/images/list 对不存在的目录会 mkdir,
     // 凭空猜名字会在 user/images 下攒出空文件夹。
     const folders = (await listUserImageFolders()).filter(
-      folder => folder.startsWith(FOLDER_PREFIX) && folder !== ARTIST_PREVIEW_FOLDER,
+      folder => galleryFolderName(folder) !== null,
     );
     const settled = await Promise.allSettled(
       folders.map(async folder => ({ folder, files: await listUserImages(folder) })),
@@ -185,7 +186,7 @@ async function load(): Promise<void> {
       }
       const { folder, files } = result.value;
       if (!files.length) return; // 删空后的残留目录不占位
-      const name = folder.slice(FOLDER_PREFIX.length) || '未命名角色';
+      const name = galleryFolderName(folder) || '未命名角色';
       next.push({
         folder,
         name,
@@ -311,11 +312,11 @@ const filtered = computed(() => {
 const totalImages = computed(() => groups.value.reduce((n, g) => n + g.images.length, 0));
 
 /* 默认折叠,仅记录手动展开的分组。旧 collapsed 列表不能反推哪些组是手动展开的。 */
-const EXPANDED_KEY = 'bbi.ui.galleryExpanded.v1';
+const EXPANDED_KEY = 'changye.ui.galleryExpanded.v1';
 
 function loadExpanded(): Set<string> {
   try {
-    const raw = JSON.parse(localStorage.getItem(EXPANDED_KEY) ?? '[]') as unknown;
+    const raw = JSON.parse(readCompatibleLocal(EXPANDED_KEY) ?? '[]') as unknown;
     return new Set(Array.isArray(raw) ? raw.filter((v): v is string => typeof v === 'string') : []);
   } catch {
     return new Set();
@@ -508,20 +509,20 @@ async function open(image: GalleryImage): Promise<void> {
 </script>
 
 <template>
-  <section class="bbi-page">
-    <div class="bbi-page-head">
-      <h2 class="bbi-title bbi-title-sub">图库</h2>
+  <section class="changye-page">
+    <div class="changye-page-head">
+      <h2 class="changye-title changye-title-sub">图库</h2>
       <button class="gal-icon-btn" type="button" title="重新读取" :disabled="loading" @click="load">
         <Icon name="refresh" />
       </button>
     </div>
-    <hr class="bbi-rule" />
+    <hr class="changye-rule" />
 
     <!-- 工具条:只搜角色名(文件名是哈希,搜了没意义) -->
     <div class="gal-toolbar">
-      <input v-model="query" class="bbi-input gal-search" placeholder="搜索角色名" />
+      <input v-model="query" class="changye-input gal-search" placeholder="搜索角色名" />
       <button
-        class="bbi-btn bbi-btn-sm gal-select-toggle"
+        class="changye-btn changye-btn-sm gal-select-toggle"
         :class="{ 'is-on': selecting }"
         type="button"
         :disabled="!groups.length"
@@ -544,7 +545,7 @@ async function open(image: GalleryImage): Promise<void> {
     <div v-if="selecting" class="gal-actionbar">
       <span class="gal-actionbar-count">已选 {{ selectedCount }} 张</span>
       <button
-        class="bbi-btn bbi-btn-sm"
+        class="changye-btn changye-btn-sm"
         type="button"
         :disabled="!selectedCount || deleting"
         @click="selected = new Set()"
@@ -552,7 +553,7 @@ async function open(image: GalleryImage): Promise<void> {
         清空
       </button>
       <button
-        class="bbi-btn bbi-btn-sm bbi-btn-danger"
+        class="changye-btn changye-btn-sm changye-btn-danger"
         type="button"
         :disabled="!selectedCount || deleting"
         @click="deleteSelected"
@@ -578,7 +579,7 @@ async function open(image: GalleryImage): Promise<void> {
       <Icon name="gallery" :size="34" />
       <p class="gal-state-title">读取失败</p>
       <p class="gal-state-hint">{{ error }}</p>
-      <button class="bbi-btn bbi-btn-sm" type="button" @click="load"><Icon name="refresh" /> 重试</button>
+      <button class="changye-btn changye-btn-sm" type="button" @click="load"><Icon name="refresh" /> 重试</button>
     </div>
 
     <div v-else-if="!groups.length" class="gal-state">
@@ -603,7 +604,7 @@ async function open(image: GalleryImage): Promise<void> {
           <label v-if="selecting" class="gal-group-check" :title="`全选${group.name}`">
             <input
               type="checkbox"
-              class="bbi-checkbox"
+              class="changye-checkbox"
               :checked="groupAllSelected(group)"
               :indeterminate="someSelected(group)"
               :aria-label="`全选${group.name}`"
@@ -622,7 +623,7 @@ async function open(image: GalleryImage): Promise<void> {
             <span class="gal-badge">{{ group.images.length }}</span>
             <span v-if="groupSizeText(group)" class="gal-size">{{ groupSizeText(group) }}</span>
           </button>
-          <button type="button" class="bbi-btn gal-folder-open" :aria-label="`打开${group.name}文件夹`"
+          <button type="button" class="changye-btn gal-folder-open" :aria-label="`打开${group.name}文件夹`"
             :disabled="!!openingFolder" @click.stop="openFolder(group.folder)">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v1M3 8h18a1 1 0 0 1 1 1.2l-3 11H2L3 8Z" /></svg>
             {{ openingFolder === group.folder ? '正在打开…' : '打开文件夹' }}
@@ -660,7 +661,7 @@ async function open(image: GalleryImage): Promise<void> {
               </ul>
               <button
                 v-if="group.images.length > visibleImages(group).length"
-                class="bbi-btn bbi-btn-sm gal-more"
+                class="changye-btn changye-btn-sm gal-more"
                 type="button"
                 @click="showMore(group)"
               >
@@ -687,17 +688,17 @@ async function open(image: GalleryImage): Promise<void> {
   height: 30px;
   padding: 0;
   border: 0;
-  border-radius: var(--bbi-radius-sm);
+  border-radius: var(--changye-radius-sm);
   background: transparent;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   cursor: pointer;
   transition:
     color 0.15s,
     background 0.15s;
 }
 .gal-icon-btn:hover:not(:disabled) {
-  color: var(--bbi-accent);
-  background: var(--bbi-surface-2);
+  color: var(--changye-accent);
+  background: var(--changye-surface-2);
 }
 .gal-icon-btn:disabled {
   cursor: default;
@@ -719,7 +720,7 @@ async function open(image: GalleryImage): Promise<void> {
 .gal-count {
   flex: 0 0 auto;
   font-size: 12px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
@@ -735,17 +736,17 @@ async function open(image: GalleryImage): Promise<void> {
   flex: 0 0 auto;
 }
 .gal-select-toggle.is-on {
-  border-color: var(--bbi-accent);
-  color: var(--bbi-accent);
-  background: var(--bbi-surface-2);
+  border-color: var(--changye-accent);
+  color: var(--changye-accent);
+  background: var(--changye-surface-2);
 }
 
 .gal-warn {
   margin: 0 0 12px;
   padding: 8px 12px;
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-warning-soft);
-  color: var(--bbi-warning);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-warning-soft);
+  color: var(--changye-warning);
   font-size: 12px;
 }
 
@@ -755,13 +756,13 @@ async function open(image: GalleryImage): Promise<void> {
   place-items: center;
   gap: 10px;
   padding: 80px 20px;
-  color: var(--bbi-ink-soft);
+  color: var(--changye-ink-soft);
   text-align: center;
 }
 .gal-state-title {
   margin: 0;
   font-size: 15px;
-  color: var(--bbi-ink);
+  color: var(--changye-ink);
 }
 .gal-state-hint {
   margin: 0;
@@ -774,11 +775,11 @@ async function open(image: GalleryImage): Promise<void> {
   padding: 40px 16px;
   text-align: center;
   font-size: 13px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
 }
 .gal-spin {
   animation: gal-rotate 0.9s linear infinite;
-  color: var(--bbi-accent);
+  color: var(--changye-accent);
 }
 @keyframes gal-rotate {
   to {
@@ -793,7 +794,7 @@ async function open(image: GalleryImage): Promise<void> {
 
 /* —— 分组 —— */
 /* —— 分组卡片 ——
-   与设置页 .bbi-sections 同款节奏(gap 12px):每组一张有边框的卡,
+   与设置页 .changye-sections 同款节奏(gap 12px):每组一张有边框的卡,
    收起时仍是一条实体标题栏,不会塌成一行浮字。
    与角色页共用「无框折叠头」语汇的差别在于:那边组内是灰白表单,
    这边是彩色缩略图,不给围合就镇不住。 */
@@ -803,9 +804,9 @@ async function open(image: GalleryImage): Promise<void> {
   gap: 12px;
 }
 .gal-group {
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius);
-  background: var(--bbi-surface);
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius);
+  background: var(--changye-surface);
   /* 刻意不写 gap:.gal-fold-wrap 收成 0fr 后 gap 仍然占位,
      加了边框就会在卡片底部露出一条死白。间距一律由各自的 padding 给。 */
 }
@@ -818,11 +819,11 @@ async function open(image: GalleryImage): Promise<void> {
   display: flex;
   align-items: center;
   /* 圆角与 hover 底色仍由本层给:它才是撑满卡片宽度的那一层 */
-  border-radius: var(--bbi-radius) var(--bbi-radius) 0 0;
-  transition: background var(--bbi-dur) var(--bbi-ease);
+  border-radius: var(--changye-radius) var(--changye-radius) 0 0;
+  transition: background var(--changye-dur) var(--changye-ease);
 }
 .gal-fold-head:hover {
-  background: var(--bbi-surface-2);
+  background: var(--changye-surface-2);
 }
 /* 折叠触发器:占满标题行剩余宽度,自己不画背景(底色在父层,连复选框一起变) */
 .gal-fold-trigger {
@@ -836,7 +837,7 @@ async function open(image: GalleryImage): Promise<void> {
   border-radius: inherit;
   background: transparent;
   color: inherit;
-  font-family: var(--bbi-font-sans);
+  font-family: var(--changye-font-sans);
   text-align: left;
   cursor: pointer;
 }
@@ -850,13 +851,13 @@ async function open(image: GalleryImage): Promise<void> {
   line-height: 1.4;
 }
 .gal-fold-trigger:focus-visible {
-  outline: 2px solid var(--bbi-accent);
+  outline: 2px solid var(--changye-accent);
   outline-offset: -2px;
 }
 /* 复选框在最左侧,与触发器共享这一行的 hover 底色;
    padding 只给左右,高度靠标题行自身撑开,免得比触发器矮一截。
-   尺寸/配色一律由全局 .bbi-checkbox 给,这里只清 margin——
-   粉彩主题把 .bbi-checkbox 改成了自绘(背景勾 14px 居中),自己再改小会把勾挤到边上。 */
+   尺寸/配色一律由全局 .changye-checkbox 给,这里只清 margin——
+   粉彩主题把 .changye-checkbox 改成了自绘(背景勾 14px 居中),自己再改小会把勾挤到边上。 */
 .gal-group-check {
   display: inline-flex;
   align-items: center;
@@ -865,7 +866,7 @@ async function open(image: GalleryImage): Promise<void> {
   padding: 0 2px 0 12px;
   cursor: pointer;
 }
-.gal-group-check .bbi-checkbox {
+.gal-group-check .changye-checkbox {
   margin: 0;
 }
 /* 有复选框时触发器的左 padding 收窄,免得箭头被推得太靠右 */
@@ -874,18 +875,18 @@ async function open(image: GalleryImage): Promise<void> {
 }
 /* 圆角只在两端瞬时切换,不参与过渡:收起中途的「下两角正在变圆」会让 .gal-fold-body
    那条满宽 border-top 的线头戳出圆角外(hover 有底色时尤其明显)。
-   展开时立刻恢复直角(0s 无延迟),收起时等高度收完再变圆(0s + --bbi-dur 延迟)。 */
+   展开时立刻恢复直角(0s 无延迟),收起时等高度收完再变圆(0s + --changye-dur 延迟)。 */
 .gal-group.is-collapsed > .gal-fold-head {
-  border-radius: var(--bbi-radius);
+  border-radius: var(--changye-radius);
   transition:
-    background var(--bbi-dur) var(--bbi-ease),
-    border-radius 0s var(--bbi-dur);
+    background var(--changye-dur) var(--changye-ease),
+    border-radius 0s var(--changye-dur);
 }
 .gal-caret {
   flex: 0 0 auto;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   transition:
-    transform var(--bbi-dur) var(--bbi-ease),
+    transform var(--changye-dur) var(--changye-ease),
     color 0.15s;
 }
 .gal-caret.is-collapsed {
@@ -893,22 +894,22 @@ async function open(image: GalleryImage): Promise<void> {
 }
 .gal-fold-trigger:hover .gal-caret,
 .gal-fold-trigger:focus-visible .gal-caret {
-  color: var(--bbi-accent);
+  color: var(--changye-accent);
 }
 .gal-name {
   min-width: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--bbi-ink);
+  color: var(--changye-ink);
   word-break: break-word;
 }
 .gal-badge {
   flex: 0 0 auto;
   padding: 2px 9px;
-  border-radius: var(--bbi-radius-pill);
-  background: var(--bbi-surface-2);
-  color: var(--bbi-ink-soft);
-  font-family: var(--bbi-font-mono);
+  border-radius: var(--changye-radius-pill);
+  background: var(--changye-surface-2);
+  color: var(--changye-ink-soft);
+  font-family: var(--changye-font-mono);
   font-size: 11px;
   font-weight: 600;
   line-height: 1.6;
@@ -919,8 +920,8 @@ async function open(image: GalleryImage): Promise<void> {
   flex: 0 0 auto;
   margin-left: auto;
   padding-left: 8px;
-  color: var(--bbi-ink-muted);
-  font-family: var(--bbi-font-mono);
+  color: var(--changye-ink-muted);
+  font-family: var(--changye-font-mono);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -929,7 +930,7 @@ async function open(image: GalleryImage): Promise<void> {
 .gal-fold-wrap {
   display: grid;
   grid-template-rows: 1fr;
-  transition: grid-template-rows var(--bbi-dur) var(--bbi-ease);
+  transition: grid-template-rows var(--changye-dur) var(--changye-ease);
 }
 .gal-fold-wrap.is-collapsed {
   grid-template-rows: 0fr;
@@ -951,7 +952,7 @@ async function open(image: GalleryImage): Promise<void> {
   flex-direction: column;
   gap: 10px;
   padding: 12px;
-  border-top: 1px solid var(--bbi-line);
+  border-top: 1px solid var(--changye-line);
 }
 
 /* —— 缩略图网格 —— */
@@ -970,23 +971,23 @@ async function open(image: GalleryImage): Promise<void> {
   display: block;
   width: 100%;
   padding: 0;
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface-2);
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface-2);
   cursor: zoom-in;
   overflow: hidden;
   transition:
-    border-color var(--bbi-dur) var(--bbi-ease),
-    box-shadow var(--bbi-dur) var(--bbi-ease),
-    transform var(--bbi-dur) var(--bbi-ease);
+    border-color var(--changye-dur) var(--changye-ease),
+    box-shadow var(--changye-dur) var(--changye-ease),
+    transform var(--changye-dur) var(--changye-ease);
 }
 .gal-thumb:hover {
-  border-color: var(--bbi-accent);
-  box-shadow: 0 8px 20px -12px var(--bbi-overlay);
+  border-color: var(--changye-accent);
+  box-shadow: 0 8px 20px -12px var(--changye-overlay);
   transform: translateY(-1px);
 }
 .gal-thumb:focus-visible {
-  outline: 2px solid var(--bbi-accent);
+  outline: 2px solid var(--changye-accent);
   outline-offset: 2px;
 }
 /* 取侧写提示词的那一小会儿:降透明度示意「在忙」,不改布局免得网格抖动 */
@@ -1000,8 +1001,8 @@ async function open(image: GalleryImage): Promise<void> {
   position: relative;
 }
 .gal-thumb.is-selected {
-  border-color: var(--bbi-accent);
-  box-shadow: 0 0 0 2px var(--bbi-accent) inset;
+  border-color: var(--changye-accent);
+  box-shadow: 0 0 0 2px var(--changye-accent) inset;
 }
 .gal-thumb.is-selected .gal-img {
   opacity: 0.72;
@@ -1017,14 +1018,14 @@ async function open(image: GalleryImage): Promise<void> {
   justify-content: center;
   width: 19px;
   height: 19px;
-  border: 1.5px solid var(--bbi-surface);
+  border: 1.5px solid var(--changye-surface);
   border-radius: 50%;
-  background: var(--bbi-overlay);
+  background: var(--changye-overlay);
   color: #fff;
 }
 .gal-thumb.is-selected .gal-check {
-  background: var(--bbi-accent);
-  border-color: var(--bbi-accent);
+  background: var(--changye-accent);
+  border-color: var(--changye-accent);
 }
 /* 固定 3:4 竖构图:生图多为竖版,统一比例让整格网格对齐,溢出由 cover 裁切 */
 .gal-img {
@@ -1041,41 +1042,41 @@ async function open(image: GalleryImage): Promise<void> {
 /* —— 选择态操作条 ——
    紧跟工具条 + sticky 吸顶:呼出它的「选择」钮就在上一行,一按就看见;
    往下翻多久它都还在,不用滚回顶部才能删。
-   top 给 calc(-1 * pad):滚动容器是 .bbi-body,它有 --bbi-page-pad 的内边距,
+   top 给 calc(-1 * pad):滚动容器是 .changye-body,它有 --changye-page-pad 的内边距,
    滚动视口顶边落在内边距处;top:0 会让操作条停在内边距下沿、上方露出一条缝
-   让缩略图从那里滚过去。抵消掉内边距才贴齐真实顶边(同 base.css 的 .bbi-modal-head)。 */
+   让缩略图从那里滚过去。抵消掉内边距才贴齐真实顶边(同 base.css 的 .changye-modal-head)。 */
 .gal-actionbar {
   position: sticky;
-  top: calc(-1 * var(--bbi-page-pad));
+  top: calc(-1 * var(--changye-page-pad));
   z-index: 2;
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 12px;
   padding: 10px 12px;
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius);
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius);
   /* 不透明底:下面是缩略图网格,半透明会把图透上来,数字读不清 */
-  background: var(--bbi-surface);
-  box-shadow: 0 6px 18px -14px var(--bbi-overlay);
+  background: var(--changye-surface);
+  box-shadow: 0 6px 18px -14px var(--changye-overlay);
 }
 .gal-actionbar-count {
   flex: 1 1 auto;
   font-size: 12.5px;
-  color: var(--bbi-ink-soft);
+  color: var(--changye-ink-soft);
   font-variant-numeric: tabular-nums;
 }
-/* .bbi-btn-danger 只声明在 ConfirmDialog 的 scoped 块里(base.css 没有),
+/* .changye-btn-danger 只声明在 ConfirmDialog 的 scoped 块里(base.css 没有),
    本组件要用就得把 base 与 hover 两条整份复制过来——只补 hover 的话平时是默认墨色、
    鼠标一过才变红,静态截图完全看不出问题。 */
-.bbi-btn-danger {
-  color: var(--bbi-danger);
-  border-color: var(--bbi-line-strong);
+.changye-btn-danger {
+  color: var(--changye-danger);
+  border-color: var(--changye-line-strong);
 }
-.bbi-btn-danger:hover:not(:disabled) {
-  color: var(--bbi-danger);
-  border-color: var(--bbi-danger);
-  background: var(--bbi-danger-soft);
+.changye-btn-danger:hover:not(:disabled) {
+  color: var(--changye-danger);
+  border-color: var(--changye-danger);
+  background: var(--changye-danger-soft);
 }
 
 @media (max-width: 640px) {

@@ -133,7 +133,7 @@ export function parseFinalJsonObject(raw: string): Record<string, unknown> {
 function sanitizeContent(value: unknown, field: string, index: number): string {
   const text = typeof value === 'string' ? value.trim().replace(/[\r\n]+/g, ' ') : '';
   if (text && FORBIDDEN_SUBTAG.test(text)) {
-    throw new Error(`images[${index}].${field} 不得包含 bbi_image/tag/nl/negative/size 标签`);
+    throw new Error(`images[${index}].${field} 不得包含 changye_image/tag/nl/negative/size 标签`);
   }
   return text;
 }

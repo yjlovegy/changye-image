@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { validateLoraFavorites, type ComfyLoraFavorite } from '@/backends/comfyLoraFavorites';
-import BbiTextarea from '@/components/BbiTextarea.vue';
+import ChangYeTextarea from '@/components/ChangYeTextarea.vue';
 const props = defineProps<{ modelValue: ComfyLoraFavorite[]; canAdd: boolean }>();
 const emit = defineEmits<{ (event: 'update:modelValue', value: ComfyLoraFavorite[]): void; (event: 'use', tags: string[]): void }>();
 let sequence = 0;
@@ -45,37 +45,37 @@ function useSelected() {
 </script>
 <template>
   <section class="favorites" aria-label="常用 LoRA 标签库">
-    <h3 class="bbi-field-label">常用 LoRA 标签库</h3>
+    <h3 class="changye-field-label">常用 LoRA 标签库</h3>
     <div class="favorite-table">
       <table>
-        <thead><tr><th class="selection"><input type="checkbox" class="bbi-checkbox" aria-label="全选收藏" :checked="allSelected" :indeterminate="selected.length > 0 && !allSelected" @change="rows.forEach(row => row.selected = ($event.target as HTMLInputElement).checked)" /></th><th>标签</th><th>备注</th><th class="row-action"></th></tr></thead>
+        <thead><tr><th class="selection"><input type="checkbox" class="changye-checkbox" aria-label="全选收藏" :checked="allSelected" :indeterminate="selected.length > 0 && !allSelected" @change="rows.forEach(row => row.selected = ($event.target as HTMLInputElement).checked)" /></th><th>标签</th><th>备注</th><th class="row-action"></th></tr></thead>
         <tbody>
           <tr v-for="(row, index) in rows" :key="row.id">
-            <td><input v-model="row.selected" type="checkbox" class="bbi-checkbox" :aria-label="'选择收藏 ' + (index + 1)" /></td>
-            <td><BbiTextarea v-model="row.tag" @blur="saveEdits" mono :rows="1" :max-rows="4" class="table-input" :aria-label="'收藏标签 ' + (index + 1)" /></td>
-            <td><BbiTextarea v-model="row.note" @blur="saveEdits" :rows="1" :max-rows="4" class="table-input" :aria-label="'收藏备注 ' + (index + 1)" /></td>
+            <td><input v-model="row.selected" type="checkbox" class="changye-checkbox" :aria-label="'选择收藏 ' + (index + 1)" /></td>
+            <td><ChangYeTextarea v-model="row.tag" @blur="saveEdits" mono :rows="1" :max-rows="4" class="table-input" :aria-label="'收藏标签 ' + (index + 1)" /></td>
+            <td><ChangYeTextarea v-model="row.note" @blur="saveEdits" :rows="1" :max-rows="4" class="table-input" :aria-label="'收藏备注 ' + (index + 1)" /></td>
             <td><button type="button" class="delete-button" :aria-label="'删除收藏 ' + (index + 1)" @click="remove(index)">删除</button></td>
           </tr>
           <tr v-if="!rows.length"><td colspan="4" class="empty">暂无收藏</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="favorite-actions"><span class="bbi-field-hint">已选 {{ selected.length }} 项</span><button type="button" class="bbi-btn favorite-use" :disabled="!canAdd || !selected.length" @click="useSelected">加入LoRA堆</button></div>
+    <div class="favorite-actions"><span class="changye-field-hint">已选 {{ selected.length }} 项</span><button type="button" class="changye-btn favorite-use" :disabled="!canAdd || !selected.length" @click="useSelected">加入LoRA堆</button></div>
     <slot />
     <div class="favorite-form">
-      <div class="favorite-field"><span class="bbi-field-label">标签</span><BbiTextarea v-model="tag" mono aria-label="新收藏标签" placeholder="&lt;lora：名称：权重&gt;" /></div>
-      <div class="favorite-field"><span class="bbi-field-label">备注</span><BbiTextarea v-model="note" aria-label="新收藏备注" placeholder="填写用途或适用场景" /></div>
-      <div class="form-actions"><span v-if="message" class="success" role="status">✓ {{ message }}</span><button type="button" class="bbi-btn favorite-add" @click="add">加入收藏</button></div>
+      <div class="favorite-field"><span class="changye-field-label">标签</span><ChangYeTextarea v-model="tag" mono aria-label="新收藏标签" placeholder="&lt;lora：名称：权重&gt;" /></div>
+      <div class="favorite-field"><span class="changye-field-label">备注</span><ChangYeTextarea v-model="note" aria-label="新收藏备注" placeholder="填写用途或适用场景" /></div>
+      <div class="form-actions"><span v-if="message" class="success" role="status">✓ {{ message }}</span><button type="button" class="changye-btn favorite-add" @click="add">加入收藏</button></div>
     </div>
     <p v-if="error" class="favorites-error" role="alert">{{ error }}</p>
   </section>
 </template>
 <style scoped>
-.favorites { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--bbi-line); min-width: 0; }.favorites h3 { margin: 0 0 16px; }
-.favorite-table { overflow-x: auto; }table { width: 100%; table-layout: fixed; border-collapse: collapse; }th,td { padding: 8px 5px; border-bottom: 1px solid var(--bbi-line); text-align: left; font-size: 13px; vertical-align: middle; }th { background: var(--bbi-bg); }.selection { width: 30px; }.row-action { width: 42px; }
-.table-input { border-color: transparent; background: transparent; padding: 4px; }.table-input:focus { border-color: var(--bbi-accent); }.delete-button { background: none; border: 0; color: var(--bbi-muted); cursor: pointer; padding: 0; white-space: nowrap; font: inherit; }.empty { text-align: center; color: var(--bbi-muted); }
-.favorite-actions > .bbi-field-hint { margin: 0; }
-.favorite-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin: 12px 0; }.favorite-form { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(0,1fr); gap: 12px; border: 1px solid var(--bbi-line); padding: 14px; border-radius: var(--bbi-radius-sm); }.favorite-form .favorite-field { display: grid; gap: 6px; min-width: 0; }.form-actions { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }.favorite-add { margin-left: auto; }.favorite-add,.favorite-use { min-height: 38px; min-width: 112px; padding: 8px 16px; font-size: 13px; }
-.success { color: #27833d; font-size: 13px; }.favorites-error { color: var(--bbi-danger,#b3261e); font-size: 13px; overflow-wrap: anywhere; }
+.favorites { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--changye-line); min-width: 0; }.favorites h3 { margin: 0 0 16px; }
+.favorite-table { overflow-x: auto; }table { width: 100%; table-layout: fixed; border-collapse: collapse; }th,td { padding: 8px 5px; border-bottom: 1px solid var(--changye-line); text-align: left; font-size: 13px; vertical-align: middle; }th { background: var(--changye-bg); }.selection { width: 30px; }.row-action { width: 42px; }
+.table-input { border-color: transparent; background: transparent; padding: 4px; }.table-input:focus { border-color: var(--changye-accent); }.delete-button { background: none; border: 0; color: var(--changye-muted); cursor: pointer; padding: 0; white-space: nowrap; font: inherit; }.empty { text-align: center; color: var(--changye-muted); }
+.favorite-actions > .changye-field-hint { margin: 0; }
+.favorite-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin: 12px 0; }.favorite-form { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(0,1fr); gap: 12px; border: 1px solid var(--changye-line); padding: 14px; border-radius: var(--changye-radius-sm); }.favorite-form .favorite-field { display: grid; gap: 6px; min-width: 0; }.form-actions { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }.favorite-add { margin-left: auto; }.favorite-add,.favorite-use { min-height: 38px; min-width: 112px; padding: 8px 16px; font-size: 13px; }
+.success { color: #27833d; font-size: 13px; }.favorites-error { color: var(--changye-danger,#b3261e); font-size: 13px; overflow-wrap: anywhere; }
 @media(max-width:520px) { .favorite-form { grid-template-columns: minmax(0,1fr); padding: 10px; }th,td { padding: 5px 2px; }.row-action { width: 36px; } }
 </style>

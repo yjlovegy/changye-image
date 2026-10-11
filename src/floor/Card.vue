@@ -34,7 +34,7 @@ import {
   deleteImageResult,
   promptHash,
   saveImageResult,
-  type BbiImageEntry,
+  type ChangYeImageEntry,
 } from '@/floor/storage';
 import { activeComfyPreset, settings } from '@/state/settings';
 import { beginImage, failImage, finishImage, safeHistory } from '@/state/history';
@@ -67,7 +67,7 @@ const props = defineProps<{
   characters: ImageCharacterPrompt[];
   /** 画幅方向(模型判定,随 tag 持久化):决定用渠道配置里的竖屏还是横屏尺寸。 */
   size: Orientation;
-  /** tag 原文(含 <bbi_image> 壳):生成提交与 promptHash 的输入。 */
+  /** tag 原文(含 <changye_image> 壳):生成提交与 promptHash 的输入。 */
   tag: string;
   /** 水合时完整图序列；中间插图后旧 DOM 不能继续按旧 seq 操作重复提示词。 */
   tagLayout: string[];
@@ -75,9 +75,9 @@ const props = defineProps<{
   seq: number;
   swipeId: number;
   /** 当前提示词同槽位的全部历史(时间正序,最新在末尾)。 */
-  history: BbiImageEntry[];
+  history: ChangYeImageEntry[];
   /** 无匹配历史时,旧提示词同槽位的最新结果(stale)。 */
-  staleEntry: BbiImageEntry | null;
+  staleEntry: ChangYeImageEntry | null;
   /** 所在聊天 id(水合时传入):槽位 key 的一部分,不再各自去 getContext 取。 */
   chatId: string;
 }>();
@@ -182,7 +182,7 @@ async function onImageError(): Promise<void> {
   if (!path) return;
   await confirmImageMissing(path);
 }
-const downloadFileName = (entry: BbiImageEntry): string => {
+const downloadFileName = (entry: ChangYeImageEntry): string => {
   const context = getContext();
   const characterName = context?.chat[props.messageId]?.name || context?.name2 || '';
   return imageDownloadFileName(entry.path, characterName, entry.generationId);
@@ -396,7 +396,7 @@ function openEditor(revisionMode = false): void {
  * 本函数可能在组件销毁后才真正执行(灯箱回调 + 确认弹窗都是异步的)。
  */
 async function removeEntry(
-  target: BbiImageEntry,
+  target: ChangYeImageEntry,
   at: { messageId: number; swipeId: number },
 ): Promise<void> {
   const ok = await confirmDialog({
@@ -455,35 +455,35 @@ onMounted(() => {
 <template>
   <!-- 沉浸式设计:图即卡片。无边框/无背景面板/无品牌栏,控件悬浮在图上,
        桌面 hover 浮现、触屏常驻淡显;提示词收进悬浮按钮唤起的面板,平时零占位。 -->
-  <div class="bbi-figure" :data-phase="phase">
+  <div class="changye-figure" :data-phase="phase">
     <!-- 折叠态:收成一条细条,职责只有「占位 + 展开」——整条点击展开,
          生成中/出错在条上给状态但不放操作按钮(要操作先展开)。 -->
     <button
       v-if="collapsed"
-      class="bbi-figure__bar"
+      class="changye-figure__bar"
       type="button"
       title="展开图片"
       @click="collapsed = false"
     >
-      <span v-if="busy" class="bbi-figure__bar-spin" aria-hidden="true" />
-      <Icon v-else name="generate" :size="14" class="bbi-figure__bar-icon" />
-      <span class="bbi-figure__bar-text" :data-error="phase === 'error' && !busy ? '1' : ''">
+      <span v-if="busy" class="changye-figure__bar-spin" aria-hidden="true" />
+      <Icon v-else name="generate" :size="14" class="changye-figure__bar-icon" />
+      <span class="changye-figure__bar-text" :data-error="phase === 'error' && !busy ? '1' : ''">
         {{ barText }}
       </span>
-      <span v-if="liveHistory.length > 1 && !busy" class="bbi-figure__bar-count">
+      <span v-if="liveHistory.length > 1 && !busy" class="changye-figure__bar-count">
         {{ liveHistory.length }} 张
       </span>
-      <Icon name="chevron" :size="13" class="bbi-figure__bar-chevron" />
+      <Icon name="chevron" :size="13" class="changye-figure__bar-chevron" />
     </button>
 
     <!-- 折叠容器:常驻 DOM(grid-template-rows 1fr→0fr 过渡做高度动画),折叠时只是
          高度归零 + 淡出,<img> 不卸载——展开瞬间图就在,不会重新发起请求。 -->
-    <div class="bbi-figure__collapse" :data-collapsed="collapsed ? '1' : ''">
-      <div class="bbi-figure__collapse-inner">
-    <div class="bbi-figure__stage" :data-size="size" :data-placeholder="imageSrc ? '' : '1'">
+    <div class="changye-figure__collapse" :data-collapsed="collapsed ? '1' : ''">
+      <div class="changye-figure__collapse-inner">
+    <div class="changye-figure__stage" :data-size="size" :data-placeholder="imageSrc ? '' : '1'">
       <img
         v-if="imageSrc"
-        class="bbi-figure__img"
+        class="changye-figure__img"
         :src="imageSrc"
         alt="生图结果"
         @click="openImage"
@@ -491,33 +491,33 @@ onMounted(() => {
       />
 
       <!-- 无图时的生成中:骨架微光扫过占位底 -->
-      <div v-if="busy && !imageSrc" class="bbi-figure__skeleton" />
+      <div v-if="busy && !imageSrc" class="changye-figure__skeleton" />
 
       <!-- 生成中遮罩:绝对定位盖在整个舞台上(有图=磨砂盖住旧图,无图=压住骨架)。
            居中 spinner + 状态 + 取消,不再像旧版那样作为 flex 子项跟图片并排互挤。 -->
-      <div v-if="busy" class="bbi-figure__busy">
-        <span class="bbi-figure__spin" />
-        <span class="bbi-figure__busy-text">{{ statusLabel }}</span>
-        <button class="bbi-figure__cancel" type="button" @click="cancel">取消</button>
+      <div v-if="busy" class="changye-figure__busy">
+        <span class="changye-figure__spin" />
+        <span class="changye-figure__busy-text">{{ statusLabel }}</span>
+        <button class="changye-figure__cancel" type="button" @click="cancel">取消</button>
       </div>
 
       <!-- 无图且空闲:生成入口 / 配置引导 -->
-      <div v-if="!imageSrc && !busy" class="bbi-figure__pending">
-        <button v-if="configured" class="bbi-figure__generate" type="button" @click="generate">
+      <div v-if="!imageSrc && !busy" class="changye-figure__pending">
+        <button v-if="configured" class="changye-figure__generate" type="button" @click="generate">
           <Icon name="palette" :size="15" />
           {{ phase === 'error' ? '重试' : '生成图片' }}
         </button>
-        <p v-else class="bbi-figure__hint">{{ pendingHint }}</p>
+        <p v-else class="changye-figure__hint">{{ pendingHint }}</p>
       </div>
 
       <!-- 提示词已改:角标提示,不再整图压暗 -->
-      <span v-if="isStale && !busy" class="bbi-figure__badge">旧提示词</span>
+      <span v-if="isStale && !busy" class="changye-figure__badge">旧提示词</span>
 
       <!-- 悬浮操作组:⋯ 收纳钮钉在右上角常驻淡显;桌面 hover 在其左侧横向浮现一排,
            触屏点开在其下方竖排展开,点任意操作后自动收起(图片平时只有一颗小点) -->
-      <span v-if="!busy" class="bbi-figure__actions" :data-open="menuOpen ? '1' : ''">
+      <span v-if="!busy" class="changye-figure__actions" :data-open="menuOpen ? '1' : ''">
         <button
-          class="bbi-fab bbi-figure__more"
+          class="changye-fab changye-figure__more"
           type="button"
           title="更多操作"
           :aria-expanded="menuOpen"
@@ -525,9 +525,9 @@ onMounted(() => {
         >
           <Icon name="more" :size="15" />
         </button>
-        <span class="bbi-figure__menu">
+        <span class="changye-figure__menu">
           <button
-            class="bbi-fab"
+            class="changye-fab"
             type="button"
             title="折叠图片"
             @click="menuOpen = false; collapsed = true"
@@ -536,7 +536,7 @@ onMounted(() => {
           </button>
           <button
             v-if="shownEntry"
-            class="bbi-fab"
+            class="changye-fab"
             type="button"
             :disabled="!configured"
             :title="configured ? '重绘' : '请先在「工作流」页完成配置'"
@@ -546,7 +546,7 @@ onMounted(() => {
           </button>
           <button
             v-if="shownEntry"
-            class="bbi-fab"
+            class="changye-fab"
             type="button"
             title="下载这张图"
             @click="menuOpen = false; downloadCurrent()"
@@ -555,7 +555,7 @@ onMounted(() => {
           </button>
           <button
             v-if="shownEntry"
-            class="bbi-fab bbi-fab--danger"
+            class="changye-fab changye-fab--danger"
             type="button"
             title="删除这张图"
             @click="menuOpen = false; removeCurrent()"
@@ -563,21 +563,21 @@ onMounted(() => {
             <Icon name="trash" :size="15" />
           </button>
           <button
-            class="bbi-fab"
+            class="changye-fab"
             type="button"
             title="编辑提示词"
             @click="menuOpen = false; openEditor()"
           >
             <Icon name="edit" :size="15" />
           </button>
-          <button v-if="shownEntry && comfyActive" class="bbi-fab" type="button" :disabled="busy"
+          <button v-if="shownEntry && comfyActive" class="changye-fab" type="button" :disabled="busy"
             title="手动局部重绘" aria-label="手动局部重绘" @click="menuOpen = false; openInpaint()">
             <Icon name="prompt" :size="15" />
           </button>
           <button
             v-if="promptText"
-            class="bbi-fab"
-            :class="{ 'bbi-fab--on': promptOpen }"
+            class="changye-fab"
+            :class="{ 'changye-fab--on': promptOpen }"
             type="button"
             title="查看提示词"
             :aria-expanded="promptOpen"
@@ -589,11 +589,11 @@ onMounted(() => {
       </span>
 
       <!-- 翻页器:叠在图片右下角的胶囊 -->
-      <span v-if="pageable" class="bbi-figure__pager">
-        <button class="bbi-figure__pager-btn" type="button" :disabled="index <= 0" @click="index--">◀</button>
-        <span class="bbi-figure__pager-count">{{ index + 1 }}/{{ liveHistory.length }}</span>
+      <span v-if="pageable" class="changye-figure__pager">
+        <button class="changye-figure__pager-btn" type="button" :disabled="index <= 0" @click="index--">◀</button>
+        <span class="changye-figure__pager-count">{{ index + 1 }}/{{ liveHistory.length }}</span>
         <button
-          class="bbi-figure__pager-btn"
+          class="changye-figure__pager-btn"
           type="button"
           :disabled="index >= liveHistory.length - 1"
           @click="index++"
@@ -604,24 +604,24 @@ onMounted(() => {
     </div>
 
     <!-- 状态行:仅出错 / 提示词已改时出现,平时零占位 -->
-    <p v-if="phase === 'error'" class="bbi-figure__status bbi-figure__status--error">
+    <p v-if="phase === 'error'" class="changye-figure__status changye-figure__status--error">
       {{ error
-      }}<button v-if="configured" class="bbi-figure__retry" type="button" @click="generate">
+      }}<button v-if="configured" class="changye-figure__retry" type="button" @click="generate">
         重试
       </button>
     </p>
-    <p v-else-if="isStale && !busy" class="bbi-figure__status bbi-figure__status--warn">
+    <p v-else-if="isStale && !busy" class="changye-figure__status changye-figure__status--warn">
       提示词已修改，上图由旧提示词生成；点右上角重绘按新提示词出图
     </p>
     <!-- 文件被删(通常是在图库里删的):记录还在但图没了,明说一句免得像凭空丢图 -->
-    <p v-else-if="filesGone" class="bbi-figure__status bbi-figure__status--warn">
+    <p v-else-if="filesGone" class="changye-figure__status changye-figure__status--warn">
       图片文件已删除（在图库里删掉了）；可点上方重新生成
     </p>
 
     <!-- 提示词面板:悬浮 文本按钮唤起,复制按钮跟着面板走 -->
-    <div v-if="promptOpen && promptText" class="bbi-figure__prompt-box">
-      <pre class="bbi-figure__prompt">{{ promptText }}</pre>
-      <button class="bbi-figure__prompt-copy" type="button" title="复制提示词" @click="copyPrompt">
+    <div v-if="promptOpen && promptText" class="changye-figure__prompt-box">
+      <pre class="changye-figure__prompt">{{ promptText }}</pre>
+      <button class="changye-figure__prompt-copy" type="button" title="复制提示词" @click="copyPrompt">
         <Icon name="copy" :size="14" />
       </button>
     </div>

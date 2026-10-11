@@ -1,3 +1,4 @@
+import { LEGACY_FOLDER_ENDPOINT } from '@/legacyCompatibility';
 import { getContext } from '@/st/context';
 
 /** The local companion validates the user, origin and real directory before launching Explorer. */
@@ -7,9 +8,14 @@ export async function openGalleryFolder(folder: string): Promise<void> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
-    const response = await fetch('/api/plugins/baibai-image-folders/open-folder', {
+    let response = await fetch('/api/plugins/changye-image-folders/open-folder', {
       method: 'POST', headers: ctx.getRequestHeaders(), body: JSON.stringify({ folder }),
       signal: controller.signal,
+    });
+    // Old server helper can still open historical folders until it is upgraded.
+    const firstError = response.status === 404 ? await response.clone().json().catch(() => null) : null;
+    if (response.status === 404 && !firstError?.error) response = await fetch(LEGACY_FOLDER_ENDPOINT, {
+      method: 'POST', headers: ctx.getRequestHeaders(), body: JSON.stringify({ folder }), signal: controller.signal,
     });
     const data = await response.json().catch(() => null) as { ok?: boolean; error?: string } | null;
     if (response.ok && data?.ok === true) return;

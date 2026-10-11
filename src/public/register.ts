@@ -1,3 +1,4 @@
+import { LEGACY_IMAGE_API, LEGACY_READY_EVENT, LEGACY_CHANGED_EVENT } from '@/legacyCompatibility';
 import { watch } from 'vue';
 
 import { charTagLib } from '@/state/charTags';
@@ -19,20 +20,20 @@ import {
   type PublicCapabilities,
   type PublicChangeListener,
   type PublicChangeNotice,
-  type STBaiBaiImageApi,
+  type STChangYeImageApi,
 } from './types';
 
 /**
  * 公开接口的注册与事件面(与角色记忆插件 src/public/register.ts 同款,第三方学一套就够)。
  *
  * 第三方怎么拿到接口——**两条路都得给**,因为插件加载顺序不确定:
- * - 它比长夜的绘图器晚加载:直接读 globalThis.STBaiBaiImage 就有;
- * - 它比长夜的绘图器早加载:读到 undefined,只能等 window 的 'st-baibai-image:ready'。
+ * - 它比长夜的绘图器晚加载:直接读 globalThis.STChangYeImage 就有;
+ * - 它比长夜的绘图器早加载:读到 undefined,只能等 window 的 'st-changye-image:ready'。
  * 只给其中一条,另一半场合的第三方就得写轮询——那是我们的锅,不是它的。
  */
 
-export const PUBLIC_READY_EVENT = 'st-baibai-image:ready';
-export const PUBLIC_CHANGED_EVENT = 'st-baibai-image:changed';
+export const PUBLIC_READY_EVENT = 'st-changye-image:ready';
+export const PUBLIC_CHANGED_EVENT = 'st-changye-image:changed';
 
 const capabilities: PublicCapabilities = {
   globalApi: true,
@@ -78,6 +79,7 @@ function emitNotice(type: PublicChangeNotice['type']): void {
   }
   const eventName = type === 'ready' ? PUBLIC_READY_EVENT : PUBLIC_CHANGED_EVENT;
   window.dispatchEvent(new CustomEvent(eventName, { detail: clonePublic(detail) }));
+  window.dispatchEvent(new CustomEvent(type === 'ready' ? LEGACY_READY_EVENT : LEGACY_CHANGED_EVENT, { detail: clonePublic(detail) }));
 }
 
 /**
@@ -95,7 +97,7 @@ function queueChangedNotice(): void {
   });
 }
 
-function createApi(): STBaiBaiImageApi {
+function createApi(): STChangYeImageApi {
   // 冻结:第三方(或它引的某个库)往接口对象上挂东西、或替换掉 generate,
   // 会让后到的另一个第三方拿到被改过的接口。冻结让这类改动直接失败而不是静默生效。
   return Object.freeze({
@@ -126,7 +128,9 @@ export function registerPublicInterface(): void {
 
   bumpPublicRevision();
   const api = createApi();
-  (globalThis as typeof globalThis & { STBaiBaiImage?: STBaiBaiImageApi }).STBaiBaiImage = api;
+  (globalThis as typeof globalThis & { STChangYeImage?: STChangYeImageApi }).STChangYeImage = api;
+
+  (globalThis as Record<string, unknown>)[LEGACY_IMAGE_API] = api;
 
   // 角色库是响应式派生结果,一律 watch 它本身,不去逐个订阅那些**导致**它变的事件
   // (CHAT_CHANGED / 删楼 / 滑动 / 用户手动编辑 / 角色记忆插件同步……漏一个就少一次通知)。

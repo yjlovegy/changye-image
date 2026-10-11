@@ -18,7 +18,7 @@ import type { CharPreferenceField, CharTagField } from '@/state/charTags';
 export const PUBLIC_API_VERSION = 1 as const;
 
 export interface PublicCapabilities {
-  /** globalThis.STBaiBaiImage 可用。 */
+  /** globalThis.STChangYeImage 可用。 */
   globalApi: true;
   /** 能读角色库(getCharacters)。 */
   characterLibrary: true;
@@ -139,7 +139,7 @@ export interface GenerateRequest {
   /**
    * 落盘进长夜的绘图器图库,**默认 true**。
    *
-   * true:图存进 user/images/柏宝绘_<character>/ 并写侧写 json,于是
+   * true:图存进 user/images/长夜绘图器_<character>/ 并写侧写 json,于是
    *       用户能在长夜的绘图器图库页里按角色分组看到它、连提示词一起。
    * false:只返回 dataUrl,不碰磁盘——适合「预览一下就丢」的用法。
    *
@@ -148,7 +148,7 @@ export interface GenerateRequest {
    */
   save?: boolean;
   /**
-   * 落盘归到哪个角色名下(图库的分组名,即目录 柏宝绘_<character>)。
+   * 落盘归到哪个角色名下(图库的分组名,即目录 长夜绘图器_<character>)。
    * 省略 = 当前聊天的角色名。save=false 时无意义。
    */
   character?: string;
@@ -191,7 +191,7 @@ export interface GenerateResult {
   /** 图片格式,如 'png' / 'jpg'。 */
   format: string;
   /**
-   * 落盘后的 ST 静态路径(形如 /user/images/柏宝绘_小雪/bbi_….png),可直接 <img src>。
+   * 落盘后的 ST 静态路径(形如 /user/images/长夜绘图器_小雪/changye_….png),可直接 <img src>。
    * save=false 或落盘失败时为 null——**落盘失败不抛错**,图已经在 dataUrl 里了,
    * 不能因为存不进图库就让你连图都拿不到。
    */
@@ -240,7 +240,7 @@ export interface PublicChangeNotice {
 
 export type PublicChangeListener = (notice: PublicChangeNotice) => void;
 
-export interface STBaiBaiImageApi {
+export interface STChangYeImageApi {
   /** 本接口数据结构的版本。第三方按它判兼容(当前恒为 1)。 */
   readonly apiVersion: typeof PUBLIC_API_VERSION;
   /** 长夜的绘图器插件版本(仅供展示/排查,别解析它做兼容判断)。 */

@@ -17,8 +17,8 @@ import ComfyWorkflowJson from './ComfyWorkflowJson.vue';
 import WorkflowResolution from './WorkflowResolution.vue';
 import WorkflowExample from './WorkflowExample.vue';
 import { cleanUnusedWorkflowExample } from '@/st/workflowExamples';
-import BbiSelect from '@/components/BbiSelect.vue';
-import BbiTextarea from '@/components/BbiTextarea.vue';
+import ChangYeSelect from '@/components/ChangYeSelect.vue';
+import ChangYeTextarea from '@/components/ChangYeTextarea.vue';
 import Collapsible from '@/components/Collapsible.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import Icon from '@/components/Icon.vue';
@@ -367,12 +367,12 @@ function applyAssist() {
   <div ref="panelRoot" class="panel">
     <nav class="wf-jump-nav" aria-label="工作流区域跳转"><button v-for="[label,selector] in jumps" :key="label" type="button" :class="{active:activeJump===label}" :aria-current="activeJump===label?'location':undefined" @click="jumpTo(label,selector)">{{label}}</button></nav>
     <div ref="scrollArea" class="wf-scroll">
-    <div class="bbi-sections">
+    <div class="changye-sections">
       <Collapsible ref="configDisclosure" class="wf-connection" title="配置" :open="false">
         <div class="api-row">
-          <span class="bbi-field-label">URL</span>
+          <span class="changye-field-label">URL</span>
           <input
-            class="bbi-input"
+            class="changye-input"
             type="text"
             v-model="settings.comfyui.url"
             placeholder="http://127.0.0.1:8188"
@@ -384,13 +384,13 @@ function applyAssist() {
           <span v-if="inUse" class="conn-inuse"><Icon name="check" :size="13" /> 当前出图渠道</span>
           <button
             v-else
-            class="bbi-btn conn-use"
+            class="changye-btn conn-use"
             type="button"
             @click="settings.defaultBackend = 'comfyui'"
           >
             使用此渠道出图
           </button>
-          <button class="bbi-btn" type="button" :disabled="testing" @click="onTestConnection">
+          <button class="changye-btn" type="button" :disabled="testing" @click="onTestConnection">
             <Icon name="plug" />
             {{ testing ? '连接中…' : '测试连接' }}
           </button>
@@ -400,11 +400,11 @@ function applyAssist() {
       <Collapsible ref="workflowDisclosure" title="工作流" :open="true">
         <fieldset class="wf-edit-fieldset" :disabled="saving">
         <div class="wf-row">
-          <span class="bbi-field-label">当前工作流</span>
+          <span class="changye-field-label">当前工作流</span>
           <input
             v-if="renaming"
             ref="renameInput"
-            class="bbi-input"
+            class="changye-input"
             type="text"
             v-model="renameDraft"
             placeholder="工作流名称"
@@ -414,7 +414,7 @@ function applyAssist() {
             @keydown.esc.stop.prevent="renaming = false"
             @blur="commitRename"
           />
-          <BbiSelect
+          <ChangYeSelect
             v-else
             class="wf-select"
             v-model="activeId"
@@ -426,7 +426,7 @@ function applyAssist() {
           />
           <span v-if="!renaming" class="wf-ops">
             <button
-              class="bbi-icon-btn wf-op"
+              class="changye-icon-btn wf-op"
               type="button"
               title="重命名当前工作流"
               aria-label="重命名当前工作流"
@@ -435,7 +435,7 @@ function applyAssist() {
               <Icon name="edit" :size="14" />
             </button>
             <button
-              class="bbi-icon-btn wf-op"
+              class="changye-icon-btn wf-op"
               type="button"
               title="新建一套空工作流"
               aria-label="新建一套空工作流"
@@ -444,7 +444,7 @@ function applyAssist() {
               <Icon name="plus" :size="14" />
             </button>
             <button
-              class="bbi-icon-btn wf-op"
+              class="changye-icon-btn wf-op"
               type="button"
               title="复制当前工作流（含开关与尺寸）"
               aria-label="复制当前工作流"
@@ -453,7 +453,7 @@ function applyAssist() {
               <Icon name="copy" :size="14" />
             </button>
             <button
-              class="bbi-icon-btn wf-op"
+              class="changye-icon-btn wf-op"
               type="button"
               title="导出当前工作流"
               aria-label="导出当前工作流"
@@ -463,7 +463,7 @@ function applyAssist() {
               <Icon name="upload" :size="14" />
             </button>
             <button
-              class="bbi-icon-btn wf-op wf-remove"
+              class="changye-icon-btn wf-op wf-remove"
               type="button"
               :disabled="!canRemove"
               :title="canRemove ? '删除当前工作流' : '至少要保留一套工作流'"
@@ -487,21 +487,21 @@ function applyAssist() {
         <WorkflowResolution ref="sizeEditor" :preset="active" />
 
         <section class="wf-group" aria-label="固定生图提示词">
-          <div class="wf-group-head"><span class="bbi-field-label">固定生图提示词</span></div>
+          <div class="wf-group-head"><span class="changye-field-label">固定生图提示词</span></div>
           <div class="wf-prompts">
-            <div class="wf-fixed-field"><span class="bbi-field-label">固定正面 · 最前面</span><BbiTextarea v-model="active.fixedPrompts.positivePrefix" :rows="2" :max-rows="8" aria-label="固定正面最前面" placeholder="例如 illustration, soft lighting" /></div>
-            <div class="wf-fixed-field"><span class="bbi-field-label">固定正面 · 最后面</span><BbiTextarea v-model="active.fixedPrompts.positiveSuffix" :rows="2" :max-rows="8" aria-label="固定正面最后面" placeholder="放在本次画面描述之后的固定内容" /></div>
+            <div class="wf-fixed-field"><span class="changye-field-label">固定正面 · 最前面</span><ChangYeTextarea v-model="active.fixedPrompts.positivePrefix" :rows="2" :max-rows="8" aria-label="固定正面最前面" placeholder="例如 illustration, soft lighting" /></div>
+            <div class="wf-fixed-field"><span class="changye-field-label">固定正面 · 最后面</span><ChangYeTextarea v-model="active.fixedPrompts.positiveSuffix" :rows="2" :max-rows="8" aria-label="固定正面最后面" placeholder="放在本次画面描述之后的固定内容" /></div>
             <div class="wf-fixed-field">
               <div class="wf-negative-controls">
-                <div class="wf-negative-row"><span class="bbi-field-label">出图时使用负面词</span><button type="button" class="wf-negative-toggle" role="switch" aria-label="出图时使用负面词" :aria-checked="active.negativeEnabled !== false" :class="{'is-on': active.negativeEnabled !== false}" @click="active.negativeEnabled = active.negativeEnabled === false" /></div>
-                <p class="bbi-field-hint">关闭后，本次出图不使用负面词；已填写的内容保留。局部重绘与自动修复也遵循此开关。</p>
-                <div class="wf-negative-row"><span class="bbi-field-label">AI 自动生成负面词</span><button type="button" class="wf-negative-toggle" role="switch" aria-label="AI 自动生成负面词" :aria-checked="active.generateNegative !== false" :class="{'is-on': active.generateNegative !== false}" @click="active.generateNegative = active.generateNegative === false" /></div>
-                <p class="bbi-field-hint">控制生成、重写和按意见修改时是否编写场景负面词；关闭后仍可手动填写。</p>
+                <div class="wf-negative-row"><span class="changye-field-label">出图时使用负面词</span><button type="button" class="wf-negative-toggle" role="switch" aria-label="出图时使用负面词" :aria-checked="active.negativeEnabled !== false" :class="{'is-on': active.negativeEnabled !== false}" @click="active.negativeEnabled = active.negativeEnabled === false" /></div>
+                <p class="changye-field-hint">关闭后，本次出图不使用负面词；已填写的内容保留。局部重绘与自动修复也遵循此开关。</p>
+                <div class="wf-negative-row"><span class="changye-field-label">AI 自动生成负面词</span><button type="button" class="wf-negative-toggle" role="switch" aria-label="AI 自动生成负面词" :aria-checked="active.generateNegative !== false" :class="{'is-on': active.generateNegative !== false}" @click="active.generateNegative = active.generateNegative === false" /></div>
+                <p class="changye-field-hint">控制生成、重写和按意见修改时是否编写场景负面词；关闭后仍可手动填写。</p>
               </div>
-              <span class="bbi-field-label">固定负面{{active.negativeEnabled === false ? '（当前不使用）' : ''}}</span><BbiTextarea v-model="active.fixedPrompts.negative" :rows="2" :max-rows="8" aria-label="固定负面" placeholder="例如 blurry, watermark" />
+              <span class="changye-field-label">固定负面{{active.negativeEnabled === false ? '（当前不使用）' : ''}}</span><ChangYeTextarea v-model="active.fixedPrompts.negative" :rows="2" :max-rows="8" aria-label="固定负面" placeholder="例如 blurry, watermark" />
             </div>
           </div>
-          <p class="bbi-field-hint">顺序：固定正面最前面 → 本次提示词和英文描述 → 固定正面最后面。启用负面词时，固定负面与本次负面内容合并。</p>
+          <p class="changye-field-hint">顺序：固定正面最前面 → 本次提示词和英文描述 → 固定正面最后面。启用负面词时，固定负面与本次负面内容合并。</p>
           <p v-if="fixedNegativeIssue" class="wf-fixed-warning">{{ fixedNegativeIssue }}</p>
         </section>
 
@@ -515,19 +515,19 @@ function applyAssist() {
     </div>
     <footer class="wf-save-bar">
       <span role="status" class="wf-save-status" :class="{'wf-unsaved':dirty}"><i aria-hidden="true"></i>{{dirty?'有未保存的修改':saveStatus||'已保存'}}</span>
-      <div class="wf-save-buttons"><button type="button" class="bbi-btn" :disabled="!dirty||saving" @click="discardCurrent()">放弃修改</button><button type="button" class="bbi-btn bbi-btn-primary" :disabled="!dirty||saving" @click="saveCurrent">{{saving?'保存中…':'保存当前工作流'}}</button></div>
+      <div class="wf-save-buttons"><button type="button" class="changye-btn" :disabled="!dirty||saving" @click="discardCurrent()">放弃修改</button><button type="button" class="changye-btn changye-btn-primary" :disabled="!dirty||saving" @click="saveCurrent">{{saving?'保存中…':'保存当前工作流'}}</button></div>
       <p v-if="saveError" class="wf-save-error" role="alert">{{saveError}}</p>
     </footer>
     <ModalMask :open="leaveOpen" top-layer @close="!saving && finishLeave(false)">
-      <section class="bbi-modal" role="dialog" aria-modal="true" aria-label="工作流有未保存修改">
-        <header class="bbi-modal-head"><span class="bbi-modal-title">工作流有未保存修改</span></header>
+      <section class="changye-modal" role="dialog" aria-modal="true" aria-label="工作流有未保存修改">
+        <header class="changye-modal-head"><span class="changye-modal-title">工作流有未保存修改</span></header>
         <p>「{{active.name}}」的修改尚未保存。保留临时修改可继续试图，刷新页面后恢复为上次保存的配置。</p>
         <p v-if="saveError" class="wf-fixed-warning" role="alert">{{saveError}}</p>
         <footer class="wf-leave-actions">
-          <button class="bbi-btn" :disabled="saving" @click="finishLeave(false)">取消</button>
-          <button class="bbi-btn" :disabled="saving" @click="leaveWith('discard')">放弃修改</button>
-          <button class="bbi-btn" :disabled="saving" @click="leaveWith('keep')">保留临时修改</button>
-          <button class="bbi-btn bbi-btn-primary" :disabled="saving" @click="leaveWith('save')">保存并继续</button>
+          <button class="changye-btn" :disabled="saving" @click="finishLeave(false)">取消</button>
+          <button class="changye-btn" :disabled="saving" @click="leaveWith('discard')">放弃修改</button>
+          <button class="changye-btn" :disabled="saving" @click="leaveWith('keep')">保留临时修改</button>
+          <button class="changye-btn changye-btn-primary" :disabled="saving" @click="leaveWith('save')">保存并继续</button>
         </footer>
       </section>
     </ModalMask>
@@ -546,19 +546,19 @@ function applyAssist() {
     <ModalMask :open="assistOpen" @close="closeAssist">
       <div
         v-if="assistResult"
-        class="bbi-modal workflow-assist-modal"
+        class="changye-modal workflow-assist-modal"
         role="dialog"
         aria-modal="true"
         aria-label="预览 AI 配置的工作流"
       >
-        <header class="bbi-modal-head">
-          <span class="bbi-modal-title">预览工作流修改</span>
-          <button class="bbi-icon-btn" type="button" aria-label="关闭" @click="closeAssist">
+        <header class="changye-modal-head">
+          <span class="changye-modal-title">预览工作流修改</span>
+          <button class="changye-icon-btn" type="button" aria-label="关闭" @click="closeAssist">
             <Icon name="close" />
           </button>
         </header>
 
-        <p class="bbi-field-hint">原文与宏由本地重建，AI 只返回节点用途；请检查后再应用。</p>
+        <p class="changye-field-hint">原文与宏由本地重建，AI 只返回节点用途；请检查后再应用。</p>
         <div class="workflow-change-list">
           <div
             v-for="change in assistResult.changes"
@@ -570,7 +570,7 @@ function applyAssist() {
           </div>
         </div>
 
-        <BbiTextarea v-model="assistDraft" :rows="10" :max-rows="24" mono />
+        <ChangYeTextarea v-model="assistDraft" :rows="10" :max-rows="24" mono />
 
         <p v-if="assistResult.nlMode !== 'none'" class="workflow-detection">
           自然语言：{{ assistResult.nlMode === 'combined' ? '与正向 TAG 共用输入' : '使用独立输入' }}
@@ -579,10 +579,10 @@ function applyAssist() {
           已配置动态负面词；AI 每张必须返回本画面负面词，空结果会按重试设置重新请求。
         </p>
 
-        <footer class="bbi-modal-foot">
-          <span class="bbi-modal-foot-spacer"></span>
-          <button class="bbi-btn" type="button" @click="closeAssist">取消</button>
-          <button class="bbi-btn bbi-btn-primary" type="button" @click="applyAssist">
+        <footer class="changye-modal-foot">
+          <span class="changye-modal-foot-spacer"></span>
+          <button class="changye-btn" type="button" @click="closeAssist">取消</button>
+          <button class="changye-btn changye-btn-primary" type="button" @click="applyAssist">
             <Icon name="check" />
             应用工作流
           </button>
@@ -594,32 +594,32 @@ function applyAssist() {
 
 <style scoped>
 .panel{height:100%;min-height:0;display:flex;flex-direction:column}
-.wf-scroll{flex:1;min-height:0;overflow-y:auto;padding:20px var(--bbi-page-pad);scroll-padding-top:16px}
-.wf-jump-nav{flex:none;display:flex;flex-wrap:wrap;gap:4px;padding:10px var(--bbi-page-pad);border-bottom:1px solid var(--bbi-line)}
-.wf-jump-nav button{font:inherit;font-size:13px;white-space:nowrap;padding:6px 10px;border:0;border-radius:7px;background:transparent;color:var(--bbi-ink-soft);cursor:pointer}
-.wf-jump-nav button:hover{background:var(--bbi-surface-2)}.wf-jump-nav button.active{background:var(--bbi-accent-soft);color:var(--bbi-accent)}
-.wf-save-bar{flex:none;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:14px var(--bbi-page-pad);border-top:1px solid var(--bbi-line);background:var(--bbi-surface)}
-.wf-save-status{font-size:13px;color:var(--bbi-ink-soft);display:flex;align-items:center;gap:9px}.wf-save-status i{width:7px;height:7px;border-radius:50%;background:var(--bbi-ink-muted)}.wf-save-status.wf-unsaved i{background:var(--bbi-accent)}
-.wf-save-buttons{display:flex;gap:10px}.wf-save-buttons button{min-height:42px}.wf-save-error{flex-basis:100%;margin:0;color:var(--bbi-danger);font-size:13px}
+.wf-scroll{flex:1;min-height:0;overflow-y:auto;padding:20px var(--changye-page-pad);scroll-padding-top:16px}
+.wf-jump-nav{flex:none;display:flex;flex-wrap:wrap;gap:4px;padding:10px var(--changye-page-pad);border-bottom:1px solid var(--changye-line)}
+.wf-jump-nav button{font:inherit;font-size:13px;white-space:nowrap;padding:6px 10px;border:0;border-radius:7px;background:transparent;color:var(--changye-ink-soft);cursor:pointer}
+.wf-jump-nav button:hover{background:var(--changye-surface-2)}.wf-jump-nav button.active{background:var(--changye-accent-soft);color:var(--changye-accent)}
+.wf-save-bar{flex:none;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:14px var(--changye-page-pad);border-top:1px solid var(--changye-line);background:var(--changye-surface)}
+.wf-save-status{font-size:13px;color:var(--changye-ink-soft);display:flex;align-items:center;gap:9px}.wf-save-status i{width:7px;height:7px;border-radius:50%;background:var(--changye-ink-muted)}.wf-save-status.wf-unsaved i{background:var(--changye-accent)}
+.wf-save-buttons{display:flex;gap:10px}.wf-save-buttons button{min-height:42px}.wf-save-error{flex-basis:100%;margin:0;color:var(--changye-danger);font-size:13px}
 @media(max-width:620px){.wf-jump-nav{flex-wrap:nowrap;overflow-x:auto;padding:8px 16px}.wf-scroll{padding:16px}.wf-save-bar{padding:12px 16px}.wf-save-buttons{width:100%}.wf-save-buttons button{flex:1}}
 
-.wf-negative-controls{border:1px solid var(--bbi-line);border-radius:12px;padding:14px;margin-bottom:14px}
+.wf-negative-controls{border:1px solid var(--changye-line);border-radius:12px;padding:14px;margin-bottom:14px}
 .wf-negative-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
 .wf-negative-row:not(:first-child){margin-top:16px}
-.wf-negative-toggle{flex:0 0 44px;width:44px;height:25px;border:1px solid var(--bbi-line-strong);border-radius:20px;background:var(--bbi-surface-2);padding:3px;cursor:pointer;display:flex;align-items:center}
-.wf-negative-toggle::after{content:'';width:17px;height:17px;border-radius:50%;background:var(--bbi-ink-soft);transition:transform .15s}
-.wf-negative-toggle.is-on{background:var(--bbi-accent);border-color:var(--bbi-accent)}
+.wf-negative-toggle{flex:0 0 44px;width:44px;height:25px;border:1px solid var(--changye-line-strong);border-radius:20px;background:var(--changye-surface-2);padding:3px;cursor:pointer;display:flex;align-items:center}
+.wf-negative-toggle::after{content:'';width:17px;height:17px;border-radius:50%;background:var(--changye-ink-soft);transition:transform .15s}
+.wf-negative-toggle.is-on{background:var(--changye-accent);border-color:var(--changye-accent)}
 .wf-negative-toggle.is-on::after{background:white;transform:translateX(18px)}
-.wf-negative-toggle:focus-visible{outline:2px solid var(--bbi-accent);outline-offset:3px}
-.wf-edit-fieldset{border:0;padding:0;margin:0;min-width:0}.wf-save-row{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin:10px 0}.wf-save-row>span{margin-right:auto;font-size:13px;color:var(--bbi-ink-muted)}.wf-save-row>span.wf-unsaved{color:var(--bbi-accent)}.wf-save-row .bbi-btn,.wf-leave-actions .bbi-btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;line-height:1.4}.wf-leave-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:20px}
+.wf-negative-toggle:focus-visible{outline:2px solid var(--changye-accent);outline-offset:3px}
+.wf-edit-fieldset{border:0;padding:0;margin:0;min-width:0}.wf-save-row{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin:10px 0}.wf-save-row>span{margin-right:auto;font-size:13px;color:var(--changye-ink-muted)}.wf-save-row>span.wf-unsaved{color:var(--changye-accent)}.wf-save-row .changye-btn,.wf-leave-actions .changye-btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;line-height:1.4}.wf-leave-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:20px}
 .wf-sizes { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:18px 0; }
 .wf-size-field { display:grid;gap:8px;min-width:0; }
-.wf-group { margin:18px 0;padding:16px;border:1px solid var(--bbi-line);border-radius:var(--bbi-radius-sm); }
+.wf-group { margin:18px 0;padding:16px;border:1px solid var(--changye-line);border-radius:var(--changye-radius-sm); }
 .wf-group-head { margin-bottom:10px; }.wf-prompts { display:grid;gap:16px;margin:14px 0; }
 @media(max-width:520px) { .wf-sizes { grid-template-columns:minmax(0,1fr); } }
 
 .wf-fixed-field { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
-.wf-fixed-warning { font-size: 13px; color: var(--bbi-warning, #906100); overflow-wrap: anywhere; }
+.wf-fixed-warning { font-size: 13px; color: var(--changye-warning, #906100); overflow-wrap: anywhere; }
 /* 工作流选择行:grid 而非 flex——靠 flex-basis 撑出的对齐一 wrap 就散,
    固定首列宽让标签列与下方 switch/num 行的标签列同起点。 */
 .wf-row {
@@ -629,10 +629,10 @@ function applyAssist() {
   gap: 12px;
   padding: 8px 0;
 }
-.wf-row > .bbi-field-label:first-child {
+.wf-row > .changye-field-label:first-child {
   white-space: nowrap;
 }
-.wf-row > .bbi-input {
+.wf-row > .changye-input {
   min-width: 0;
 }
 /* 下拉不吃满:名称通常很短,拉满只会拖出半截空白(子组件根类默认 180px/不伸缩,此处 0,2,0 压过) */
@@ -660,14 +660,14 @@ function applyAssist() {
 /* 选择器与预设内容的分界:线以下均跟随当前这套工作流 */
 .wf-divider {
   border: 0;
-  border-top: 1px dashed var(--bbi-line);
+  border-top: 1px dashed var(--changye-line);
   margin: 4px 0;
 }
-/* 开关自带下留白,说明文字只需补一点上间距(base.css 的 .bbi-input + hint 规则不覆盖此组合) */
+/* 开关自带下留白,说明文字只需补一点上间距(base.css 的 .changye-input + hint 规则不覆盖此组合) */
 .wf-switch-hint {
   margin: 2px 0 6px;
 }
-/* 尺寸输入:比 .bbi-num 宽一点(要装「1024×1536」),但不右对齐——「宽×高」是文本不是数值 */
+/* 尺寸输入:比 .changye-num 宽一点(要装「1024×1536」),但不右对齐——「宽×高」是文本不是数值 */
 .wf-size {
   width: 130px;
   flex: 0 0 auto;
@@ -675,32 +675,32 @@ function applyAssist() {
 /* 危险操作按钮:平时与其它图标钮同样低调,hover 才显红(与 ConfirmDialog 同口径)。
    图标钮无描边,故 hover 只换底色与前景色,不碰 border。 */
 .wf-remove:not(:disabled) {
-  color: var(--bbi-danger);
+  color: var(--changye-danger);
 }
 .wf-remove:not(:disabled):hover {
-  color: var(--bbi-danger);
-  background: var(--bbi-danger-soft);
+  color: var(--changye-danger);
+  background: var(--changye-danger-soft);
 }
-/* AI 预览弹窗关闭钮:.bbi-icon-btn 只在 App.vue 里声明(scoped 不跨组件),此处补一份 */
-.bbi-icon-btn {
+/* AI 预览弹窗关闭钮:.changye-icon-btn 只在 App.vue 里声明(scoped 不跨组件),此处补一份 */
+.changye-icon-btn {
   width: 36px;
   height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface-2);
-  color: var(--bbi-ink-soft);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface-2);
+  color: var(--changye-ink-soft);
   cursor: pointer;
   font-size: 15px;
   transition:
-    color var(--bbi-dur) var(--bbi-ease),
-    background var(--bbi-dur) var(--bbi-ease);
+    color var(--changye-dur) var(--changye-ease),
+    background var(--changye-dur) var(--changye-ease);
 }
-.bbi-icon-btn:hover {
-  color: var(--bbi-ink);
-  background: var(--bbi-line-strong);
+.changye-icon-btn:hover {
+  color: var(--changye-ink);
+  background: var(--changye-line-strong);
 }
 .workflow-assist-modal {
   width: min(720px, calc(100vw - 32px));
@@ -715,26 +715,26 @@ function applyAssist() {
   align-items: center;
   gap: 10px;
   padding: 7px 9px;
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface-2);
-  color: var(--bbi-ink-soft);
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface-2);
+  color: var(--changye-ink-soft);
   font-size: 12px;
 }
 .workflow-change-role {
   flex: 0 0 118px;
-  color: var(--bbi-ink);
+  color: var(--changye-ink);
   font-weight: 600;
 }
 .workflow-change code {
   min-width: 0;
   overflow-wrap: anywhere;
-  color: var(--bbi-accent);
-  font-family: var(--bbi-font-mono);
+  color: var(--changye-accent);
+  font-family: var(--changye-font-mono);
 }
 .workflow-detection {
   margin: 9px 0 0;
-  color: var(--bbi-ink-soft);
+  color: var(--changye-ink-soft);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -745,10 +745,10 @@ function applyAssist() {
   gap: 12px;
   padding: 8px 0;
 }
-.api-row .bbi-field-label {
+.api-row .changye-field-label {
   flex: 0 0 auto;
 }
-.api-row .bbi-input {
+.api-row .changye-input {
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -768,7 +768,7 @@ function applyAssist() {
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: var(--bbi-accent);
+  color: var(--changye-accent);
 }
 @media (max-width: 640px) {
   /* 窄屏:四个图标钮 + 标签会把下拉挤成一条缝,标签独占首行,下拉与操作组同行分据两端 */
@@ -776,7 +776,7 @@ function applyAssist() {
     grid-template-columns: minmax(0, 1fr) auto;
     row-gap: 8px;
   }
-  .wf-row > .bbi-field-label:first-child {
+  .wf-row > .changye-field-label:first-child {
     grid-column: 1 / -1;
   }
   .wf-row > .wf-select {

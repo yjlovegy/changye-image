@@ -1,12 +1,13 @@
+import { readCompatibleField } from '@/legacyCompatibility';
 import type { STMessage } from '@/st/context';
 import { stripImageTags } from '@/st/imageTagRegex';
 import type { TargetSegment } from '@/autoTag/clean';
 import { ImageSourceValidationError, type ImageInsertion } from '@/autoTag/protocol';
-export const PROMPT_SOURCES_KEY = 'bbi_prompt_sources';
+export const PROMPT_SOURCES_KEY = 'changye_prompt_sources';
 export interface PromptSource { text: string; kind: 'selection' | 'floor' | 'excerpt' }
 interface SourceRecord extends PromptSource { rawTag: string; swipe: number }
 function entries(message: STMessage): SourceRecord[] {
-  const value = message.extra?.[PROMPT_SOURCES_KEY];
+  const value = readCompatibleField(message.extra, PROMPT_SOURCES_KEY);
   return Array.isArray(value) ? value.filter((v): v is SourceRecord => !!v && typeof v === 'object'
     && typeof v.text === 'string' && typeof v.rawTag === 'string' && Number.isInteger(v.swipe)
     && (v.kind === 'selection' || v.kind === 'floor' || v.kind === 'excerpt')) : [];

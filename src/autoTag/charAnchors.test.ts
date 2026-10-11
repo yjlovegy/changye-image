@@ -191,8 +191,8 @@ describe('parseConvertedTags', () => {
     expect(parseConvertedTags(raw)).toEqual({ 阿黛尔: { hair: 'silver' } });
   });
 
-  it('sanitizes values with newlines or bbi tags, rejects non-object shapes', () => {
-    const raw = '{"阿黛尔":{"hair":"long\\nblack"},"坏":{"eyes":"x<bbi_image>y"},"串":{"hair":"ok"}}';
+  it('sanitizes values with newlines or changye tags, rejects non-object shapes', () => {
+    const raw = '{"阿黛尔":{"hair":"long\\nblack"},"坏":{"eyes":"x<changye_image>y"},"串":{"hair":"ok"}}';
     expect(parseConvertedTags(raw)).toEqual({ 串: { hair: 'ok' }, 阿黛尔: { hair: 'long black' } });
     expect(parseConvertedTags('{"阿黛尔":"plain string"}')).toEqual({});
     expect(parseConvertedTags('no json')).toEqual({});

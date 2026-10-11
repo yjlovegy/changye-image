@@ -159,9 +159,9 @@ beforeEach(() => {
   settings.autoTag.retryCount = 0;
   const message: STMessage = {
     name: '用户', is_user: true, is_system: false,
-    mes: '她翻开书。\n<bbi_image>old image</bbi_image>',
-    swipes: ['她翻开书。\n<bbi_image>old image</bbi_image>'], swipe_id: 0,
-    extra: { bbiCharChanges: { v: 1, swipe: 0, ops: [] } },
+    mes: '她翻开书。\n<changye_image>old image</changye_image>',
+    swipes: ['她翻开书。\n<changye_image>old image</changye_image>'], swipe_id: 0,
+    extra: { changyeCharChanges: { v: 1, swipe: 0, ops: [] } },
   };
   state.context = { chat: [message], getCurrentChatId: () => 'chat-a', name1: '用户' } as STContext;
   setGlobalCharTagSource(() => []);
@@ -436,10 +436,10 @@ describe('manual selection image request', () => {
   });
   it('works with automatic switches off, inserts below the selection and migrates the original image history', async () => {
     const snapshot = snapshotAt('她翻开书。'.length);
-    const oldDelta = state.context!.chat[0].extra!.bbiCharChanges;
-    const oldHash = promptHash('<bbi_image>old image</bbi_image>');
-    state.context!.chat[0].extra!.bbiImage = { '0': { [oldHash]: [{
-      generationId: 'old', path: '/old.png', prompt: '<bbi_image>old image</bbi_image>',
+    const oldDelta = state.context!.chat[0].extra!.changyeCharChanges;
+    const oldHash = promptHash('<changye_image>old image</changye_image>');
+    state.context!.chat[0].extra!.changyeImage = { '0': { [oldHash]: [{
+      generationId: 'old', path: '/old.png', prompt: '<changye_image>old image</changye_image>',
       seed: 1, status: 'ready', createdAt: 1, slotSeq: 0,
     }] } };
     await requestSelectionImage(0, '她翻开书。', snapshot);
@@ -450,13 +450,13 @@ describe('manual selection image request', () => {
       expect.objectContaining({ promptText: '她翻开书。 ⟦P1⟧' }), null, false, undefined,
     );
     expect(parseImageTags(state.context!.chat[0].mes)).toEqual([
-      '<bbi_image>1girl, holding a book<nl>The girl holds an open book, her eyes lowered toward the page.</nl><size>portrait</size></bbi_image>',
-      '<bbi_image>old image</bbi_image>',
+      '<changye_image>1girl, holding a book<nl>The girl holds an open book, her eyes lowered toward the page.</nl><size>portrait</size></changye_image>',
+      '<changye_image>old image</changye_image>',
     ]);
     expect(consumeAutoGenerate('chat-a', 0, 0, 0)).toBe('force');
     expect(consumeAutoGenerate('chat-a', 0, 0, 1)).toBeNull();
     expect(consumeAutoGenerate('chat-a', 0, 0, 2)).toBeNull();
-    expect(state.context!.chat[0].extra!.bbiCharChanges).toBe(oldDelta);
+    expect(state.context!.chat[0].extra!.changyeCharChanges).toBe(oldDelta);
     expect(latestEntry(readStore(state.context!.chat[0]), 0, oldHash, 1)?.path).toBe('/old.png');
     expect(latestEntry(readStore(state.context!.chat[0]), 0, oldHash, 0)).toBeNull();
     expect(isGenerationFloorLocked('chat-a', 0)).toBe(false);
@@ -476,7 +476,7 @@ describe('manual selection image request', () => {
   });
 
   it('rejects an unclosed existing image tag before spending a model request', async () => {
-    state.context!.chat[0].mes = '她翻开书。\n<bbi_image>unfinished';
+    state.context!.chat[0].mes = '她翻开书。\n<changye_image>unfinished';
     await requestSelectionImage(0, '她翻开书。', snapshotAt());
     expect(requestViaMainApi).not.toHaveBeenCalled();
     expect(applyMessageText).not.toHaveBeenCalled();
@@ -484,7 +484,7 @@ describe('manual selection image request', () => {
   });
 
   it('rejects @ references for a character changed within this floor instead of applying a late profile', async () => {
-    state.context!.chat[0].extra!.bbiCharChanges = {
+    state.context!.chat[0].extra!.changyeCharChanges = {
       v: 1, swipe: 0,
       ops: [{ kind: 'set', name: '小雪', field: 'hair', value: 'red hair', reason: '后来染发', at: 1 }],
     };
@@ -602,17 +602,17 @@ function prepareCharacterCompletionCase() {
   ];
   const context = state.context!;
   Object.assign(context, {
-    chatMetadata: { baibai_image_char_tags: { version: 3, entries: [entry('画家'), entry('已变化角色')] } },
+    chatMetadata: { changye_image_char_tags: { version: 3, entries: [entry('画家'), entry('已变化角色')] } },
     saveChat: vi.fn(async () => undefined),
     eventSource: { emit: vi.fn(async () => undefined) },
     eventTypes: { MESSAGE_EDITED: 'edited', MESSAGE_UPDATED: 'updated' },
   });
   setGlobalCharTagSource(() => [entry('锁定角色')]);
-  const oldHash = promptHash('<bbi_image>old image</bbi_image>');
+  const oldHash = promptHash('<changye_image>old image</changye_image>');
   context.chat[0].extra = {
     untouched: 'keep',
-    bbiCharChanges: { v: 1, swipe: 0, ops: existingOps },
-    bbiImage: { '0': { [oldHash]: [{ generationId: 'old', path: '/old.png', prompt: '<bbi_image>old image</bbi_image>', seed: 1, status: 'ready', createdAt: 1, slotSeq: 0 }] } },
+    changyeCharChanges: { v: 1, swipe: 0, ops: existingOps },
+    changyeImage: { '0': { [oldHash]: [{ generationId: 'old', path: '/old.png', prompt: '<changye_image>old image</changye_image>', seed: 1, status: 'ready', createdAt: 1, slotSeq: 0 }] } },
   };
   hydrateCharTags();
   vi.stubGlobal('document', { querySelector: vi.fn(() => null) });
@@ -662,16 +662,16 @@ describe('selection character completion transaction', () => {
     const { context } = prepareCharacterCompletionCase();
     const delta = readCharTagFloorDelta(context.chat[0])!;
     const unknown = { kind: 'future-character-op', name: '画家', value: 'keep this opaque record' };
-    context.chat[0].extra!.bbiCharChanges = { ...delta, ops: [...delta.ops, unknown] };
+    context.chat[0].extra!.changyeCharChanges = { ...delta, ops: [...delta.ops, unknown] };
     const source = context.chat[0].mes;
     const extra = context.chat[0].extra;
-    const record = extra!.bbiCharChanges;
+    const record = extra!.changyeCharChanges;
     await requestSelectionImage(0, '她翻开书。', snapshotAt('她翻开书。'.length));
     expect(applyMessageText).not.toHaveBeenCalled();
     expect(context.saveChat).not.toHaveBeenCalled();
     expect(context.chat[0].mes).toBe(source);
     expect(context.chat[0].extra).toBe(extra);
-    expect(context.chat[0].extra!.bbiCharChanges).toBe(record);
+    expect(context.chat[0].extra!.changyeCharChanges).toBe(record);
     expect(consumeAutoGenerate('chat-a', 0, 0, 0)).toBeNull();
     expect(promptFailures[0]?.reason).toEqual('本楼角色记录格式无法安全合并，本次未保存');
   });
@@ -701,7 +701,7 @@ describe('selection character completion transaction', () => {
     const snapshot = snapshotAt('她翻开书。'.length);
     const delta = readCharTagFloorDelta(context.chat[0])!;
     const preexisting = createCharTagSetOp('画家', 'mouth', 'thin lips', '点击前已有补全', 3, true)!;
-    context.chat[0] = { ...context.chat[0], extra: { ...context.chat[0].extra, bbiCharChanges: { ...delta, ops: [...delta.ops, preexisting] } } };
+    context.chat[0] = { ...context.chat[0], extra: { ...context.chat[0].extra, changyeCharChanges: { ...delta, ops: [...delta.ops, preexisting] } } };
     const actual = await vi.importActual<typeof import('@/st/messageEdit')>('@/st/messageEdit');
     vi.mocked(applyMessageText).mockImplementation(actual.applyMessageText);
     await requestSelectionImage(0, '她翻开书。', snapshot);
@@ -716,7 +716,7 @@ describe('selection character completion transaction', () => {
     vi.mocked(requestViaMainApi).mockImplementation(async (...args) => {
       const result = await original(...args);
       const delta = readCharTagFloorDelta(context.chat[0])!;
-      context.chat[0].extra!.bbiCharChanges = { ...delta, ops: [...delta.ops, createCharTagSetOp('画家', 'mouth', 'thin lips', '并发补全', 3, true)!] };
+      context.chat[0].extra!.changyeCharChanges = { ...delta, ops: [...delta.ops, createCharTagSetOp('画家', 'mouth', 'thin lips', '并发补全', 3, true)!] };
       return result;
     });
     await requestSelectionImage(0, '她翻开书。', snapshotAt());

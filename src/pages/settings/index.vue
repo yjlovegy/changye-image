@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { DEFAULT_KREA2_SPEC, DEFAULT_KREA2_THINKING, type PromptMode } from '@/promptMode';
-import BbiSelect from '@/components/BbiSelect.vue';
-import BbiCombo from '@/components/BbiCombo.vue';
-import BbiTextarea from '@/components/BbiTextarea.vue';
+import ChangYeSelect from '@/components/ChangYeSelect.vue';
+import ChangYeCombo from '@/components/ChangYeCombo.vue';
+import ChangYeTextarea from '@/components/ChangYeTextarea.vue';
 import Collapsible from '@/components/Collapsible.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import Icon from '@/components/Icon.vue';
@@ -43,7 +43,7 @@ const NAV_OPTIONS: { value: NavPosition; label: string }[] = [
 /**
  * 思考强度候选:各家取值的并集,**不是**某一家的官方列表。
  * auto 是显式选项(值为空串 = 不发送该参数),不是「留空」——
- * 用 BbiSelect 而非可输入的 BbiCombo:移动端点输入框会弹出输入法,很打扰。
+ * 用 ChangYeSelect 而非可输入的 ChangYeCombo:移动端点输入框会弹出输入法,很打扰。
  * 取值不做校验,原样发给端点(见 ApiChannel.reasoningEffort)。
  */
 const REASONING_EFFORT_OPTIONS = [
@@ -56,7 +56,7 @@ const REASONING_EFFORT_OPTIONS = [
   { value: 'max', label: 'max' },
 ];
 
-/* —— 自绘下拉(BbiSelect)的 v-model 适配:组件按 string 收发,这里收窄回具体联合类型 —— */
+/* —— 自绘下拉(ChangYeSelect)的 v-model 适配:组件按 string 收发,这里收窄回具体联合类型 —— */
 const themeSel = computed<string>({
   get: () => ui.theme,
   set: v => (ui.theme = v as ThemeName),
@@ -162,7 +162,7 @@ const modePromptMetas = computed(() => TAG_PROMPT_METAS.filter(meta => (ruleMode
 // 正在编辑的提示词;draft 是草稿,点「完成」才写回 settings(取消则丢弃)。
 const editingTagPrompt = ref<TagPromptMeta | null>(null);
 const tagPromptDraft = ref('');
-const tagPromptArea = ref<InstanceType<typeof BbiTextarea> | null>(null);
+const tagPromptArea = ref<InstanceType<typeof ChangYeTextarea> | null>(null);
 
 // 该条是否已自定义(非空即视为已覆盖内置)
 function isTagPromptCustom(key: keyof AutoTagPrompts): boolean {
@@ -417,13 +417,13 @@ async function confirmUpdate() {
 </script>
 
 <template>
-  <section class="bbi-page">
+  <section class="changye-page">
     <!-- 标题行右端显示版本号;有更新时旁边出现更新按钮。 -->
-    <div class="bbi-page-head">
-      <h2 class="bbi-title bbi-title-sub">设置</h2>
-      <div class="bbi-ver-row">
+    <div class="changye-page-head">
+      <h2 class="changye-title changye-title-sub">设置</h2>
+      <div class="changye-ver-row">
         <button
-          class="bbi-ver"
+          class="changye-ver"
           type="button"
           :disabled="updateState.checking"
           :title="updateState.checking ? '正在检查更新' : '点击检查更新'"
@@ -433,7 +433,7 @@ async function confirmUpdate() {
         </button>
         <button
           v-if="updateState.available"
-          class="bbi-btn bbi-btn-primary bbi-btn-sm"
+          class="changye-btn changye-btn-primary changye-btn-sm"
           type="button"
           :disabled="updateState.updating"
           :title="`更新到 v${updateState.latest}`"
@@ -443,138 +443,138 @@ async function confirmUpdate() {
         </button>
       </div>
     </div>
-    <hr class="bbi-rule" />
+    <hr class="changye-rule" />
 
     <!-- 总开关:整个插件的主控。全页唯一的大号滑动开关,与下方各项的小复选框拉开层级。 -->
-    <div class="bbi-master" :class="{ 'is-off': !settings.enabled }">
-      <span class="bbi-master-spine" aria-hidden="true"></span>
-      <span class="bbi-master-title">长夜的绘图器</span>
+    <div class="changye-master" :class="{ 'is-off': !settings.enabled }">
+      <span class="changye-master-spine" aria-hidden="true"></span>
+      <span class="changye-master-title">长夜的绘图器</span>
       <button
         type="button"
         role="switch"
-        class="bbi-toggle"
+        class="changye-toggle"
         :class="{ 'is-on': settings.enabled }"
         :aria-checked="settings.enabled"
         :title="settings.enabled ? '点击停用' : '点击启用'"
         @click="settings.enabled = !settings.enabled"
       >
-        <span class="bbi-toggle-knob"></span>
+        <span class="changye-toggle-knob"></span>
       </button>
     </div>
 
-    <div class="bbi-sections">
+    <div class="changye-sections">
       <!-- 基本设置:主题 / 导航 / 入口 / 悬浮球等界面项,置于首位 -->
       <Collapsible title="基本设置" :open="false">
-        <div class="bbi-select-row">
-          <span class="bbi-field-label">主题</span>
-          <BbiSelect v-model="themeSel" :options="THEMES" aria-label="主题" />
+        <div class="changye-select-row">
+          <span class="changye-field-label">主题</span>
+          <ChangYeSelect v-model="themeSel" :options="THEMES" aria-label="主题" />
         </div>
 
-        <div class="bbi-select-row">
-          <span class="bbi-field-label">导航位置</span>
-          <BbiSelect v-model="navSel" :options="NAV_OPTIONS" aria-label="导航位置" />
+        <div class="changye-select-row">
+          <span class="changye-field-label">导航位置</span>
+          <ChangYeSelect v-model="navSel" :options="NAV_OPTIONS" aria-label="导航位置" />
         </div>
 
 
-        <label class="bbi-switch-row">
-          <span class="bbi-field-label">新图保存为 JPG</span>
-          <input v-model="settings.storage.saveAsJpeg" type="checkbox" class="bbi-checkbox" />
+        <label class="changye-switch-row">
+          <span class="changye-field-label">新图保存为 JPG</span>
+          <input v-model="settings.storage.saveAsJpeg" type="checkbox" class="changye-checkbox" />
         </label>
-        <p class="bbi-field-hint">
+        <p class="changye-field-hint">
           体积约为 PNG 的一到两成；代价是图片不再内嵌生成参数（提示词与种子仍留在聊天记录里）。
         </p>
 
-        <label class="bbi-switch-row">
-          <span class="bbi-field-label">楼层图片默认折叠</span>
-          <input v-model="settings.ui.autoCollapseImages" type="checkbox" class="bbi-checkbox" />
+        <label class="changye-switch-row">
+          <span class="changye-field-label">楼层图片默认折叠</span>
+          <input v-model="settings.ui.autoCollapseImages" type="checkbox" class="changye-checkbox" />
         </label>
-        <p class="bbi-field-hint">
+        <p class="changye-field-hint">
           开启后图片默认收成一条细条，点击才展开，适合在外面玩时防窥。在卡片上手动展开/折叠过的以手动状态为准（刷新页面后重置）。
         </p>
 
-        <label class="bbi-switch-row">
-          <span class="bbi-field-label">移动端点当前页导航关窗</span>
-          <input v-model="ui.navTapClose" type="checkbox" class="bbi-checkbox" />
+        <label class="changye-switch-row">
+          <span class="changye-field-label">移动端点当前页导航关窗</span>
+          <input v-model="ui.navTapClose" type="checkbox" class="changye-checkbox" />
         </label>
-        <p class="bbi-field-hint">移动端再点一下当前所在页的导航按钮即可关闭整个窗口，省得去够右上角的 ×。怕误触可关。</p>
+        <p class="changye-field-hint">移动端再点一下当前所在页的导航按钮即可关闭整个窗口，省得去够右上角的 ×。怕误触可关。</p>
 
-        <label class="bbi-switch-row">
-          <span class="bbi-field-label">在 ST 顶栏显示按钮</span>
-          <input v-model="ui.showTopBar" type="checkbox" class="bbi-checkbox" />
+        <label class="changye-switch-row">
+          <span class="changye-field-label">在 ST 顶栏显示按钮</span>
+          <input v-model="ui.showTopBar" type="checkbox" class="changye-checkbox" />
         </label>
-        <p class="bbi-field-hint">在酒馆顶部导航栏加一个快速打开按钮。左下角魔杖入口照旧保留。</p>
+        <p class="changye-field-hint">在酒馆顶部导航栏加一个快速打开按钮。左下角魔杖入口照旧保留。</p>
 
-        <label class="bbi-switch-row">
-          <span class="bbi-field-label">显示屏幕悬浮球</span>
-          <input v-model="ui.showOrb" type="checkbox" class="bbi-checkbox" />
+        <label class="changye-switch-row">
+          <span class="changye-field-label">显示屏幕悬浮球</span>
+          <input v-model="ui.showOrb" type="checkbox" class="changye-checkbox" />
         </label>
-        <p class="bbi-field-hint">在屏幕边缘挂一枚可拖动的悬浮球，点击即可打开。拖到中间可常驻悬浮，拖近左右边缘则吸附贴边。</p>
+        <p class="changye-field-hint">在屏幕边缘挂一枚可拖动的悬浮球，点击即可打开。拖到中间可常驻悬浮，拖近左右边缘则吸附贴边。</p>
 
         <!-- 悬浮球外观:配置项多,开启后才收进小分组 -->
         <Collapsible v-if="ui.showOrb" title="悬浮球外观" :open="false">
-          <div class="bbi-select-row">
-            <span class="bbi-field-label">形状</span>
-            <BbiSelect v-model="orbShapeSel" :options="ORB_SHAPES" aria-label="悬浮球形状" />
+          <div class="changye-select-row">
+            <span class="changye-field-label">形状</span>
+            <ChangYeSelect v-model="orbShapeSel" :options="ORB_SHAPES" aria-label="悬浮球形状" />
           </div>
 
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">大小</span>
-              <span class="bbi-field-value">{{ ui.orbSize }}px</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">大小</span>
+              <span class="changye-field-value">{{ ui.orbSize }}px</span>
             </div>
-            <input class="bbi-range" type="range" min="32" max="80" step="1" v-model.number="ui.orbSize" />
+            <input class="changye-range" type="range" min="32" max="80" step="1" v-model.number="ui.orbSize" />
           </div>
 
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">静止透明度</span>
-              <span class="bbi-field-value">{{ ui.orbOpacity }}%</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">静止透明度</span>
+              <span class="changye-field-value">{{ ui.orbOpacity }}%</span>
             </div>
-            <input class="bbi-range" type="range" min="20" max="100" step="1" v-model.number="ui.orbOpacity" />
-            <p class="bbi-field-hint">悬浮球静止时的不透明度；唤起 / 拖动时一律全显。</p>
+            <input class="changye-range" type="range" min="20" max="100" step="1" v-model.number="ui.orbOpacity" />
+            <p class="changye-field-hint">悬浮球静止时的不透明度；唤起 / 拖动时一律全显。</p>
           </div>
 
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">自定义图标</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">自定义图标</span>
             </div>
-            <input class="bbi-input" type="text" v-model="ui.orbImage" placeholder="ST 服务器图片路径" spellcheck="false" />
-            <p class="bbi-field-hint">留空用默认画笔图标。</p>
+            <input class="changye-input" type="text" v-model="ui.orbImage" placeholder="ST 服务器图片路径" spellcheck="false" />
+            <p class="changye-field-hint">留空用默认画笔图标。</p>
           </div>
         </Collapsible>
       </Collapsible>
 
       <Collapsible title="自动生成 TAG" :open="false">
-        <label class="bbi-switch-row">
-          <span class="bbi-field-label">自动生成 TAG</span>
-          <input v-model="settings.autoTag.enabled" type="checkbox" class="bbi-checkbox" />
+        <label class="changye-switch-row">
+          <span class="changye-field-label">自动生成 TAG</span>
+          <input v-model="settings.autoTag.enabled" type="checkbox" class="changye-checkbox" />
         </label>
-        <p class="bbi-field-hint">AI 正文生成后自动判断该楼是否需要插图，需要就写入生图 TAG。</p>
+        <p class="changye-field-hint">AI 正文生成后自动判断该楼是否需要插图，需要就写入生图 TAG。</p>
 
-        <label class="bbi-switch-row">
-          <span class="bbi-field-label">自动生成图片</span>
-          <input v-model="settings.autoTag.autoGenerate" type="checkbox" class="bbi-checkbox" />
+        <label class="changye-switch-row">
+          <span class="changye-field-label">自动生成图片</span>
+          <input v-model="settings.autoTag.autoGenerate" type="checkbox" class="changye-checkbox" />
         </label>
-        <p class="bbi-field-hint">写入 TAG 后立即按当前出图渠道自动出图；关闭则只写 TAG，在卡片上手动生成。</p>
+        <p class="changye-field-hint">写入 TAG 后立即按当前出图渠道自动出图；关闭则只写 TAG，在卡片上手动生成。</p>
 
-        <label class="bbi-num-row">
-          <span class="bbi-field-label">携带最近 AI 楼数</span>
+        <label class="changye-num-row">
+          <span class="changye-field-label">携带最近 AI 楼数</span>
           <input
             v-model.number="settings.autoTag.contextMessages"
-            class="bbi-input bbi-num"
+            class="changye-input changye-num"
             type="number"
             min="1"
             step="1"
             @change="normalizeAutoTagNumbers"
           />
         </label>
-        <p class="bbi-field-hint">按 AI 故事楼计数，中间的 user 楼一并携带。</p>
+        <p class="changye-field-hint">按 AI 故事楼计数，中间的 user 楼一并携带。</p>
 
-        <label class="bbi-num-row">
-          <span class="bbi-field-label">单楼最少图片数</span>
+        <label class="changye-num-row">
+          <span class="changye-field-label">单楼最少图片数</span>
           <input
             v-model.number="settings.autoTag.minImages"
-            class="bbi-input bbi-num"
+            class="changye-input changye-num"
             type="number"
             min="0"
             :max="settings.autoTag.maxImages"
@@ -583,24 +583,24 @@ async function confirmUpdate() {
           />
         </label>
 
-        <label class="bbi-num-row">
-          <span class="bbi-field-label">单楼最多图片数</span>
+        <label class="changye-num-row">
+          <span class="changye-field-label">单楼最多图片数</span>
           <input
             v-model.number="settings.autoTag.maxImages"
-            class="bbi-input bbi-num"
+            class="changye-input changye-num"
             type="number"
             :min="Math.max(1, settings.autoTag.minImages)"
             step="1"
             @change="normalizeAutoTagNumbers('maxImages')"
           />
         </label>
-        <p class="bbi-field-hint">最少设为 0 时允许不出图；最多数量始终受插件硬限制。</p>
+        <p class="changye-field-hint">最少设为 0 时允许不出图；最多数量始终受插件硬限制。</p>
 
-        <label class="bbi-num-row">
-          <span class="bbi-field-label">失败自动重试次数</span>
+        <label class="changye-num-row">
+          <span class="changye-field-label">失败自动重试次数</span>
           <input
             v-model.number="settings.autoTag.retryCount"
-            class="bbi-input bbi-num"
+            class="changye-input changye-num"
             type="number"
             min="0"
             max="5"
@@ -608,122 +608,122 @@ async function confirmUpdate() {
             @change="normalizeAutoTagNumbers"
           />
         </label>
-        <p class="bbi-field-hint">副 API 请求失败或返回无法解析时自动重试；0 = 不重试，最多 5 次。</p>
+        <p class="changye-field-hint">副 API 请求失败或返回无法解析时自动重试；0 = 不重试，最多 5 次。</p>
       </Collapsible>
 
       <!-- 排除世界书内容:与角色记忆插件同名单共享 -->
       <Collapsible title="排除世界书内容" :open="false">
-        <p class="bbi-field-hint">
+        <p class="changye-field-hint">
           排除生成 TAG 时不需要参考的世界书内容。整本名单与正则规则沿用共享设置。
         </p>
 
         <!-- 整本排除:复刻排除角色的搜索+勾选弹窗 -->
-        <div class="bbi-channel-bar">
-          <span class="bbi-field-label">整本排除 · 已选 {{ settings.excludes.excludedWorldNames.length }} 本</span>
-          <button class="bbi-btn bbi-btn-primary bbi-btn-sm" type="button" @click="openExcludeWorld">
+        <div class="changye-channel-bar">
+          <span class="changye-field-label">整本排除 · 已选 {{ settings.excludes.excludedWorldNames.length }} 本</span>
+          <button class="changye-btn changye-btn-primary changye-btn-sm" type="button" @click="openExcludeWorld">
             <Icon name="edit" /> 编辑名单
           </button>
         </div>
-        <ul v-if="settings.excludes.excludedWorldNames.length" class="bbi-exclude-chips">
-          <li v-for="name in settings.excludes.excludedWorldNames" :key="name" class="bbi-exclude-chip">
-            <span class="bbi-exclude-chip-name">{{ name }}</span>
-            <button class="bbi-exclude-chip-x" type="button" title="移出名单" @click="toggleWorldExcluded(name)">
+        <ul v-if="settings.excludes.excludedWorldNames.length" class="changye-exclude-chips">
+          <li v-for="name in settings.excludes.excludedWorldNames" :key="name" class="changye-exclude-chip">
+            <span class="changye-exclude-chip-name">{{ name }}</span>
+            <button class="changye-exclude-chip-x" type="button" title="移出名单" @click="toggleWorldExcluded(name)">
               <Icon name="close" />
             </button>
           </li>
         </ul>
-        <p v-else class="bbi-field-hint">未整本排除世界书，仍按下方条目规则过滤。</p>
+        <p v-else class="changye-field-hint">未整本排除世界书，仍按下方条目规则过滤。</p>
 
-        <hr class="bbi-rule" />
+        <hr class="changye-rule" />
 
         <!-- 按条目名称排除:复刻清洗标签的输入框 + chips -->
-        <div class="bbi-field-head">
-          <span class="bbi-field-label">按条目名称排除</span>
+        <div class="changye-field-head">
+          <span class="changye-field-label">按条目名称排除</span>
         </div>
-        <label class="bbi-field-label"><input v-model="mvuExcluded" type="checkbox" /> 排除 MVU 条目</label>
-        <p class="bbi-field-hint">按条目名称中的 [MVU…] 标记匹配。</p>
-        <select v-model="wiRuleMode" class="bbi-input" aria-label="条目匹配方式">
+        <label class="changye-field-label"><input v-model="mvuExcluded" type="checkbox" /> 排除 MVU 条目</label>
+        <p class="changye-field-hint">按条目名称中的 [MVU…] 标记匹配。</p>
+        <select v-model="wiRuleMode" class="changye-input" aria-label="条目匹配方式">
           <option value="keyword">关键词</option><option value="regex">正则表达式</option>
         </select>
-        <div class="bbi-striptag-bar">
+        <div class="changye-striptag-bar">
           <input
             v-model="wiPatternDraft"
-            class="bbi-input"
+            class="changye-input"
             type="text"
             :placeholder="wiRuleMode === 'keyword' ? '条目名称关键词' : '正则表达式，例如 ^规则'"
             @keydown.enter.prevent="addWiPattern"
           />
-          <button class="bbi-btn bbi-btn-primary bbi-btn-sm" type="button" @click="addWiPattern">
+          <button class="changye-btn changye-btn-primary changye-btn-sm" type="button" @click="addWiPattern">
             <Icon name="plus" /> 添加
           </button>
         </div>
-        <p v-if="wiRuleError" role="alert" class="bbi-field-hint">{{ wiRuleError }}</p>
-        <ul v-if="visibleWiPatterns.length || settings.worldInfoKeywords.length" class="bbi-exclude-chips">
-          <li v-for="word in settings.worldInfoKeywords" :key="'keyword:' + word" class="bbi-exclude-chip">
-            <span class="bbi-exclude-chip-name">关键词：{{ word }}</span>
-            <button class="bbi-exclude-chip-x" type="button" title="移除关键词" @click="removeWiKeyword(word)"><Icon name="close" /></button>
+        <p v-if="wiRuleError" role="alert" class="changye-field-hint">{{ wiRuleError }}</p>
+        <ul v-if="visibleWiPatterns.length || settings.worldInfoKeywords.length" class="changye-exclude-chips">
+          <li v-for="word in settings.worldInfoKeywords" :key="'keyword:' + word" class="changye-exclude-chip">
+            <span class="changye-exclude-chip-name">关键词：{{ word }}</span>
+            <button class="changye-exclude-chip-x" type="button" title="移除关键词" @click="removeWiKeyword(word)"><Icon name="close" /></button>
           </li>
-          <li v-for="pat in visibleWiPatterns" :key="pat" class="bbi-exclude-chip">
-            <span class="bbi-exclude-chip-name">正则：{{ pat }}</span>
-            <button class="bbi-exclude-chip-x" type="button" title="移除" @click="removeWiPattern(pat)">
+          <li v-for="pat in visibleWiPatterns" :key="pat" class="changye-exclude-chip">
+            <span class="changye-exclude-chip-name">正则：{{ pat }}</span>
+            <button class="changye-exclude-chip-x" type="button" title="移除" @click="removeWiPattern(pat)">
               <Icon name="close" />
             </button>
           </li>
         </ul>
-        <p v-else class="bbi-field-hint">暂无条目名规则。</p>
+        <p v-else class="changye-field-hint">暂无条目名规则。</p>
       </Collapsible>
 
       <!-- 全局正文标签范围独立保存，不与旧删除名单互换 -->
       <Collapsible title="自定义标签范围" :open="false">
-        <p class="bbi-field-hint">
+        <p class="changye-field-hint">
           添加标签名，例如 <code>game</code>。仅从匹配标签内部选取正文，所有角色卡通用。
         </p>
-        <div class="bbi-striptag-bar">
+        <div class="changye-striptag-bar">
           <input
             v-model="stripTagDraft"
-            class="bbi-input"
+            class="changye-input"
             type="text"
             placeholder="标签名，例如 game"
             @keydown.enter.prevent="addStripTag"
           />
-          <button class="bbi-btn bbi-btn-primary bbi-btn-sm" type="button" @click="addStripTag">
+          <button class="changye-btn changye-btn-primary changye-btn-sm" type="button" @click="addStripTag">
             <Icon name="plus" /> 添加
           </button>
         </div>
-        <ul v-if="settings.storyTags.length" class="bbi-exclude-chips">
-          <li v-for="tag in settings.storyTags" :key="tag" class="bbi-exclude-chip">
-            <span class="bbi-exclude-chip-name">&lt;{{ tag }}&gt;</span>
-            <button class="bbi-exclude-chip-x" type="button" title="移除" @click="removeStripTag(tag)">
+        <ul v-if="settings.storyTags.length" class="changye-exclude-chips">
+          <li v-for="tag in settings.storyTags" :key="tag" class="changye-exclude-chip">
+            <span class="changye-exclude-chip-name">&lt;{{ tag }}&gt;</span>
+            <button class="changye-exclude-chip-x" type="button" title="移除" @click="removeStripTag(tag)">
               <Icon name="close" />
             </button>
           </li>
         </ul>
-        <p v-else class="bbi-field-hint">未设置标签范围，使用普通正文识别。</p>
+        <p v-else class="changye-field-hint">未设置标签范围，使用普通正文识别。</p>
       </Collapsible>
 
       <!-- 自定义提示词(与角色记忆插件同款入口,独立成区) -->
       <Collapsible title="自定义提示词" :open="false">
-        <ul class="bbi-prompt-list">
-          <li v-for="m in commonPromptMetas" :key="m.key" class="bbi-prompt-item">
-            <button class="bbi-prompt-open" type="button" @click="openTagPrompt(m)">
-              <span class="bbi-prompt-name">{{ m.label }}</span>
-              <span class="bbi-prompt-state" :class="{ 'is-custom': isTagPromptCustom(m.key) }">
+        <ul class="changye-prompt-list">
+          <li v-for="m in commonPromptMetas" :key="m.key" class="changye-prompt-item">
+            <button class="changye-prompt-open" type="button" @click="openTagPrompt(m)">
+              <span class="changye-prompt-name">{{ m.label }}</span>
+              <span class="changye-prompt-state" :class="{ 'is-custom': isTagPromptCustom(m.key) }">
                 {{ isTagPromptCustom(m.key) ? '已自定义' : '默认' }}
               </span>
-              <Icon name="edit" class="bbi-prompt-edit" />
+              <Icon name="edit" class="changye-prompt-edit" />
             </button>
           </li>
         </ul>
-        <div class="bbi-segmented bbi-rule-mode" role="tablist" aria-label="提示词规则模式">
-          <button v-for="mode in (['anima', 'krea2'] as const)" :key="mode" type="button" role="tab" class="bbi-seg" :class="{ 'is-on': ruleMode === mode }" :aria-selected="ruleMode === mode" @click="ruleMode = mode">{{ mode === 'anima' ? 'Anima' : 'Krea2' }}</button>
+        <div class="changye-segmented changye-rule-mode" role="tablist" aria-label="提示词规则模式">
+          <button v-for="mode in (['anima', 'krea2'] as const)" :key="mode" type="button" role="tab" class="changye-seg" :class="{ 'is-on': ruleMode === mode }" :aria-selected="ruleMode === mode" @click="ruleMode = mode">{{ mode === 'anima' ? 'Anima' : 'Krea2' }}</button>
         </div>
-        <p class="bbi-field-hint">两套规则分别保存；工作流的提示词模式决定使用哪一套。</p>
-        <ul class="bbi-prompt-list">
-          <li v-for="m in modePromptMetas" :key="m.key" class="bbi-prompt-item">
-            <button class="bbi-prompt-open" type="button" @click="openTagPrompt(m)">
-              <span class="bbi-prompt-name">{{ m.label }}</span>
-              <span class="bbi-prompt-state" :class="{ 'is-custom': isTagPromptCustom(m.key) }">{{ isTagPromptCustom(m.key) ? '已自定义' : '默认' }}</span>
-              <Icon name="edit" class="bbi-prompt-edit" />
+        <p class="changye-field-hint">两套规则分别保存；工作流的提示词模式决定使用哪一套。</p>
+        <ul class="changye-prompt-list">
+          <li v-for="m in modePromptMetas" :key="m.key" class="changye-prompt-item">
+            <button class="changye-prompt-open" type="button" @click="openTagPrompt(m)">
+              <span class="changye-prompt-name">{{ m.label }}</span>
+              <span class="changye-prompt-state" :class="{ 'is-custom': isTagPromptCustom(m.key) }">{{ isTagPromptCustom(m.key) ? '已自定义' : '默认' }}</span>
+              <Icon name="edit" class="changye-prompt-edit" />
             </button>
           </li>
         </ul>
@@ -732,101 +732,101 @@ async function confirmUpdate() {
       <!-- 副 API:生成画图 tag 用的模型渠道(与角色记忆插件共享渠道列表) -->
       <Collapsible title="副 API" :open="false">
         <!-- 任务指派:只有一个任务——生成 tag -->
-        <div class="bbi-field bbi-assign">
-          <div class="bbi-assign-row">
-            <span class="bbi-field-label">生成 TAG 使用</span>
-            <BbiSelect v-model="settings.assignments.tagGen" style="width:100%" aria-label="生成 TAG 使用" :options="[{ value: '', label: '跟随主 API' }, ...settings.channels.map(c => ({ value: c.id, label: c.name }))]" />
+        <div class="changye-field changye-assign">
+          <div class="changye-assign-row">
+            <span class="changye-field-label">生成 TAG 使用</span>
+            <ChangYeSelect v-model="settings.assignments.tagGen" style="width:100%" aria-label="生成 TAG 使用" :options="[{ value: '', label: '跟随主 API' }, ...settings.channels.map(c => ({ value: c.id, label: c.name }))]" />
           </div>
         </div>
-        <p class="bbi-field-hint">不指派渠道时跟随主API，想用不同模型再在下方建副渠道指派。</p>
+        <p class="changye-field-hint">不指派渠道时跟随主API，想用不同模型再在下方建副渠道指派。</p>
 
-        <hr class="bbi-rule" />
+        <hr class="changye-rule" />
 
         <!-- 渠道:顶部添加按钮 + 紧凑只读列表(点行进弹窗编辑),不再一长列表平铺 -->
-        <div class="bbi-channel-bar">
-          <span class="bbi-field-label">渠道</span>
-          <button class="bbi-btn bbi-btn-primary bbi-btn-sm" type="button" @click="addChannel()">
+        <div class="changye-channel-bar">
+          <span class="changye-field-label">渠道</span>
+          <button class="changye-btn changye-btn-primary changye-btn-sm" type="button" @click="addChannel()">
             <Icon name="plus" /> 添加渠道
           </button>
         </div>
 
-        <ul v-if="settings.channels.length" class="bbi-channel-list">
-          <li v-for="ch in settings.channels" :key="ch.id" class="bbi-channel-item">
-            <button class="bbi-channel-open" type="button" @click="openChannel(ch.id)">
-              <span class="bbi-channel-item-name">{{ ch.name || '未命名渠道' }}</span>
-              <span class="bbi-channel-item-model">{{ ch.model || '未设模型' }}</span>
+        <ul v-if="settings.channels.length" class="changye-channel-list">
+          <li v-for="ch in settings.channels" :key="ch.id" class="changye-channel-item">
+            <button class="changye-channel-open" type="button" @click="openChannel(ch.id)">
+              <span class="changye-channel-item-name">{{ ch.name || '未命名渠道' }}</span>
+              <span class="changye-channel-item-model">{{ ch.model || '未设模型' }}</span>
             </button>
           </li>
         </ul>
-        <p v-else class="bbi-field-hint">还没有渠道。点「添加渠道」配置生成 TAG 要用的 API。</p>
+        <p v-else class="changye-field-hint">还没有渠道。点「添加渠道」配置生成 TAG 要用的 API。</p>
       </Collapsible>
     </div>
 
     <!-- ===== 排除世界书弹窗:搜索 + 勾选列表(复刻排除角色) ===== -->
     <ModalMask :open="excludeWorldOpen" @close="closeExcludeWorld">
-      <div class="bbi-modal" role="dialog" aria-modal="true" aria-label="编辑排除世界书名单">
-        <header class="bbi-modal-head">
-          <span class="bbi-modal-title">整本排除世界书</span>
-          <button class="bbi-icon-mini" type="button" title="关闭" @click="closeExcludeWorld"><Icon name="close" /></button>
+      <div class="changye-modal" role="dialog" aria-modal="true" aria-label="编辑排除世界书名单">
+        <header class="changye-modal-head">
+          <span class="changye-modal-title">整本排除世界书</span>
+          <button class="changye-icon-mini" type="button" title="关闭" @click="closeExcludeWorld"><Icon name="close" /></button>
         </header>
 
         <input
           v-model="excludeWorldSearch"
-          class="bbi-input"
+          class="changye-input"
           type="search"
           placeholder="搜索世界书名…"
           spellcheck="false"
         />
 
-        <div class="bbi-exclude-list">
-          <label v-for="name in filteredWorldNames" :key="name" class="bbi-exclude-row">
+        <div class="changye-exclude-list">
+          <label v-for="name in filteredWorldNames" :key="name" class="changye-exclude-row">
             <input
               type="checkbox"
-              class="bbi-checkbox"
+              class="changye-checkbox"
               :checked="isWorldExcluded(name)"
               @change="toggleWorldExcluded(name)"
             />
-            <span class="bbi-exclude-row-name">{{ name }}</span>
+            <span class="changye-exclude-row-name">{{ name }}</span>
           </label>
-          <p v-if="!worldNames.length" class="bbi-field-hint">未读取到世界书。请先在 ST 里加载 / 挂载世界书。</p>
-          <p v-else-if="!filteredWorldNames.length" class="bbi-field-hint">没有匹配「{{ excludeWorldSearch }}」的世界书。</p>
+          <p v-if="!worldNames.length" class="changye-field-hint">未读取到世界书。请先在 ST 里加载 / 挂载世界书。</p>
+          <p v-else-if="!filteredWorldNames.length" class="changye-field-hint">没有匹配「{{ excludeWorldSearch }}」的世界书。</p>
         </div>
 
-        <footer class="bbi-modal-foot">
-          <span class="bbi-exclude-count">共 {{ worldNames.length }} 本 · 已排除 {{ settings.excludes.excludedWorldNames.length }}</span>
-          <span class="bbi-modal-foot-spacer"></span>
-          <button class="bbi-btn bbi-btn-primary" type="button" @click="closeExcludeWorld">完成</button>
+        <footer class="changye-modal-foot">
+          <span class="changye-exclude-count">共 {{ worldNames.length }} 本 · 已排除 {{ settings.excludes.excludedWorldNames.length }}</span>
+          <span class="changye-modal-foot-spacer"></span>
+          <button class="changye-btn changye-btn-primary" type="button" @click="closeExcludeWorld">完成</button>
         </footer>
       </div>
     </ModalMask>
 
     <!-- ===== 渠道编辑弹窗 ===== -->
     <ModalMask :open="!!editingChannel" @close="closeChannel">
-      <div v-if="editingChannel" class="bbi-modal" role="dialog" aria-modal="true" aria-label="编辑渠道">
-        <header class="bbi-modal-head">
-          <span class="bbi-modal-title">编辑渠道</span>
-          <button class="bbi-icon-mini" type="button" title="关闭" @click="closeChannel"><Icon name="close" /></button>
+      <div v-if="editingChannel" class="changye-modal" role="dialog" aria-modal="true" aria-label="编辑渠道">
+        <header class="changye-modal-head">
+          <span class="changye-modal-title">编辑渠道</span>
+          <button class="changye-icon-mini" type="button" title="关闭" @click="closeChannel"><Icon name="close" /></button>
         </header>
 
-        <label class="bbi-modal-field">
-          <span class="bbi-modal-label">渠道名</span>
-          <input v-model="editingChannel.name" class="bbi-input" placeholder="渠道名" />
+        <label class="changye-modal-field">
+          <span class="changye-modal-label">渠道名</span>
+          <input v-model="editingChannel.name" class="changye-input" placeholder="渠道名" />
         </label>
-        <label class="bbi-modal-field">
-          <span class="bbi-modal-label">API 地址</span>
-          <input v-model="editingChannel.url" class="bbi-input" placeholder="如 https://api.openai.com/v1" />
+        <label class="changye-modal-field">
+          <span class="changye-modal-label">API 地址</span>
+          <input v-model="editingChannel.url" class="changye-input" placeholder="如 https://api.openai.com/v1" />
         </label>
-        <label class="bbi-modal-field">
-          <span class="bbi-modal-label">API 密钥</span>
-          <div class="bbi-model-row">
+        <label class="changye-modal-field">
+          <span class="changye-modal-label">API 密钥</span>
+          <div class="changye-model-row">
             <input
               v-model="editingChannel.key"
-              class="bbi-input"
+              class="changye-input"
               :type="showKey ? 'text' : 'password'"
               placeholder="API 密钥"
             />
             <button
-              class="bbi-icon-mini"
+              class="changye-icon-mini"
               type="button"
               :title="showKey ? '隐藏密钥' : '显示密钥'"
               :aria-pressed="showKey"
@@ -836,12 +836,12 @@ async function confirmUpdate() {
             </button>
           </div>
         </label>
-        <label class="bbi-modal-field">
-          <span class="bbi-modal-label">模型</span>
-          <div class="bbi-model-row">
-            <BbiCombo v-model="editingChannel.model" :options="modelList" aria-label="副 API 模型" :placeholder="modelList.length ? '搜索或输入模型名…' : '模型名,如 gpt-4o-mini'" />
+        <label class="changye-modal-field">
+          <span class="changye-modal-label">模型</span>
+          <div class="changye-model-row">
+            <ChangYeCombo v-model="editingChannel.model" :options="modelList" aria-label="副 API 模型" :placeholder="modelList.length ? '搜索或输入模型名…' : '模型名,如 gpt-4o-mini'" />
             <button
-              class="bbi-icon-mini"
+              class="changye-icon-mini"
               type="button"
               :title="loadingModels[editingChannel.id] ? '拉取中…' : '拉取模型'"
               :disabled="loadingModels[editingChannel.id]"
@@ -851,63 +851,63 @@ async function confirmUpdate() {
             </button>
           </div>
         </label>
-        <div class="bbi-channel-row">
-          <label class="bbi-mini-field">
+        <div class="changye-channel-row">
+          <label class="changye-mini-field">
             <span>温度</span>
-            <input v-model.number="editingChannel.temperature" class="bbi-input" type="number" step="0.1" min="0" max="2" />
+            <input v-model.number="editingChannel.temperature" class="changye-input" type="number" step="0.1" min="0" max="2" />
           </label>
-          <label class="bbi-mini-field">
+          <label class="changye-mini-field">
             <span>最大 token</span>
-            <input v-model.number="editingChannel.maxTokens" class="bbi-input" type="number" step="256" min="256" />
+            <input v-model.number="editingChannel.maxTokens" class="changye-input" type="number" step="256" min="256" />
           </label>
-          <label class="bbi-mini-field">
+          <label class="changye-mini-field">
             <span>超时（秒）</span>
-            <input v-model.number="editingChannel.timeoutSec" class="bbi-input" type="number" step="10" min="1" />
+            <input v-model.number="editingChannel.timeoutSec" class="changye-input" type="number" step="10" min="1" />
           </label>
-          <!-- 思考强度用 BbiSelect(纯选择,不唤起输入法);它自带 180px 固定宽,
-               这里要跟其余三个等分,故在 .bbi-mini-field 内用 :deep 放开宽度 -->
-          <div class="bbi-mini-field">
+          <!-- 思考强度用 ChangYeSelect(纯选择,不唤起输入法);它自带 180px 固定宽,
+               这里要跟其余三个等分,故在 .changye-mini-field 内用 :deep 放开宽度 -->
+          <div class="changye-mini-field">
             <span>思考强度</span>
-            <BbiSelect
+            <ChangYeSelect
               v-model="editingChannel.reasoningEffort"
               :options="REASONING_EFFORT_OPTIONS"
               aria-label="思考强度"
             />
           </div>
         </div>
-        <span class="bbi-field-hint">思考强度不知道的就选 auto，DS 系推荐 max</span>
-        <label class="bbi-switch-row">
-          <span class="bbi-modal-label">流式传输</span>
-          <input v-model="editingChannel.stream" type="checkbox" class="bbi-checkbox" />
+        <span class="changye-field-hint">思考强度不知道的就选 auto，DS 系推荐 max</span>
+        <label class="changye-switch-row">
+          <span class="changye-modal-label">流式传输</span>
+          <input v-model="editingChannel.stream" type="checkbox" class="changye-checkbox" />
         </label>
-        <label class="bbi-switch-row">
-          <span class="bbi-modal-label">发送预填充</span>
-          <input v-model="editingChannel.prefill" type="checkbox" class="bbi-checkbox" />
+        <label class="changye-switch-row">
+          <span class="changye-modal-label">发送预填充</span>
+          <input v-model="editingChannel.prefill" type="checkbox" class="changye-checkbox" />
         </label>
-        <span class="bbi-field-hint">默认开。若副 API 报错信息里出现 prefill 字样，关掉它即可。</span>
-        <label class="bbi-modal-field">
-          <span class="bbi-modal-label">排除参数</span>
+        <span class="changye-field-hint">默认开。若副 API 报错信息里出现 prefill 字样，关掉它即可。</span>
+        <label class="changye-modal-field">
+          <span class="changye-modal-label">排除参数</span>
           <input
             v-model="excludeParamsText"
-            class="bbi-input"
+            class="changye-input"
             type="text"
             placeholder="逗号分隔，如 temperature, max_tokens"
           />
-          <span class="bbi-field-hint">这些参数会在发请求前从请求体里删除，用于规避不接受该参数的兼容端点报错。逗号分隔，留空则不排除。</span>
+          <span class="changye-field-hint">这些参数会在发请求前从请求体里删除，用于规避不接受该参数的兼容端点报错。逗号分隔，留空则不排除。</span>
         </label>
-        <p v-if="testing[editingChannel.id]" class="bbi-channel-test">{{ testing[editingChannel.id] }}</p>
+        <p v-if="testing[editingChannel.id]" class="changye-channel-test">{{ testing[editingChannel.id] }}</p>
 
-        <footer class="bbi-modal-foot">
+        <footer class="changye-modal-foot">
           <!-- 删除靠左、与右侧主操作拉开,破坏性动作不与「完成」相邻,降低误触。
                删除:始终显示文字;测试:PC 显「测试渠道」,移动端只显「测试」(短版,省版面) -->
-          <button class="bbi-btn bbi-btn-danger" type="button" @click="askRemoveChannel">
+          <button class="changye-btn changye-btn-danger" type="button" @click="askRemoveChannel">
             <Icon name="trash" /> 删除
           </button>
-          <span class="bbi-modal-foot-spacer"></span>
-          <button class="bbi-btn" type="button" title="测试渠道" @click="doTest(editingChannel)">
-            <Icon name="plug" /> <span class="bbi-btn-label-full">测试渠道</span><span class="bbi-btn-label-short">测试</span>
+          <span class="changye-modal-foot-spacer"></span>
+          <button class="changye-btn" type="button" title="测试渠道" @click="doTest(editingChannel)">
+            <Icon name="plug" /> <span class="changye-btn-label-full">测试渠道</span><span class="changye-btn-label-short">测试</span>
           </button>
-          <button class="bbi-btn bbi-btn-primary" type="button" @click="confirmChannel">完成</button>
+          <button class="changye-btn changye-btn-primary" type="button" @click="confirmChannel">完成</button>
         </footer>
 
         <!-- 删除渠道二次确认:叠在渠道弹窗之上。置于 v-if="editingChannel" 块内,
@@ -931,25 +931,25 @@ async function confirmUpdate() {
     <ModalMask :open="!!editingTagPrompt" @close="closeTagPrompt">
       <div
         v-if="editingTagPrompt"
-        class="bbi-modal bbi-modal-wide"
+        class="changye-modal changye-modal-wide"
         role="dialog"
         aria-modal="true"
         :aria-label="`编辑${editingTagPrompt.label}`"
       >
-        <header class="bbi-modal-head">
-          <span class="bbi-modal-title">编辑{{ editingTagPrompt.label }}</span>
-          <button class="bbi-icon-mini" type="button" title="关闭" @click="closeTagPrompt"><Icon name="close" /></button>
+        <header class="changye-modal-head">
+          <span class="changye-modal-title">编辑{{ editingTagPrompt.label }}</span>
+          <button class="changye-icon-mini" type="button" title="关闭" @click="closeTagPrompt"><Icon name="close" /></button>
         </header>
 
-        <p class="bbi-modal-label">{{ editingTagPrompt.hint }}</p>
+        <p class="changye-modal-label">{{ editingTagPrompt.hint }}</p>
 
         <!-- 可用宏:点一下插入到光标处(仅 ComfyUI 规范有 {{nl}};无宏的条目不显示这一栏) -->
-        <div v-if="editingTagPrompt.macros.length" class="bbi-macro-bar">
-          <span class="bbi-macro-tip">点击插入宏：</span>
+        <div v-if="editingTagPrompt.macros.length" class="changye-macro-bar">
+          <span class="changye-macro-tip">点击插入宏：</span>
           <button
             v-for="mac in editingTagPrompt.macros"
             :key="mac.token"
-            class="bbi-macro"
+            class="changye-macro"
             type="button"
             :title="mac.desc"
             @click="insertTagMacro(mac.token)"
@@ -958,22 +958,22 @@ async function confirmUpdate() {
           </button>
         </div>
 
-        <BbiTextarea
+        <ChangYeTextarea
           ref="tagPromptArea"
           v-model="tagPromptDraft"
-          class="bbi-prompt-area"
+          class="changye-prompt-area"
           :rows="12"
           :max-rows="28"
           mono
         />
 
-        <footer class="bbi-modal-foot">
-          <button class="bbi-btn bbi-btn-danger" type="button" @click="resetTagPromptDraft">
+        <footer class="changye-modal-foot">
+          <button class="changye-btn changye-btn-danger" type="button" @click="resetTagPromptDraft">
             <Icon name="refresh" /> 恢复默认
           </button>
-          <span class="bbi-modal-foot-spacer"></span>
-          <button class="bbi-btn" type="button" @click="closeTagPrompt">取消</button>
-          <button class="bbi-btn bbi-btn-primary" type="button" @click="saveTagPrompt">完成</button>
+          <span class="changye-modal-foot-spacer"></span>
+          <button class="changye-btn" type="button" @click="closeTagPrompt">取消</button>
+          <button class="changye-btn changye-btn-primary" type="button" @click="saveTagPrompt">完成</button>
         </footer>
       </div>
     </ModalMask>
@@ -993,68 +993,68 @@ async function confirmUpdate() {
 </template>
 
 <style scoped>
-.bbi-rule-mode { margin-top: 20px; width: fit-content; }
-.bbi-ver-row {
+.changye-rule-mode { margin-top: 20px; width: fit-content; }
+.changye-ver-row {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
 /* —— 版本标签:实心强调底 + 反白字,点击可重新检查 —— */
-.bbi-ver {
+.changye-ver {
   border: 0;
   padding: 7px 12px;
-  border-radius: var(--bbi-radius-pill);
-  background: var(--bbi-accent);
-  color: var(--bbi-accent-ink);
+  border-radius: var(--changye-radius-pill);
+  background: var(--changye-accent);
+  color: var(--changye-accent-ink);
   cursor: pointer;
-  font-family: var(--bbi-font-mono);
+  font-family: var(--changye-font-mono);
   font-size: 13px;
   font-weight: 600;
   line-height: 1;
 }
-.bbi-ver:disabled {
+.changye-ver:disabled {
   cursor: wait;
   opacity: 0.7;
 }
 
 /* —— 总开关主控卡 —— */
 /* 左缘一道强调色竖脊;停用时整卡褪色、竖脊转灰,状态一眼可辨 */
-.bbi-master {
+.changye-master {
   display: flex;
   align-items: center;
   gap: 14px;
   margin-bottom: 16px;
   padding: 16px 18px 16px 16px;
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius);
-  background: var(--bbi-surface);
-  box-shadow: var(--bbi-shadow);
-  transition: opacity var(--bbi-dur) var(--bbi-ease);
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius);
+  background: var(--changye-surface);
+  box-shadow: var(--changye-shadow);
+  transition: opacity var(--changye-dur) var(--changye-ease);
 }
-.bbi-master-spine {
+.changye-master-spine {
   flex: 0 0 auto;
   align-self: stretch;
   width: 4px;
-  border-radius: var(--bbi-radius-pill);
-  background: var(--bbi-accent);
-  transition: background var(--bbi-dur) var(--bbi-ease);
+  border-radius: var(--changye-radius-pill);
+  background: var(--changye-accent);
+  transition: background var(--changye-dur) var(--changye-ease);
 }
-.bbi-master.is-off .bbi-master-spine {
-  background: var(--bbi-line-strong);
+.changye-master.is-off .changye-master-spine {
+  background: var(--changye-line-strong);
 }
-.bbi-master.is-off .bbi-master-title {
+.changye-master.is-off .changye-master-title {
   opacity: 0.7;
 }
-.bbi-master-title {
+.changye-master-title {
   flex: 1 1 auto;
   min-width: 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--bbi-ink);
+  color: var(--changye-ink);
 }
 
-.bbi-auto-grid {
+.changye-auto-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
@@ -1062,58 +1062,58 @@ async function confirmUpdate() {
 }
 
 /* —— 滑动开关:全页仅总开关一处使用 —— */
-.bbi-toggle {
+.changye-toggle {
   flex: 0 0 auto;
   position: relative;
   width: 46px;
   height: 26px;
   padding: 0;
   border: 0;
-  border-radius: var(--bbi-radius-pill);
-  background: var(--bbi-line-strong);
+  border-radius: var(--changye-radius-pill);
+  background: var(--changye-line-strong);
   cursor: pointer;
-  transition: background var(--bbi-dur) var(--bbi-ease);
+  transition: background var(--changye-dur) var(--changye-ease);
 }
-.bbi-toggle.is-on {
-  background: var(--bbi-accent);
+.changye-toggle.is-on {
+  background: var(--changye-accent);
 }
-.bbi-toggle:focus-visible {
-  outline: 2px solid var(--bbi-accent);
+.changye-toggle:focus-visible {
+  outline: 2px solid var(--changye-accent);
   outline-offset: 2px;
 }
-.bbi-toggle-knob {
+.changye-toggle-knob {
   position: absolute;
   top: 3px;
   left: 3px;
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--bbi-surface);
+  background: var(--changye-surface);
   box-shadow: 0 1px 3px oklch(0 0 0 / 0.25);
-  transition: transform var(--bbi-dur) var(--bbi-ease);
+  transition: transform var(--changye-dur) var(--changye-ease);
 }
-.bbi-toggle.is-on .bbi-toggle-knob {
+.changye-toggle.is-on .changye-toggle-knob {
   transform: translateX(20px);
 }
 
 /* ============ 副 API:渠道(与角色记忆插件同款) ============ */
 
 /* 任务指派 */
-.bbi-assign {
+.changye-assign {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-.bbi-assign-row { display: grid; grid-template-columns: minmax(0,1fr); gap: 8px; min-width: 0; }
-.bbi-assign-row > * { width: 100%; min-width: 0; }
-/* 指派下拉:比全局 bbi-select 更窄小一号,与右侧对齐、不撑满半行(角色记忆插件同款) */
-.bbi-assign-row .bbi-select {
+.changye-assign-row { display: grid; grid-template-columns: minmax(0,1fr); gap: 8px; min-width: 0; }
+.changye-assign-row > * { width: 100%; min-width: 0; }
+/* 指派下拉:比全局 changye-select 更窄小一号,与右侧对齐、不撑满半行(角色记忆插件同款) */
+.changye-assign-row .changye-select {
   max-width: 100%;
   font-size: 12px;
 }
 
 /* 渠道:顶部操作条(标签 + 添加按钮) */
-.bbi-channel-bar {
+.changye-channel-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1122,7 +1122,7 @@ async function confirmUpdate() {
 }
 
 /* 渠道:紧凑只读列表,每渠道一行,点行进弹窗编辑 */
-.bbi-channel-list {
+.changye-channel-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1130,13 +1130,13 @@ async function confirmUpdate() {
   flex-direction: column;
   gap: 8px;
 }
-.bbi-channel-item {
+.changye-channel-item {
   display: flex;
   align-items: stretch;
   gap: 8px;
 }
 /* 行主体:整块可点,左名字右模型 */
-.bbi-channel-open {
+.changye-channel-open {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -1144,21 +1144,21 @@ async function confirmUpdate() {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 14px;
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius);
-  background: var(--bbi-surface-2);
-  color: var(--bbi-ink);
-  font-family: var(--bbi-font-sans);
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius);
+  background: var(--changye-surface-2);
+  color: var(--changye-ink);
+  font-family: var(--changye-font-sans);
   cursor: pointer;
   text-align: left;
-  transition: border-color var(--bbi-dur) var(--bbi-ease), background var(--bbi-dur) var(--bbi-ease);
+  transition: border-color var(--changye-dur) var(--changye-ease), background var(--changye-dur) var(--changye-ease);
 }
-.bbi-channel-open:hover {
-  border-color: var(--bbi-accent);
-  background: var(--bbi-surface);
+.changye-channel-open:hover {
+  border-color: var(--changye-accent);
+  background: var(--changye-surface);
 }
 /* 渠道名:完整显示,允许换行,占据剩余空间 */
-.bbi-channel-item-name {
+.changye-channel-item-name {
   flex: 1 1 auto;
   min-width: 0;
   font-size: 14px;
@@ -1166,11 +1166,11 @@ async function confirmUpdate() {
   word-break: break-word;
 }
 /* 模型名:次要信息,过长则截断,不挤占名字 */
-.bbi-channel-item-model {
+.changye-channel-item-model {
   flex: 0 1 auto;
   min-width: 0;
   font-size: 12px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
@@ -1178,89 +1178,89 @@ async function confirmUpdate() {
 }
 
 /* —— 渠道编辑弹窗 —— */
-.bbi-model-row {
+.changye-model-row {
   display: flex;
   gap: 8px;
   align-items: center;
 }
-.bbi-model-row .bbi-input {
+.changye-model-row .changye-input {
   flex: 1;
 }
-.bbi-icon-mini {
+.changye-icon-mini {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: 1px solid var(--bbi-line-strong);
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface);
-  color: var(--bbi-ink-soft);
+  border: 1px solid var(--changye-line-strong);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface);
+  color: var(--changye-ink-soft);
   cursor: pointer;
   font-size: 14px;
 }
-.bbi-icon-mini:hover {
-  color: var(--bbi-accent);
-  border-color: var(--bbi-accent);
+.changye-icon-mini:hover {
+  color: var(--changye-accent);
+  border-color: var(--changye-accent);
 }
-.bbi-icon-mini:disabled {
+.changye-icon-mini:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
 /* 温度/最大 token/超时/思考强度:四个短控件并排,窄屏落到 2×2(见媒体查询) */
-.bbi-channel-row {
+.changye-channel-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
-.bbi-mini-field {
+.changye-mini-field {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
 }
-/* BbiSelect 自带 180px 固定宽(为设置页的行布局设计),这里要跟其余三个等分 */
-.bbi-mini-field :deep(.bbi-select-box) {
+/* ChangYeSelect 自带 180px 固定宽(为设置页的行布局设计),这里要跟其余三个等分 */
+.changye-mini-field :deep(.changye-select-box) {
   width: 100%;
 }
-/* 与相邻 number 输入等高:触发器默认 padding 比 .bbi-input 略小 */
-.bbi-mini-field :deep(.bbi-select-trigger) {
+/* 与相邻 number 输入等高:触发器默认 padding 比 .changye-input 略小 */
+.changye-mini-field :deep(.changye-select-trigger) {
   padding: 7px 10px;
 }
-.bbi-channel-test {
+.changye-channel-test {
   margin: 2px 0 0;
   font-size: 12px;
-  color: var(--bbi-ink-soft);
+  color: var(--changye-ink-soft);
   word-break: break-all;
 }
 
 /* 弹窗底部:spacer 把删除键推到最左,与右侧操作分隔 */
-.bbi-modal-foot-spacer {
+.changye-modal-foot-spacer {
   flex: 1 1 auto;
 }
 /* 危险操作按钮:描边低调,hover 才显红,避免误触 */
-.bbi-btn-danger {
-  color: var(--bbi-danger);
-  border-color: var(--bbi-line-strong);
+.changye-btn-danger {
+  color: var(--changye-danger);
+  border-color: var(--changye-line-strong);
 }
-.bbi-btn-danger:hover {
-  color: var(--bbi-danger);
-  border-color: var(--bbi-danger);
-  background: var(--bbi-danger-soft);
+.changye-btn-danger:hover {
+  color: var(--changye-danger);
+  border-color: var(--changye-danger);
+  background: var(--changye-danger-soft);
 }
 
 /* 测试按钮文字:默认(PC)显完整版,短版藏起;窄屏在媒体查询里互换 */
-.bbi-btn-label-short {
+.changye-btn-label-short {
   display: none;
 }
 
 /* —— 自定义提示词列表(UI 照搬角色记忆插件) —— */
-.bbi-prompt-list {
+.changye-prompt-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1269,75 +1269,75 @@ async function confirmUpdate() {
   gap: 8px;
 }
 /* 整行可点进弹窗编辑;布局沿用渠道列表的观感(描边、hover 显强调色) */
-.bbi-prompt-open {
+.changye-prompt-open {
   width: 100%;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius);
-  background: var(--bbi-surface-2);
-  color: var(--bbi-ink);
-  font-family: var(--bbi-font-sans);
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius);
+  background: var(--changye-surface-2);
+  color: var(--changye-ink);
+  font-family: var(--changye-font-sans);
   cursor: pointer;
   text-align: left;
-  transition: border-color var(--bbi-dur) var(--bbi-ease), background var(--bbi-dur) var(--bbi-ease);
+  transition: border-color var(--changye-dur) var(--changye-ease), background var(--changye-dur) var(--changye-ease);
 }
-.bbi-prompt-open:hover {
-  border-color: var(--bbi-accent);
-  background: var(--bbi-surface);
+.changye-prompt-open:hover {
+  border-color: var(--changye-accent);
+  background: var(--changye-surface);
 }
-.bbi-prompt-name {
+.changye-prompt-name {
   flex: 1 1 auto;
   min-width: 0;
   font-size: 13px;
   font-weight: 600;
 }
-/* 状态药丸(.bbi-prompt-state / .is-custom)已提到 base.css 全局:渠道页也用它 */
-.bbi-prompt-edit {
+/* 状态药丸(.changye-prompt-state / .is-custom)已提到 base.css 全局:渠道页也用它 */
+.changye-prompt-edit {
   flex: 0 0 auto;
   font-size: 16px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
 }
-.bbi-prompt-open:hover .bbi-prompt-edit {
-  color: var(--bbi-accent);
+.changye-prompt-open:hover .changye-prompt-edit {
+  color: var(--changye-accent);
 }
 
 /* —— 提示词弹窗:更宽 + 大文本框 —— */
-.bbi-modal-wide {
+.changye-modal-wide {
   max-width: 680px;
 }
 /* 宏标签条:可横向裹行,每个宏点击插入 */
-.bbi-macro-bar {
+.changye-macro-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
-.bbi-macro-tip {
+.changye-macro-tip {
   font-size: 12px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   margin-right: 2px;
 }
-.bbi-macro {
+.changye-macro {
   padding: 3px 9px;
-  border: 1px solid var(--bbi-line-strong);
-  border-radius: var(--bbi-radius-pill);
-  background: var(--bbi-surface-2);
-  color: var(--bbi-ink-soft);
-  font-family: var(--bbi-font-mono);
+  border: 1px solid var(--changye-line-strong);
+  border-radius: var(--changye-radius-pill);
+  background: var(--changye-surface-2);
+  color: var(--changye-ink-soft);
+  font-family: var(--changye-font-mono);
   font-size: 12px;
   cursor: pointer;
-  transition: color var(--bbi-dur) var(--bbi-ease), border-color var(--bbi-dur) var(--bbi-ease),
-    background var(--bbi-dur) var(--bbi-ease);
+  transition: color var(--changye-dur) var(--changye-ease), border-color var(--changye-dur) var(--changye-ease),
+    background var(--changye-dur) var(--changye-ease);
 }
-.bbi-macro:hover {
-  color: var(--bbi-accent);
-  border-color: var(--bbi-accent);
-  background: var(--bbi-accent-soft);
+.changye-macro:hover {
+  color: var(--changye-accent);
+  border-color: var(--changye-accent);
+  background: var(--changye-accent-soft);
 }
-.bbi-prompt-area {
+.changye-prompt-area {
   line-height: 1.6;
   font-size: 12.5px;
   white-space: pre-wrap;
@@ -1345,8 +1345,8 @@ async function confirmUpdate() {
   tab-size: 2;
 }
 
-/* ============ 排除名单(chips + 弹窗列表):与角色记忆插件同款交互,类名换 bbi 前缀 ============ */
-.bbi-exclude-chips {
+/* ============ 排除名单(chips + 弹窗列表):与角色记忆插件同款交互,类名换 changye 前缀 ============ */
+.changye-exclude-chips {
   list-style: none;
   margin: 10px 0 0;
   padding: 0;
@@ -1354,18 +1354,18 @@ async function confirmUpdate() {
   flex-wrap: wrap;
   gap: 8px;
 }
-.bbi-exclude-chip {
+.changye-exclude-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 4px 6px 4px 11px;
-  border-radius: var(--bbi-radius-pill);
-  background: var(--bbi-accent-soft);
-  color: var(--bbi-accent);
+  border-radius: var(--changye-radius-pill);
+  background: var(--changye-accent-soft);
+  color: var(--changye-accent);
   font-size: 12px;
   font-weight: 600;
 }
-.bbi-exclude-chip-x {
+.changye-exclude-chip-x {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1380,24 +1380,24 @@ async function confirmUpdate() {
   font-size: 12px;
   opacity: 0.7;
 }
-.bbi-exclude-chip-x:hover {
+.changye-exclude-chip-x:hover {
   opacity: 1;
   background: oklch(0 0 0 / 0.08);
 }
-.bbi-striptag-bar {
+.changye-striptag-bar {
   display: flex;
   gap: 8px;
   align-items: center;
   margin-top: 10px;
 }
-.bbi-striptag-bar .bbi-input {
+.changye-striptag-bar .changye-input {
   flex: 1;
   min-width: 0;
 }
-.bbi-striptag-bar .bbi-btn {
+.changye-striptag-bar .changye-btn {
   flex: none;
 }
-.bbi-exclude-list {
+.changye-exclude-list {
   max-height: 46vh;
   overflow-y: auto;
   display: flex;
@@ -1406,39 +1406,39 @@ async function confirmUpdate() {
   margin: 2px 0;
   padding-right: 2px;
 }
-.bbi-exclude-row {
+.changye-exclude-row {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 8px;
-  border-radius: var(--bbi-radius-sm);
+  border-radius: var(--changye-radius-sm);
   cursor: pointer;
 }
-.bbi-exclude-count {
+.changye-exclude-count {
   font-size: 12px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
 }
 
 /* ============ 移动端:折叠区内部正文整体收一号,与窄屏标题节奏统一 ============ */
 @media (max-width: 640px) {
-  .bbi-auto-grid {
+  .changye-auto-grid {
     grid-template-columns: 1fr;
   }
   /* 渠道参数四连:窄屏一行四个每个只剩几十 px,落成 2×2 */
-  .bbi-channel-row {
+  .changye-channel-row {
     grid-template-columns: repeat(2, 1fr);
   }
-  .bbi-channel-item-name {
+  .changye-channel-item-name {
     font-size: 13px;
   }
-  .bbi-channel-item-model {
+  .changye-channel-item-model {
     font-size: 11px;
   }
   /* 渠道弹窗底部:测试按钮窄屏只显短版「测试」,PC 显完整「测试渠道」 */
-  .bbi-btn-label-full {
+  .changye-btn-label-full {
     display: none;
   }
-  .bbi-btn-label-short {
+  .changye-btn-label-short {
     display: inline;
   }
 }

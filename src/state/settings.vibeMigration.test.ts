@@ -45,15 +45,15 @@ describe('旧版 Vibe 设置迁移', () => {
     };
     mocks.context = {
       extensionSettings: {
-        baibai_image: {
+        changye_image: {
           nai: { vibes: [legacy] },
         },
       },
       saveSettingsDebounced,
     };
     mocks.saveVibeFiles.mockResolvedValue({
-      dataPath: '/user/files/bbi-vibe-legacy-v1.json',
-      thumbnailPath: '/user/files/bbi-vibe-thumb-legacy-v1.jpg',
+      dataPath: '/user/files/changye-vibe-legacy-v1.json',
+      thumbnailPath: '/user/files/changye-vibe-thumb-legacy-v1.jpg',
     });
 
     const { hydrateSettings, settings } = await import('@/state/settings');
@@ -62,14 +62,14 @@ describe('旧版 Vibe 设置迁移', () => {
     expect(mocks.saveVibeFiles).toHaveBeenCalledOnce();
     expect(settings.nai.vibes[0]).toMatchObject({
       id: 'legacy-v1',
-      dataPath: '/user/files/bbi-vibe-legacy-v1.json',
-      thumbnailPath: '/user/files/bbi-vibe-thumb-legacy-v1.jpg',
+      dataPath: '/user/files/changye-vibe-legacy-v1.json',
+      thumbnailPath: '/user/files/changye-vibe-thumb-legacy-v1.jpg',
       modelKeys: ['v4-5full'],
       hasImage: true,
       strength: 0.7,
       enabled: true,
     });
-    const persisted = mocks.context.extensionSettings.baibai_image.nai.vibes[0];
+    const persisted = mocks.context.extensionSettings.changye_image.nai.vibes[0];
     expect(persisted).not.toHaveProperty('image');
     expect(persisted).not.toHaveProperty('thumbnail');
     expect(persisted).not.toHaveProperty('encodings');
@@ -82,7 +82,7 @@ describe('旧版 Vibe 设置迁移', () => {
       { id: 'legacy-2', image: 'B'.repeat(1024), thumbnail: '', encodings: {} },
     ];
     mocks.context = {
-      extensionSettings: { baibai_image: { nai: { vibes } } },
+      extensionSettings: { changye_image: { nai: { vibes } } },
       saveSettingsDebounced: vi.fn(),
     };
     mocks.saveVibeFiles
@@ -109,7 +109,7 @@ describe('旧版 Vibe 设置迁移', () => {
       encodings: {},
     };
     mocks.context = {
-      extensionSettings: { baibai_image: { nai: { vibes: [legacy] } } },
+      extensionSettings: { changye_image: { nai: { vibes: [legacy] } } },
       saveSettingsDebounced,
     };
     mocks.saveVibeFiles.mockRejectedValue(new Error('server 与 IndexedDB 都失败'));
@@ -117,7 +117,7 @@ describe('旧版 Vibe 设置迁移', () => {
     const { hydrateSettings } = await import('@/state/settings');
     await expect(hydrateSettings()).rejects.toThrow('server 与 IndexedDB 都失败');
 
-    expect(mocks.context.extensionSettings.baibai_image.nai.vibes[0]).toBe(legacy);
+    expect(mocks.context.extensionSettings.changye_image.nai.vibes[0]).toBe(legacy);
     expect(legacy).toHaveProperty('image');
     expect(saveSettingsDebounced).not.toHaveBeenCalled();
   });
@@ -129,7 +129,7 @@ describe('旧版 Vibe 设置迁移', () => {
       { id: 'legacy-failed', image: 'B'.repeat(1024), thumbnail: '', encodings: {} },
     ];
     mocks.context = {
-      extensionSettings: { baibai_image: { nai: { vibes } } },
+      extensionSettings: { changye_image: { nai: { vibes } } },
       saveSettingsDebounced,
     };
     mocks.saveVibeFiles

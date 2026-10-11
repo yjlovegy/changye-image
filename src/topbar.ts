@@ -1,8 +1,8 @@
 import { openPanel } from '@/state/ui';
 import { ensureIconFallback } from '@/st/iconFallback';
 
-const BTN_ID = 'bbi-topbar-button';
-const STYLE_ID = 'bbi-topbar-style';
+const BTN_ID = 'changye-topbar-button';
+const STYLE_ID = 'changye-topbar-style';
 
 function ensureStyle(): void {
   // 美化主题可能清空顶栏图标字形,用高特异性选择器强制还原(见 iconFallback)

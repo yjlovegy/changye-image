@@ -1,6 +1,6 @@
 import { openPanel } from '@/state/ui';
 
-const MENU_ITEM_ID = 'bbi-menu-item';
+const MENU_ITEM_ID = 'changye-menu-item';
 
 /**
  * 往 ST 的 #extensionsMenu(魔杖菜单)末尾注入"长夜的绘图器"入口。

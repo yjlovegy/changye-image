@@ -1,3 +1,4 @@
+import { readCompatibleField } from '@/legacyCompatibility';
 import { trackPromptTask } from '@/state/promptTasks';
 import { syncCurrentAppearance, currentAppearanceText, currentAppearanceRevision } from './currentAppearance';
 import { reportPromptFailure } from '@/state/promptFailures';
@@ -29,7 +30,7 @@ import {
 } from '@/autoTag/selection';
 import { rebaseImagePositions, type RebaseReport } from '@/autoTag/rebase';
 import {
-  BBI_CHAR_EXTRA_KEY,
+  CHANGYE_CHAR_EXTRA_KEY,
   CHAR_TAG_FIELDS,
   charTagsBeforeFloor,
   createCharTagNewOp,
@@ -46,7 +47,7 @@ import { injectImageTags, parseImagePlan, ImageSourceValidationError, ImagePlanF
 import { clearAutoGenerateForFloor, consumeAutoGenerate, hasPendingAutoGenerateForFloor, markForAutoGenerate } from '@/floor/autoGenerate';
 import { hasActiveGenerationForFloor, isGenerationFloorLocked, lockGenerationFloor, shiftIdleGenerationForInsertion } from '@/floor/genState';
 import { shiftCollapseStateForInsertion } from '@/floor/collapseState';
-import { BBI_IMAGE_EXTRA_KEY, readStore, shiftImageHistoryForInsertion } from '@/floor/storage';
+import { CHANGYE_IMAGE_EXTRA_KEY, readStore, shiftImageHistoryForInsertion } from '@/floor/storage';
 import { backendStatus } from '@/generate';
 import { applyMessageText, type ApplyMessageResult, type MessageExtraUpdate } from '@/st/messageEdit';
 import { getContext, isAiStoryMessage, isStoryMessage, type STMessage } from '@/st/context';
@@ -87,7 +88,7 @@ const running = new Map<string, AbortController>();
 const selectionRunning = new Set<string>();
 let bound = false;
 const scheduled = new Set<ReturnType<typeof setTimeout>>();
-const DIAGNOSTIC_PREFIX = '[BBI][AutoTagDebug]';
+const DIAGNOSTIC_PREFIX = '[CHANGYE][AutoTagDebug]';
 
 function diagnostic(event: string, payload: unknown = null): void {
   const seen = new WeakSet<object>();
@@ -251,7 +252,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
   }
   const rawSource = message.mes;
   // 探测口径与按钮层同源(imageTagRegex.hasImageTagTrace):两侧漂移过一次——
-  // 按钮只认开标签、这里认开也认闭,只剩 `</bbi_image>` 的楼就卡成「点了没反应」。
+  // 按钮只认开标签、这里认开也认闭,只剩 `</changye_image>` 的楼就卡成「点了没反应」。
   if (hasImageTagTrace(rawSource) && !opts.replace) {
     abort(
       floor,
@@ -259,7 +260,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
       opts.manual,
       '本楼已有生图 TAG，没有确认重新生成，本次未改动',
     );
-    if (!opts.manual) console.debug(`[长夜的绘图器] 第 ${floor} 楼已经含有 bbi_image TAG，跳过自动分析`);
+    if (!opts.manual) console.debug(`[长夜的绘图器] 第 ${floor} 楼已经含有 changye_image TAG，跳过自动分析`);
     return;
   }
   // replace:分析和注入都基于剔除旧 tag 后的正文;写回时旧 tag 随之消失
@@ -540,7 +541,7 @@ async function runForFloor(floor: number, opts: RunOptions = {}): Promise<void> 
       swipeId,
       message,
       [
-        { key: BBI_CHAR_EXTRA_KEY, value: makeCharTagFloorDelta(floorOps, swipeId ?? 0) },
+        { key: CHANGYE_CHAR_EXTRA_KEY, value: makeCharTagFloorDelta(floorOps, swipeId ?? 0) },
         { key: PROMPT_SOURCES_KEY, value: rememberPromptSources(message, swipeId ?? 0,
           plan.images.map(image => ({rawTag:serializeImageTag(image),...sourceForPlannedImage(image, preparedTarget.segments)}))) },
       ],
@@ -678,7 +679,7 @@ export async function requestSelectionImage(
       storyTags: settings.storyTags ?? [],
       appearance: currentAppearanceRevision(context, floor),
       entries: charTagsBeforeFloor(floor),
-      delta: getContext()?.chat[floor]?.extra?.[BBI_CHAR_EXTRA_KEY] ?? null,
+      delta: readCompatibleField(getContext()?.chat[floor]?.extra, CHANGYE_CHAR_EXTRA_KEY) ?? null,
       locked: [...lockedCharTagNames()].sort(),
     });
     const initialCharacterState = characterStateKey();
@@ -757,7 +758,7 @@ export async function requestSelectionImage(
       return;
     }
     const selectionOps = filterSelectionCharacterOps(planChangeOps(plan), selectionState.entries, locked, selectionState.changedNames);
-    const rawDelta = getContext()?.chat[floor]?.extra?.[BBI_CHAR_EXTRA_KEY];
+    const rawDelta = readCompatibleField(getContext()?.chat[floor]?.extra, CHANGYE_CHAR_EXTRA_KEY);
     if (selectionOps.length && rawDelta !== undefined && rawDelta !== null) {
       const rawOps = typeof rawDelta === 'object' ? (rawDelta as { ops?: unknown }).ops : undefined;
       if (!previousDelta || !Array.isArray(rawOps) || rawOps.length !== previousDelta.ops.length) {
@@ -789,10 +790,10 @@ export async function requestSelectionImage(
       value:rememberPromptSources(snapshot.message, snapshot.swipeId ?? 0,
         [{rawTag:serializeImageTag(image),text:selectedText,kind:'selection'}])}];
     if (currentStore) extraUpdates.push({
-      key: BBI_IMAGE_EXTRA_KEY,
+      key: CHANGYE_IMAGE_EXTRA_KEY,
       value: shiftImageHistoryForInsertion(currentStore, snapshot.swipeId ?? 0, insertion.seq),
     });
-    if (selectionOps.length) extraUpdates.push({ key: BBI_CHAR_EXTRA_KEY, value: nextDelta });
+    if (selectionOps.length) extraUpdates.push({ key: CHANGYE_CHAR_EXTRA_KEY, value: nextDelta });
     const result = await applyMessageText(
       floor,
       currentText => {

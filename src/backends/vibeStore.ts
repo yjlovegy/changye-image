@@ -1,20 +1,25 @@
+import { LEGACY_VIBE_DB } from '@/legacyCompatibility';
 import { utf8ToBase64 } from '@/base64';
 import { deleteUploadedFile, uploadBase64File } from '@/floor/upload';
 import type { NaiVibe, NaiVibeData, NaiVibeEncodings } from '@/state/settings';
 import { randomUuid } from '@/randomUuid';
 
 const FETCH_TIMEOUT_MS = 20_000;
-const LOCAL_DB_NAME = 'baibai_image_vibes';
+const LOCAL_DB_NAME = 'changye_image_vibes';
 const LOCAL_DB_VERSION = 1;
 const LOCAL_STORE_NAME = 'vibes';
 const LOCAL_PATH_PREFIX = 'idb:';
+const NEW_LOCAL_PATH_PREFIX = 'idb-changye:';
+const isLocalPath = (path: string) => path.startsWith(LOCAL_PATH_PREFIX) || path.startsWith(NEW_LOCAL_PATH_PREFIX);
+const localKeyFor = (path: string) => path.slice(path.startsWith(NEW_LOCAL_PATH_PREFIX) ? NEW_LOCAL_PATH_PREFIX.length : LOCAL_PATH_PREFIX.length);
 
-let localDbPromise: Promise<IDBDatabase> | null = null;
+const localDatabases = new Map<string, Promise<IDBDatabase>>();
 
-function openLocalDb(): Promise<IDBDatabase> {
-  if (localDbPromise) return localDbPromise;
-  localDbPromise = new Promise((resolve, reject) => {
-    const request = indexedDB.open(LOCAL_DB_NAME, LOCAL_DB_VERSION);
+function openLocalDb(name = LOCAL_DB_NAME): Promise<IDBDatabase> {
+  const existing = localDatabases.get(name);
+  if (existing) return existing;
+  const localDbPromise = new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open(name, LOCAL_DB_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(LOCAL_STORE_NAME)) db.createObjectStore(LOCAL_STORE_NAME);
@@ -23,6 +28,7 @@ function openLocalDb(): Promise<IDBDatabase> {
     request.onerror = () => reject(request.error ?? new Error('打开 Vibe 本地存储失败'));
     request.onblocked = () => reject(new Error('Vibe 本地存储被其他页面占用'));
   });
+  localDatabases.set(name, localDbPromise);
   return localDbPromise;
 }
 
@@ -33,12 +39,12 @@ async function writeLocalData(key: string, data: NaiVibeData): Promise<string> {
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error ?? new Error('写入 Vibe 本地存储失败'));
   });
-  return `${LOCAL_PATH_PREFIX}${key}`;
+  return `${NEW_LOCAL_PATH_PREFIX}${key}`;
 }
 
 async function readLocalData(path: string): Promise<NaiVibeData> {
-  const db = await openLocalDb();
-  const key = path.slice(LOCAL_PATH_PREFIX.length);
+  const db = await openLocalDb(path.startsWith(NEW_LOCAL_PATH_PREFIX) ? LOCAL_DB_NAME : LEGACY_VIBE_DB);
+  const key = localKeyFor(path);
   return new Promise((resolve, reject) => {
     const request = db.transaction(LOCAL_STORE_NAME, 'readonly').objectStore(LOCAL_STORE_NAME).get(key);
     request.onsuccess = () => {
@@ -51,8 +57,8 @@ async function readLocalData(path: string): Promise<NaiVibeData> {
 }
 
 async function deleteLocalData(path: string): Promise<void> {
-  const db = await openLocalDb();
-  const key = path.slice(LOCAL_PATH_PREFIX.length);
+  const db = await openLocalDb(path.startsWith(NEW_LOCAL_PATH_PREFIX) ? LOCAL_DB_NAME : LEGACY_VIBE_DB);
+  const key = localKeyFor(path);
   await new Promise<void>((resolve, reject) => {
     const request = db.transaction(LOCAL_STORE_NAME, 'readwrite').objectStore(LOCAL_STORE_NAME).delete(key);
     request.onsuccess = () => resolve();
@@ -66,7 +72,7 @@ function safeFileKey(key: string): string {
 
 function storageFileName(path?: string, key = ''): string {
   const current = path?.split('/').pop();
-  return current || `bbi-vibe-${safeFileKey(key) || randomUuid()}.json`;
+  return current || `changye-vibe-${safeFileKey(key) || randomUuid()}.json`;
 }
 
 function thumbnailFileName(dataUrl: string, path?: string, key = ''): string {
@@ -74,7 +80,7 @@ function thumbnailFileName(dataUrl: string, path?: string, key = ''): string {
   if (current) return current;
   const format = dataUrl.match(/^data:image\/([^;,]+)/i)?.[1]?.toLowerCase();
   const extension = format === 'jpeg' ? 'jpg' : format || 'jpg';
-  return `bbi-vibe-thumb-${safeFileKey(key) || randomUuid()}.${extension}`;
+  return `changye-vibe-thumb-${safeFileKey(key) || randomUuid()}.${extension}`;
 }
 
 function dataUrlBase64(dataUrl: string): string {
@@ -140,10 +146,10 @@ export async function saveVibeFiles(
   current: Pick<NaiVibe, 'dataPath' | 'thumbnailPath'> | null = null,
   key = '',
 ): Promise<{ dataPath: string; thumbnailPath: string }> {
-  const localKey = current?.dataPath.startsWith(LOCAL_PATH_PREFIX)
-    ? current.dataPath.slice(LOCAL_PATH_PREFIX.length)
+  const localKey = (current && isLocalPath(current.dataPath))
+    ? localKeyFor(current.dataPath)
     : safeFileKey(key) || randomUuid();
-  if (current?.dataPath.startsWith(LOCAL_PATH_PREFIX)) {
+  if ((current && isLocalPath(current.dataPath))) {
     return { dataPath: await writeLocalData(localKey, data), thumbnailPath: current.thumbnailPath };
   }
   try {
@@ -177,7 +183,7 @@ async function saveServerVibeFiles(
 
 export async function loadVibeData(vibe: Pick<NaiVibe, 'dataPath' | 'name'>): Promise<NaiVibeData> {
   if (!vibe.dataPath) throw new Error(`Vibe「${vibe.name}」缺少数据文件`);
-  if (vibe.dataPath.startsWith(LOCAL_PATH_PREFIX)) return readLocalData(vibe.dataPath);
+  if (isLocalPath(vibe.dataPath)) return readLocalData(vibe.dataPath);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
@@ -202,7 +208,7 @@ export async function deleteVibeData(vibe: Pick<NaiVibe, 'dataPath' | 'thumbnail
   for (const path of [vibe.dataPath, vibe.thumbnailPath]) {
     if (!path) continue;
     try {
-      if (path.startsWith(LOCAL_PATH_PREFIX)) await deleteLocalData(path);
+      if (isLocalPath(path)) await deleteLocalData(path);
       else await deleteUploadedFile(path);
     } catch (error) {
       firstError ??= error;

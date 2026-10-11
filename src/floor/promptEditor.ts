@@ -29,7 +29,7 @@ import { backendStatus } from '@/generate';
  * 命令式打开「编辑提示词」弹窗(供楼层卡片调用)。
  *
  * 挂载位置与 components/confirm.ts、floor/lightbox.ts 同款:插件 host 的 shadow root ——
- * 那里有 dist/index.css 与 --bbi-* 主题变量,挂 document.body 会裸奔无样式。
+ * 那里有 dist/index.css 与 --changye-* 主题变量,挂 document.body 会裸奔无样式。
  * 特意**不**挂进卡片自己的 shadow root:弹窗是 fixed 全屏层,而卡片活在 .mes_text 内部,
  * 那里的层叠上下文与 overflow 会把它裁掉(灯箱同理,见 lightbox.ts)。
  *
@@ -41,7 +41,7 @@ import { backendStatus } from '@/generate';
  */
 
 // 与 index.ts 的 HOST_ID 一致
-const HOST_ID = 'bbi-app-host';
+const HOST_ID = 'changye-app-host';
 
 /** 楼层坐标快照。弹窗活得比卡片长,这些一律开窗时取值,回调里绝不读 props。 */
 export interface PromptEditorAt {
@@ -76,7 +76,7 @@ function revisionBackendKey(): string {
 /** 同一时刻只允许一个编辑弹窗,重复调用先关旧的。 */
 let closeCurrent: (() => void) | null = null;
 
-/** 离场动画时长,与 base.css 的 .bbi-modal-enter/leave-active(0.15s)对齐。 */
+/** 离场动画时长,与 base.css 的 .changye-modal-enter/leave-active(0.15s)对齐。 */
 const LEAVE_MS = 160;
 
 /** 补水合的延时,与 hydrate.ts 的 LATE_HYDRATION_DELAY 同一口径。 */

@@ -73,7 +73,7 @@ ${krea2 ? KREA2_VISUAL_CONTRACT : facialDetailContract({ mixed, characterPrompts
 自定义规范中有关五官表达的旧要求，以本次脸部表达规则为准；Anima 按景别取舍且不要求两边逐项复述，用户明确指定的辨识细节保持。五官补全只用于这一张图片的待确认草稿，不写入角色库、不返回 changes，也不能声称这些设计细节原本来自角色设定。非人物画面不添加人物；背影、遮挡或远景看不清的部位不强加五官，不为补全改变姿势或镜头。
 ${krea2 ? (settings.autoTag.prompts.krea2Thinking?.trim() || DEFAULT_KREA2_THINKING) : poseSpatialContract({ mixed, characterPrompts, negativeRequired })}
 按意见修改姿势时，将姿势、支撑、接触点和构图作为一组同步改写：删除与新姿势不兼容的旧姿态词、旧支撑点、旧接触关系及旧镜头要求，不要把新动作附加在仍然保留的旧姿势后面。先在各自实际生图字段明确新的身体朝向、承重位置、参与动作的手脚与物体相对位置，再保留意见没有变更的身份、五官与衣着；没有必要时不改变镜头，确需调整时以完整呈现新动作及支撑为准。画幅 size 仍遵守用户明确选择，不为套示例更改。${negativeRequired ? '本次改姿势后必须重新核对本画面 negative：移除会否定新姿势、支撑或接触关系的旧排除项，再针对新画面的姿态与位置易错处补充不冲突的排除项。' : '本次不生成 negative，不为姿势改写编写负面词；保留原字段，靠正面明确新姿势与关系。'}
-所有内容字段中禁止 bbi_image、tag、nl、negative、size 等 XML 标签，不返回 changes，不更新角色档案。工作流固定词由出图设置管理，不需要在此重复。
+所有内容字段中禁止 changye_image、tag、nl、negative、size 等 XML 标签，不返回 changes，不更新角色档案。工作流固定词由出图设置管理，不需要在此重复。
 ${!negativeRequired ? '本次未启用 AI 生成负面词：不编写或修改 negative，不因缺少 negative 而补写。可省略该字段，原负面内容由插件保留。此项覆盖自定义规范中的旧要求。' : ''}
 输出形状示例：${JSON.stringify({ images: [{ position: 'P1', ...example }] })}`;
   const messages: ChatMsg[] = [

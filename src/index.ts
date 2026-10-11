@@ -19,7 +19,7 @@ import '@/styles/base.css';
 import '@/styles/theme.css';
 import { createApp, watch } from 'vue';
 
-const HOST_ID = 'bbi-app-host';
+const HOST_ID = 'changye-app-host';
 
 /**
  * 可继承的排版属性——shadow DOM 不隔离继承,这些会透过 host 从 ST 漏进来。
@@ -110,7 +110,7 @@ async function hydrateWhenReady(attempt = 0) {
       // ready 事件里的 revision 已经对应真实角色库。
       registerPublicInterface();
       void checkForUpdate();
-      console.log(`[长夜的绘图器] 已加载 v${__BBI_VERSION__}，设置已同步`);
+      console.log(`[长夜的绘图器] 已加载 v${__CHANGYE_VERSION__}，设置已同步`);
     } catch (e) {
       console.error('[长夜的绘图器] 设置载入失败', e);
     }

@@ -7,7 +7,7 @@ import { activeComfyPreset, effectiveComfyConn, settings } from '@/state/setting
 import { parseImageTagContent, matchesImageTagLayout } from '@/st/imageTagRegex';
 import { getContext } from '@/st/context';
 import { isGenerationFloorLocked, trackGenerationOperation } from './genState';
-import { saveImageResult, type BbiImageEntry } from './storage';
+import { saveImageResult, type ChangYeImageEntry } from './storage';
 import { hydrateMessage } from './hydrate';
 import type { PromptEditorAt } from './promptEditor';
 import { beginImage, finishImage, failImage, safeHistory } from '@/state/history';
@@ -15,9 +15,9 @@ import { composeInpaintDescription } from '@/autoTag/inpaintPrompt';
 import { composeComfyPositive, normalizeComfyFixedPrompts } from '@/backends/comfyFixedPrompts';
 
 let active=false;
-export function openInpaintEditor(options:{at:PromptEditorAt;entry:BbiImageEntry}):void{
+export function openInpaintEditor(options:{at:PromptEditorAt;entry:ChangYeImageEntry}):void{
   if(active){toastr.info('请先完成已打开的局部重绘','长夜的绘图器');return;}
-  const root=document.getElementById('bbi-app-host')?.shadowRoot;
+  const root=document.getElementById('changye-app-host')?.shadowRoot;
   if(!root)return;
   const at=options.at, originalMessage=getContext()?.chat[at.messageId];
   const check=()=>{

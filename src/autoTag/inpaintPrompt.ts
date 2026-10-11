@@ -29,7 +29,7 @@ ${natural ? 'Krea2：tag 必须为空，nl 是简洁连贯的英文自然语言�
       throw new Error('画面描述格式不完整，请重试或手动编辑');
     if (natural && value.tag.trim()) throw new Error('Krea2 画面描述应为自然语言，请重试');
     result = [natural ? '' : value.tag.trim(), value.nl.trim()].filter(Boolean).join('\n\n');
-    if (/<\/?(?:bbi_image|script|tag|nl)\b/i.test(result) || result.length > 8000)
+    if (/<\/?(?:changye_image|bbi_image|script|tag|nl)\b/i.test(result) || result.length > 8000)
       throw new Error('画面描述包含无效标记或过长，请重试');
   } });
   signal.throwIfAborted();

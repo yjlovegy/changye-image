@@ -124,7 +124,7 @@ async function change(target: TestNode): Promise<void> {
 const prefix = '\u67cf\u5b9d\u7ed8_';
 const alpha = `${prefix}Alpha`;
 const beta = `${prefix}Beta`;
-const expandedKey = 'bbi.ui.galleryExpanded.v1';
+const expandedKey = 'changye.ui.galleryExpanded.v1';
 /** 删除调用要的是归一化 key（解码、无前导斜杠），与组件 image.key、markImagesMissing 同一口径；<img> 用的编码 src 是另一回事（见 imageSrc）。 */
 const keyOf = (folder: string, file: string) => `user/images/${folder}/${file}`;
 let stored: Map<string, string>;
@@ -167,7 +167,7 @@ afterEach(() => {
 
 describe('gallery on-demand rendering', () => {
   it('starts folded without image nodes, including when old collapsed preferences exist', async () => {
-    stored.set('bbi.ui.galleryCollapsed.v1', JSON.stringify([beta]));
+    stored.set('changye.ui.galleryCollapsed.v1', JSON.stringify([beta]));
     const root = await mount();
     expect(find(root, '.gal-fold-trigger').map(head => head.props['aria-expanded'])).toEqual([false, false]);
     expect(find(root, 'img')).toHaveLength(0);
@@ -340,7 +340,7 @@ describe('gallery multi-select delete', () => {
     await click(find(root, '.gal-more')[0]);
     expect(find(root, 'img')).toHaveLength(48);
 
-    await click(find(root, '.bbi-btn-danger')[0]);
+    await click(find(root, '.changye-btn-danger')[0]);
     await flush();
 
     expect(vi.mocked(confirmDialog)).toHaveBeenCalledTimes(1);
@@ -370,7 +370,7 @@ describe('gallery multi-select delete', () => {
     // 懒加载只渲染了 24 张,但「全选这个角色」指的是这个角色的全部 53 张
     expect(text(find(root, '.gal-actionbar-count')[0])).toContain('53');
 
-    await click(find(root, '.bbi-btn-danger')[0]);
+    await click(find(root, '.changye-btn-danger')[0]);
     await flush();
     expect(vi.mocked(deleteImageFileOnly)).toHaveBeenCalledTimes(53);
     // 删空的分组整组消失
@@ -382,7 +382,7 @@ describe('gallery multi-select delete', () => {
     vi.mocked(confirmDialog).mockResolvedValue(false);
     const root = await selectMode();
     await click(find(root, '.gal-thumb')[0]);
-    await click(find(root, '.bbi-btn-danger')[0]);
+    await click(find(root, '.changye-btn-danger')[0]);
     await flush();
     expect(vi.mocked(deleteImageFileOnly)).not.toHaveBeenCalled();
     // 取消不该顺手把选中项清掉:用户多半是想再核对一遍
@@ -397,7 +397,7 @@ describe('gallery multi-select delete', () => {
     const root = await selectMode();
     await click(find(root, '.gal-thumb')[0]);
     await click(find(root, '.gal-thumb')[1]);
-    await click(find(root, '.bbi-btn-danger')[0]);
+    await click(find(root, '.changye-btn-danger')[0]);
     await flush();
 
     // 成功的摘掉、失败的留在列表里且仍勾着,用户可以直接重试
@@ -424,15 +424,15 @@ describe('gallery multi-select delete', () => {
     // 像没生效;吸顶则一按就看见。这条锁的是顺序——CSS 的 sticky 单测看不见,但 DOM 顺序看得见。
     const root = await mount();
     await click(find(root, '.gal-select-toggle')[0]);
-    const page = find(root, '.bbi-page')[0];
+    const page = find(root, '.changye-page')[0];
     const order = page.children.map(child => String(child.props.class ?? ''));
     expect(order.findIndex(cls => cls.includes('gal-actionbar')))
       .toBeLessThan(order.findIndex(cls => cls.includes('gal-groups')));
   });
 
-  it('uses the shared .bbi-checkbox so themes restyling it (pastel redraws the tick) apply here too', async () => {
+  it('uses the shared .changye-checkbox so themes restyling it (pastel redraws the tick) apply here too', async () => {
     const root = await selectMode();
     const box = find(root, '.gal-group-check')[0].children[0];
-    expect(String(box.props.class ?? '')).toContain('bbi-checkbox');
+    expect(String(box.props.class ?? '')).toContain('changye-checkbox');
   });
 });

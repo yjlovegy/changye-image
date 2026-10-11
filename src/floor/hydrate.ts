@@ -10,7 +10,7 @@ import { SlotRegistry } from '@/floor/registry';
 import { checkSlotHealth, floorIdOf } from '@/floor/slotHealth';
 import { historyEntries, latestStaleEntry, promptHash, readStore } from '@/floor/storage';
 import { getContext, type STContext } from '@/st/context';
-import { BBI_SLOT_SELECTOR, parseImageTagContent, parseImageTags } from '@/st/imageTagRegex';
+import { CHANGYE_SLOT_SELECTOR, parseImageTagContent, parseImageTags } from '@/st/imageTagRegex';
 import { settings } from '@/state/settings';
 
 /**
@@ -143,7 +143,7 @@ export function hydrateMessage(messageId: number, ctx: STContext): void {
       const mesText = findMesText(messageId);
       // 楼层不在 DOM(未渲染/群聊懒渲染):desired 留空,本楼旧记录被卸载,等下次渲染事件
       if (mesText) {
-        const anchors = [...mesText.querySelectorAll<HTMLElement>(BBI_SLOT_SELECTOR)];
+        const anchors = [...mesText.querySelectorAll<HTMLElement>(CHANGYE_SLOT_SELECTOR)];
         if (anchors.length !== tags.length) {
           console.warn(
             `[长夜的绘图器] 楼层 #${messageId} 锚点 ${anchors.length} 个 ≠ 生图 TAG ${tags.length} 个，按少者配对`,

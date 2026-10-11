@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  BBI_CHAR_EXTRA_KEY,
+  CHANGYE_CHAR_EXTRA_KEY,
   applyCharTagOps,
   buildEntryTag,
   computeLockedCharTagNames,
@@ -25,7 +25,7 @@ function floorMessage(ops: CharTagAutoOp[], swipe = 0, storedSwipe = swipe): STM
     swipes: ['正文', '另一页'],
     swipe_id: swipe,
     extra: {
-      [BBI_CHAR_EXTRA_KEY]: { v: 1, swipe: storedSwipe, ops },
+      [CHANGYE_CHAR_EXTRA_KEY]: { v: 1, swipe: storedSwipe, ops },
     },
   };
 }

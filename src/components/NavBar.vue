@@ -22,11 +22,11 @@ function onNavClick(id: string) {
 </script>
 
 <template>
-  <nav class="bbi-nav" :class="[`is-${placement}`, { 'is-narrow': narrow }]">
+  <nav class="changye-nav" :class="[`is-${placement}`, { 'is-narrow': narrow }]">
     <button
       v-for="p in PAGES"
       :key="p.id"
-      class="bbi-nav-item"
+      class="changye-nav-item"
       :class="{ 'is-active': ui.activePage === p.id }"
       type="button"
       :title="p.label"
@@ -34,94 +34,94 @@ function onNavClick(id: string) {
       :aria-current="ui.activePage === p.id ? 'page' : undefined"
       @click="onNavClick(p.id)"
     >
-      <span class="bbi-nav-icon-wrap">
-        <Icon :name="p.id" class="bbi-nav-icon" />
-        <span v-if="showUpdateDot(p.id)" class="bbi-nav-dot" aria-label="有可用更新"></span>
+      <span class="changye-nav-icon-wrap">
+        <Icon :name="p.id" class="changye-nav-icon" />
+        <span v-if="showUpdateDot(p.id)" class="changye-nav-dot" aria-label="有可用更新"></span>
       </span>
       <!-- 顶部带文字;但窄屏(移动端)顶部也只放图标,否则一排带字胶囊横向放不下,会把后面的项挤出屏幕 -->
-      <span v-if="placement === 'top' && !narrow" class="bbi-nav-label">{{ p.label }}</span>
+      <span v-if="placement === 'top' && !narrow" class="changye-nav-label">{{ p.label }}</span>
     </button>
   </nav>
 </template>
 
 <style scoped>
-.bbi-nav {
+.changye-nav {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
 }
 
 /* —— 顶部:胶囊分段,横排图标+字 —— */
-.bbi-nav.is-top {
+.changye-nav.is-top {
   gap: 4px;
   padding: 10px 14px;
-  border-bottom: 1px solid var(--bbi-line);
+  border-bottom: 1px solid var(--changye-line);
 }
-.bbi-nav.is-top .bbi-nav-item {
+.changye-nav.is-top .changye-nav-item {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 7px 14px;
   border: 0;
-  border-radius: var(--bbi-radius-pill);
+  border-radius: var(--changye-radius-pill);
   background: transparent;
-  color: var(--bbi-ink-soft);
+  color: var(--changye-ink-soft);
   cursor: pointer;
   font-size: 14px;
   white-space: nowrap;
   transition:
-    background var(--bbi-dur) var(--bbi-ease),
-    color var(--bbi-dur) var(--bbi-ease);
+    background var(--changye-dur) var(--changye-ease),
+    color var(--changye-dur) var(--changye-ease);
 }
-.bbi-nav.is-top .bbi-nav-item:hover {
-  background: var(--bbi-surface-2);
-  color: var(--bbi-ink);
+.changye-nav.is-top .changye-nav-item:hover {
+  background: var(--changye-surface-2);
+  color: var(--changye-ink);
 }
-.bbi-nav.is-top .bbi-nav-item.is-active {
-  background: var(--bbi-accent);
-  color: var(--bbi-accent-ink);
+.changye-nav.is-top .changye-nav-item.is-active {
+  background: var(--changye-accent);
+  color: var(--changye-accent-ink);
 }
-.bbi-nav.is-top .bbi-nav-icon {
+.changye-nav.is-top .changye-nav-icon {
   font-size: 17px;
 }
 
 /* —— 顶部 + 窄屏(移动端):降级为仅图标,样式与底部导航完全一致(尺寸/配色/选中态),
    仅位置在顶,免得带字胶囊横向溢出把后面的项挤出屏幕 —— */
-.bbi-nav.is-top.is-narrow {
+.changye-nav.is-top.is-narrow {
   justify-content: space-around;
   gap: 0;
   padding: 6px 6px;
 }
-.bbi-nav.is-top.is-narrow .bbi-nav-item {
+.changye-nav.is-top.is-narrow .changye-nav-item {
   flex: 1;
   justify-content: center;
   gap: 0;
   padding: 10px 0;
   border-radius: 0;
   background: transparent;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
 }
-.bbi-nav.is-top.is-narrow .bbi-nav-item:hover {
+.changye-nav.is-top.is-narrow .changye-nav-item:hover {
   background: transparent;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
 }
-.bbi-nav.is-top.is-narrow .bbi-nav-item.is-active {
+.changye-nav.is-top.is-narrow .changye-nav-item.is-active {
   background: transparent;
-  color: var(--bbi-accent);
+  color: var(--changye-accent);
 }
-.bbi-nav.is-top.is-narrow .bbi-nav-icon {
+.changye-nav.is-top.is-narrow .changye-nav-icon {
   font-size: 23px;
 }
 
 /* —— 底部:仅图标,等分,触达区大 —— */
-.bbi-nav.is-bottom {
+.changye-nav.is-bottom {
   justify-content: space-around;
   padding: 6px 6px;
   padding-bottom: max(6px, env(safe-area-inset-bottom));
-  border-top: 1px solid var(--bbi-line);
-  background: var(--bbi-surface);
+  border-top: 1px solid var(--changye-line);
+  background: var(--changye-surface);
 }
-.bbi-nav.is-bottom .bbi-nav-item {
+.changye-nav.is-bottom .changye-nav-item {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -129,38 +129,38 @@ function onNavClick(id: string) {
   padding: 10px 0;
   border: 0;
   background: transparent;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   cursor: pointer;
-  transition: color var(--bbi-dur) var(--bbi-ease);
+  transition: color var(--changye-dur) var(--changye-ease);
 }
-.bbi-nav.is-bottom .bbi-nav-icon {
+.changye-nav.is-bottom .changye-nav-icon {
   font-size: 23px;
 }
-.bbi-nav.is-bottom .bbi-nav-item.is-active {
-  color: var(--bbi-accent);
+.changye-nav.is-bottom .changye-nav-item.is-active {
+  color: var(--changye-accent);
 }
 
-.bbi-nav-item:focus-visible {
-  outline: 2px solid var(--bbi-accent);
+.changye-nav-item:focus-visible {
+  outline: 2px solid var(--changye-accent);
   outline-offset: 2px;
-  border-radius: var(--bbi-radius-sm);
+  border-radius: var(--changye-radius-sm);
 }
 
-.bbi-nav-icon-wrap {
+.changye-nav-icon-wrap {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.bbi-nav-dot {
+.changye-nav-dot {
   position: absolute;
   top: -2px;
   right: -3px;
   width: 7px;
   height: 7px;
-  border-radius: var(--bbi-radius-pill);
-  background: var(--bbi-danger);
-  box-shadow: 0 0 0 1.5px var(--bbi-surface);
+  border-radius: var(--changye-radius-pill);
+  background: var(--changye-danger);
+  box-shadow: 0 0 0 1.5px var(--changye-surface);
   pointer-events: none;
 }
 

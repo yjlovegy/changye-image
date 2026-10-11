@@ -314,7 +314,7 @@ function unetLoader(simple: ComfySimpleConfig): SimpleWorkflowNode {
 }
 
 function saveNode(images: NodeRef): SimpleWorkflowNode {
-  return { class_type: 'SaveImage', inputs: { filename_prefix: 'BaiBai', images } };
+  return { class_type: 'SaveImage', inputs: { filename_prefix: 'ChangYe', images } };
 }
 
 function buildCheckpointWorkflow(simple: ComfySimpleConfig, values: SimpleGenValues, fixedPrompts?: ComfyFixedPrompts): SimpleWorkflow {

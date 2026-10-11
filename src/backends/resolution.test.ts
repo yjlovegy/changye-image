@@ -13,11 +13,11 @@ describe('saved and per-image dimensions', () => {
     expect(workflowResolution({...old,defaultSize:'1080×1920'},'landscape')).toEqual({width:1080,height:1920});
   });
   it('round trips per-image dimensions without polluting the prompt or changing old tags', () => {
-    const original = parseImageTagContent('<bbi_image>a ceramic vase<size>portrait</size></bbi_image>');
-    expect(serializeImageTag(original)).toBe('<bbi_image>a ceramic vase<size>portrait</size></bbi_image>');
+    const original = parseImageTagContent('<changye_image>a ceramic vase<size>portrait</size></changye_image>');
+    expect(serializeImageTag(original)).toBe('<changye_image>a ceramic vase<size>portrait</size></changye_image>');
     const edited={...original,resolution:{width:1080,height:1920}};
     expect(parseImageTagContent(serializeImageTag(edited))).toEqual(edited);
-    const broken=parseImageTagContent('<bbi_image>a vase<resolution>10000×1024</resolution></bbi_image>');
+    const broken=parseImageTagContent('<changye_image>a vase<resolution>10000×1024</resolution></changye_image>');
     expect(broken.tag).toBe('a vase'); expect(broken.resolutionInvalid).toBe(true);
     expect(containsTagMarkup('<resolution>')).toBe(true);
   });

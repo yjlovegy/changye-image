@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * 共享存储「空种子」事故回归测试:
- * 旧版绘在没有任何排除数据时也会用空名单创建共享存储(occupying baibai_exclude_settings),
+ * 旧版绘在没有任何排除数据时也会用空名单创建共享存储(occupying changye_exclude_settings),
  * 书启动后领养空 store → 双方互相同步成空,用户配置全灭。
  * 现在的契约:没有用户数据的一方绝不建仓;有数据的一方遇到「空种子 store」时自愈回写。
  *

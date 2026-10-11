@@ -12,8 +12,8 @@ export interface ConfirmOptions {
 }
 
 // 与 index.ts 的 HOST_ID 保持一致:插件宿主元素,其 shadow root 里有 dist/index.css
-// 与 --bbi-* 主题变量;弹窗必须挂进去才有样式(挂 document.body 会裸奔)。
-const HOST_ID = 'bbi-app-host';
+// 与 --changye-* 主题变量;弹窗必须挂进去才有样式(挂 document.body 会裸奔)。
+const HOST_ID = 'changye-app-host';
 
 /**
  * 命令式确认弹窗:供聊天侧(楼层按钮等模板外环境)使用,替代浏览器原生 confirm。

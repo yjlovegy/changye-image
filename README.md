@@ -2,6 +2,8 @@
 
 SillyTavern 剧情配图扩展，基于 **柏柏** 的 [ST-BaiBai-Image](https://github.com/baibai-git/ST-BaiBai-Image) 修改，当前版本 **V1.5.1**（安装版本 `1.5.1`）。
 
+源码、组件和新写入数据已统一使用 ChangYe 命名。旧配置、聊天图片标签和图库路径继续兼容，详见 [命名清理与兼容清单](BRANDING-MIGRATION.md)。
+
 本仓库由长夜维护增强版，并非原作者官方仓库。原有设置键与数据格式保留兼容，界面名称统一为“长夜的绘图器”；内部标识与历史图片目录沿用旧格式，以兼容已保存的数据。
 
 ## 安装
@@ -235,7 +237,8 @@ Krea2 与 Anima 共用处理逻辑，各自保留模型、CLIP 类型、VAE、Lo
 
 普通酒馆扩展安装不会安装服务器插件。**仅需要在 Windows 本机点击图库后弹出资源管理器的用户才需要本节。**
 
-1. 将本仓库 `server-plugins/baibai-image-folders` 文件夹复制到 `SillyTavern/plugins/baibai-image-folders`。
+1. 将本仓库 `server-plugins/changye-image-folders` 文件夹复制到 `SillyTavern/plugins/changye-image-folders`。
+   已安装旧助手时，使用新目录内的文件更新现有助手目录即可，不要同时安装两份。更新后需要重启酒馆。
 2. 在酒馆 `config.yaml` 中设置 `enableServerPlugins: true`。
 3. 关闭原酒馆启动窗口，用原来的启动方式重新启动。
 4. 使用 `http://127.0.0.1:8000` 或自己的本机酒馆端口访问。点击图库分组的“打开文件夹”；手动删减后重新读取图库。

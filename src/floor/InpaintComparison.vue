@@ -63,7 +63,7 @@ onBeforeUnmount(() => stop());
 
 <template>
   <div class="result-body">
-    <div class="result-heading"><h3>重绘结果</h3><button class="bbi-btn" :aria-pressed="nativeSize" @click="toggleSize">{{nativeSize?'适应窗口':'原尺寸对比'}}</button></div>
+    <div class="result-heading"><h3>重绘结果</h3><button class="changye-btn" :aria-pressed="nativeSize" @click="toggleSize">{{nativeSize?'适应窗口':'原尺寸对比'}}</button></div>
     <div class="result-grid" :class="{'native-size':nativeSize}">
       <figure><figcaption>原图</figcaption>
         <div ref="originalView" class="result-image" :class="{dragging:dragging===originalView}" :tabindex="nativeSize?0:undefined" role="region" aria-label="原图对比区域" :title="nativeSize?'拖动查看；Shift＋滚轮横向移动':undefined"
@@ -82,10 +82,10 @@ onBeforeUnmount(() => stop());
 </template>
 
 <style scoped>
-.result-body{padding:20px 24px;background:var(--bbi-bg);min-width:0}
+.result-body{padding:20px 24px;background:var(--changye-bg);min-width:0}
 .result-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:14px}
 .result-heading h3{margin:0}
-.bbi-btn{display:inline-flex;justify-content:center;align-items:center;white-space:nowrap;min-height:42px;line-height:1.3}
+.changye-btn{display:inline-flex;justify-content:center;align-items:center;white-space:nowrap;min-height:42px;line-height:1.3}
 .result-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;align-items:start}
 figure{min-width:0;text-align:center;margin:0}
 figcaption{font-size:14px;margin-bottom:10px}
@@ -95,8 +95,8 @@ figcaption{font-size:14px;margin-bottom:10px}
 .native-size .result-image.dragging{cursor:grabbing}
 .native-size .result-image img{display:block;width:auto;max-width:none;height:auto;max-height:none;border-radius:0;pointer-events:none}
 .native-size .result-image::-webkit-scrollbar{width:12px;height:12px}
-.native-size .result-image::-webkit-scrollbar-thumb{background:var(--bbi-ink-muted);border:3px solid var(--bbi-bg);border-radius:8px}
-.native-size .result-image::-webkit-scrollbar-track,.native-size .result-image::-webkit-scrollbar-corner{background:var(--bbi-bg)}
-.result-image:focus-visible,button:focus-visible{outline:2px solid var(--bbi-accent);outline-offset:2px}
-@media(max-width:620px){.result-body{padding:16px 12px}.result-grid{gap:10px}.result-image img{height:280px}.result-heading{gap:10px}.bbi-btn{font-size:13px;min-height:39px}}
+.native-size .result-image::-webkit-scrollbar-thumb{background:var(--changye-ink-muted);border:3px solid var(--changye-bg);border-radius:8px}
+.native-size .result-image::-webkit-scrollbar-track,.native-size .result-image::-webkit-scrollbar-corner{background:var(--changye-bg)}
+.result-image:focus-visible,button:focus-visible{outline:2px solid var(--changye-accent);outline-offset:2px}
+@media(max-width:620px){.result-body{padding:16px 12px}.result-grid{gap:10px}.result-image img{height:280px}.result-heading{gap:10px}.changye-btn{font-size:13px;min-height:39px}}
 </style>

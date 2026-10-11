@@ -125,7 +125,7 @@ const dim = computed(() => (props.size ? (typeof props.size === 'number' ? `${pr
 
 <template>
   <svg
-    class="bbi-icon"
+    class="changye-icon"
     :style="{ width: dim, height: dim }"
     viewBox="0 0 24 24"
     fill="none"
@@ -139,7 +139,7 @@ const dim = computed(() => (props.size ? (typeof props.size === 'number' ? `${pr
 </template>
 
 <style scoped>
-.bbi-icon {
+.changye-icon {
   display: inline-block;
   flex: 0 0 auto;
   vertical-align: -0.15em;

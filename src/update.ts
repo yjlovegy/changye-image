@@ -82,7 +82,7 @@ function extensionFolderName(): string {
   } catch {
     // 解析失败时回退固定目录名。
   }
-  return 'ST-BaiBai-Image';
+  return 'ST-ChangYe-Image';
 }
 
 async function discoverExtensionType(folder: string): Promise<'global' | 'local' | 'system' | null> {

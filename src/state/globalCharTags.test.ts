@@ -61,7 +61,7 @@ afterEach(() => {
 
 describe('global char tag store', () => {
   it('normalizes old global eye color data with an empty eyeShape while retaining legacy appearance', async () => {
-    ctx.extensionSettings['baibai_image_char_global'] = {
+    ctx.extensionSettings['changye_image_char_global'] = {
       schemaVersion: 1, revision: 3,
       entries: [{ name: 'Lin', fields: { eyes: 'brown eyes, long eyelashes' }, raw: 'legacy appearance',
         nl: 'Lin has brown eyes and long eyelashes.', source: 'manual', desc: '', history: [] }],
@@ -89,7 +89,7 @@ describe('global char tag store', () => {
     expect(globalTags.globalCharTagLib.entries[0].history).toEqual([]);
     // 派生库(本聊天为空时)直接含全局条目
     expect(charTags.charTagLib.entries.map(e => e.name)).toEqual(['玩家']);
-    const stored = ctx.extensionSettings['baibai_image_char_global'] as {
+    const stored = ctx.extensionSettings['changye_image_char_global'] as {
       schemaVersion: number;
       entries: Array<{ name: string; history: unknown[] }>;
     };
@@ -118,7 +118,7 @@ describe('global char tag store', () => {
   });
 
   it('init 时领养 extensionSettings 里已有的全局库', async () => {
-    ctx.extensionSettings['baibai_image_char_global'] = {
+    ctx.extensionSettings['changye_image_char_global'] = {
       schemaVersion: 1,
       revision: 3,
       entries: [makeEntry('老玩家', { sex: '1girl' })],
@@ -144,7 +144,7 @@ describe('锁定与合并语义', () => {
         is_system: false,
         mes: '正文',
         swipe_id: 0,
-        extra: { [charTags.BBI_CHAR_EXTRA_KEY]: { v: 1, swipe: 0, ops: [dye] } },
+        extra: { [charTags.CHANGYE_CHAR_EXTRA_KEY]: { v: 1, swipe: 0, ops: [dye] } },
       },
     ];
     charTags.recomputeCharTags();
@@ -169,7 +169,7 @@ describe('锁定与合并语义', () => {
         is_system: false,
         mes: '正文',
         swipe_id: 0,
-        extra: { [charTags.BBI_CHAR_EXTRA_KEY]: { v: 1, swipe: 0, ops: [dye] } },
+        extra: { [charTags.CHANGYE_CHAR_EXTRA_KEY]: { v: 1, swipe: 0, ops: [dye] } },
       },
     ];
     charTags.recomputeCharTags();
@@ -188,7 +188,7 @@ describe('提升为全局 / 复制到本聊天', () => {
     expect(globalTags.findGlobalCharTag('Lin')?.fields.eyeShape).toBe('almond-shaped eyes, long eyelashes');
     expect(charTags.findCharTag('Lin')?.fields.eyeShape).toBe('almond-shaped eyes, long eyelashes');
     expect(charTags.findCharTag('Lin')?.fields.eyes).toBe('brown eyes');
-    const store = ctx.extensionSettings['baibai_image_char_global'] as { entries: Array<{ fields: Record<string, string> }> };
+    const store = ctx.extensionSettings['changye_image_char_global'] as { entries: Array<{ fields: Record<string, string> }> };
     expect(store.entries[0].fields.eyeShape).toBe('almond-shaped eyes, long eyelashes');
   });
 
@@ -209,7 +209,7 @@ describe('提升为全局 / 复制到本聊天', () => {
     charTags.hydrateCharTags();
     expect(charTags.findCharTag('小雪')?.preferences).toEqual({ expression: 'serious' });
     expect(charTags.findCharTag('小雪')?.fields.accessories).toBe('round glasses');
-    const globalStore = ctx.extensionSettings['baibai_image_char_global'] as { entries: Array<{ preferences: unknown }> };
+    const globalStore = ctx.extensionSettings['changye_image_char_global'] as { entries: Array<{ preferences: unknown }> };
     expect(globalStore.entries[0].preferences).toEqual({ expression: 'smile', pose: 'standing' });
   });
 
@@ -250,7 +250,7 @@ describe('提升为全局 / 复制到本聊天', () => {
     expect(globalTags.findGlobalCharTag('小雪')?.preferences).toBeUndefined();
     expect(charTags.findCharTag('小雪')?.preferences).toBeUndefined();
     expect(charTags.charTagBaseNames.has('小雪')).toBe(false);
-    const store = ctx.extensionSettings['baibai_image_char_global'] as { entries: Array<{ preferences?: unknown }> };
+    const store = ctx.extensionSettings['changye_image_char_global'] as { entries: Array<{ preferences?: unknown }> };
     expect(store.entries[0].preferences).toBeUndefined();
   });
 
@@ -286,7 +286,7 @@ describe('提升为全局 / 复制到本聊天', () => {
         is_system: false,
         mes: '正文',
         swipe_id: 0,
-        extra: { [charTags.BBI_CHAR_EXTRA_KEY]: { v: 1, swipe: 0, ops: [dye] } },
+        extra: { [charTags.CHANGYE_CHAR_EXTRA_KEY]: { v: 1, swipe: 0, ops: [dye] } },
       },
     ];
     charTags.recomputeCharTags();
@@ -298,7 +298,7 @@ describe('提升为全局 / 复制到本聊天', () => {
     // 本聊天基线副本已删、楼层 ops 已清
     expect(charTags.charTagBaseNames.has('小雪')).toBe(false);
     const floorExtra = (ctx.chat[0] as { extra?: Record<string, unknown> }).extra;
-    expect(floorExtra?.[charTags.BBI_CHAR_EXTRA_KEY]).toBeUndefined();
+    expect(floorExtra?.[charTags.CHANGYE_CHAR_EXTRA_KEY]).toBeUndefined();
     // 此后该名字被锁定
     expect([...charTags.lockedCharTagNames()]).toEqual(['小雪']);
     expect(charTags.charTagLib.entries[0].fields.hair).toBe('short red hair');

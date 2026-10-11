@@ -104,11 +104,11 @@ const CONVERT_SPEC = `你是外貌 tag 转换器。把给出的角色中文外�
 3. 描述里没提的细节不要脑补,对应字段留空字符串。
 4. 只返回一个 JSON 对象:{"角色名":{"sex":"...","hair":"...","eyes":"...","face":"...","eyeShape":"...","eyebrows":"...","nose":"...","mouth":"..."}}，可以使用上述所有固定字段，没提到的字段省略或留空；键与输入的角色名完全一致;不要 Markdown 代码块、不要解释。`;
 
-/** 字段值清洗:换行压成空格、剥 bbi_image 系子标签字面量(防止污染注入格式)。 */
+/** 字段值清洗:换行压成空格、剥 changye_image 系子标签字面量(防止污染注入格式)。 */
 function sanitizeTagValue(value: unknown): string {
   const text = typeof value === 'string' ? value.trim().replace(/[\r\n]+/g, ' ') : '';
   if (!text) return '';
-  if (/<\/?(?:bbi_image|tag|nl|size)\b/i.test(text)) return '';
+  if (/<\/?(?:changye_image|bbi_image|tag|nl|size)\b/i.test(text)) return '';
   return text;
 }
 

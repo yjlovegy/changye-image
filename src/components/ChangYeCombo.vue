@@ -9,7 +9,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
  *
  * 为什么菜单 Teleport 到 modalHost 而不是就地绝对定位(副 API 那个是就地):
  * 本组件用在 Collapsible(overflow:hidden)里,就地定位会被裁剪(角色记忆插件踩过同款坑),
- * 故与 BbiSelect 同方案 —— 视口级 fixed,由输入框 getBoundingClientRect 推算,
+ * 故与 ChangYeSelect 同方案 —— 视口级 fixed,由输入框 getBoundingClientRect 推算,
  * 下方空间不足时向上翻。
  *
  * 交互:聚焦/输入展开;↑↓ 移动高亮,Enter 选中,Esc 只关菜单(不触发窗口级 Esc);
@@ -109,7 +109,7 @@ function pick(option: string) {
 
 function scrollActiveIntoView() {
   menu.value
-    ?.querySelectorAll('.bbi-combo-item')
+    ?.querySelectorAll('.changye-combo-item')
     [activeIndex.value]?.scrollIntoView({ block: 'nearest' });
 }
 
@@ -156,10 +156,10 @@ onBeforeUnmount(() => closeMenu());
 </script>
 
 <template>
-  <div class="bbi-combo-box">
+  <div class="changye-combo-box">
     <input
       ref="trigger"
-      class="bbi-input bbi-combo-input"
+      class="changye-input changye-combo-input"
       type="text"
       :value="modelValue"
       :placeholder="placeholder"
@@ -178,7 +178,7 @@ onBeforeUnmount(() => closeMenu());
     <Icon
       v-if="options.length"
       name="chevron"
-      class="bbi-combo-caret"
+      class="changye-combo-caret"
       :class="{ 'is-open': open }"
       :size="12"
     />
@@ -186,23 +186,23 @@ onBeforeUnmount(() => closeMenu());
       <ul
         v-if="open"
         ref="menu"
-        class="bbi-combo-menu"
+        class="changye-combo-menu"
         role="listbox"
         :style="menuStyle"
         @mousedown.prevent="keepFocus"
       >
-        <li v-if="!filtered.length" class="bbi-combo-empty">无匹配项</li>
+        <li v-if="!filtered.length" class="changye-combo-empty">无匹配项</li>
         <li
           v-for="(option, i) in filtered"
           :key="option"
-          class="bbi-combo-item"
+          class="changye-combo-item"
           :class="{ 'is-active': i === activeIndex, 'is-selected': option === modelValue }"
           role="option"
           :aria-selected="option === modelValue"
           @mouseenter="activeIndex = i"
           @click="pick(option)"
         >
-          <span class="bbi-combo-label">{{ option }}</span><Icon v-if="option === modelValue" name="check" :size="13" />
+          <span class="changye-combo-label">{{ option }}</span><Icon v-if="option === modelValue" name="check" :size="13" />
         </li>
       </ul>
     </Teleport>
@@ -210,67 +210,67 @@ onBeforeUnmount(() => closeMenu());
 </template>
 
 <style scoped>
-.bbi-combo-box {
+.changye-combo-box {
   position: relative;
   width: 100%;
   min-width: 0;
 }
-.bbi-combo-input {
+.changye-combo-input {
   width: 100%;
-  background: var(--bbi-surface);
+  background: var(--changye-surface);
   cursor: pointer;
   padding-right: 26px; /* 给右侧三角让位 */
 }
-.bbi-combo-input:hover,.bbi-combo-input[aria-expanded="true"] { background: var(--bbi-surface-2); }
-.bbi-combo-caret {
+.changye-combo-input:hover,.changye-combo-input[aria-expanded="true"] { background: var(--changye-surface-2); }
+.changye-combo-caret {
   position: absolute;
   top: 50%;
   right: 9px;
   transform: translateY(-50%);
   pointer-events: none;
-  color: var(--bbi-ink-soft);
-  transition: transform var(--bbi-dur) var(--bbi-ease);
+  color: var(--changye-ink-soft);
+  transition: transform var(--changye-dur) var(--changye-ease);
 }
-.bbi-combo-caret.is-open {
+.changye-combo-caret.is-open {
   transform: translateY(-50%) rotate(180deg);
 }
 
 /* 菜单 Teleport 到 modalHost(scoped 样式在同 shadow root 内照常生效) */
-.bbi-combo-menu {
+.changye-combo-menu {
   position: fixed;
-  z-index: 10003; /* 窗口(10000)之上,与 BbiSelect 菜单同级 */
+  z-index: 10003; /* 窗口(10000)之上,与 ChangYeSelect 菜单同级 */
   margin: 0;
   padding: 4px;
   list-style: none;
   overflow-y: auto;
-  background: var(--bbi-surface);
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius);
-  box-shadow: var(--bbi-shadow);
+  background: var(--changye-surface);
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius);
+  box-shadow: var(--changye-shadow);
 }
-.bbi-combo-item {
+.changye-combo-item {
   display: flex; align-items: center; gap: 8px;
   padding: 7px 10px;
-  border-radius: var(--bbi-radius-sm);
+  border-radius: var(--changye-radius-sm);
   font-size: 13px;
-  color: var(--bbi-ink);
+  color: var(--changye-ink);
   cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.bbi-combo-item.is-active {
-  background: var(--bbi-surface-2);
+.changye-combo-item.is-active {
+  background: var(--changye-surface-2);
 }
-.bbi-combo-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-.bbi-combo-item.is-selected {
-  background: var(--bbi-surface-2);
-  color: var(--bbi-accent);
+.changye-combo-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.changye-combo-item.is-selected {
+  background: var(--changye-surface-2);
+  color: var(--changye-accent);
   font-weight: 600;
 }
-.bbi-combo-empty {
+.changye-combo-empty {
   padding: 6px 10px;
   font-size: 12px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
 }
 </style>

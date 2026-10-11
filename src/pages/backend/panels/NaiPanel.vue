@@ -48,9 +48,9 @@ import {
   type VibeGroup,
 } from '@/backends/vibeGroups';
 import Collapsible from '@/components/Collapsible.vue';
-import BbiCombo from '@/components/BbiCombo.vue';
-import BbiSelect from '@/components/BbiSelect.vue';
-import BbiTextarea from '@/components/BbiTextarea.vue';
+import ChangYeCombo from '@/components/ChangYeCombo.vue';
+import ChangYeSelect from '@/components/ChangYeSelect.vue';
+import ChangYeTextarea from '@/components/ChangYeTextarea.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import Icon from '@/components/Icon.vue';
 import ModalMask from '@/components/ModalMask.vue';
@@ -706,40 +706,40 @@ async function removeVibe(vibe: NaiVibe) {
 
 <template>
   <div class="panel">
-    <p class="bbi-page-intro">
+    <p class="changye-page-intro">
       NovelAI 生图接口。地址默认为官方，填第三方兼容站（镜像/转发）即走第三方，协议一致。
     </p>
 
-    <div class="bbi-sections">
+    <div class="changye-sections">
       <Collapsible title="配置" :open="false">
-        <div class="bbi-field">
-          <div class="bbi-field-head">
-            <span class="bbi-field-label">接口地址</span>
+        <div class="changye-field">
+          <div class="changye-field-head">
+            <span class="changye-field-label">接口地址</span>
           </div>
           <input
-            class="bbi-input"
+            class="changye-input"
             type="text"
             v-model="settings.nai.url"
             placeholder="https://image.novelai.net"
             spellcheck="false"
           />
-          <p class="bbi-field-hint">默认官方；第三方站填域名即可，自动补全 /ai 端点。</p>
+          <p class="changye-field-hint">默认官方；第三方站填域名即可，自动补全 /ai 端点。</p>
         </div>
 
-        <div class="bbi-field">
-          <div class="bbi-field-head">
-            <span class="bbi-field-label">API Key</span>
+        <div class="changye-field">
+          <div class="changye-field-head">
+            <span class="changye-field-label">API Key</span>
           </div>
           <div class="key-row">
             <input
-              class="bbi-input"
+              class="changye-input"
               :type="showKey ? 'text' : 'password'"
               v-model="settings.nai.key"
               placeholder="nai-..."
               spellcheck="false"
             />
             <button
-              class="bbi-btn"
+              class="changye-btn"
               type="button"
               :title="showKey ? '隐藏' : '显示'"
               @click="showKey = !showKey"
@@ -747,21 +747,21 @@ async function removeVibe(vibe: NaiVibe) {
               <Icon :name="showKey ? 'eye-off' : 'eye'" />
             </button>
           </div>
-          <p class="bbi-field-hint">官方站在 NovelAI 设置页生成。</p>
+          <p class="changye-field-hint">官方站在 NovelAI 设置页生成。</p>
         </div>
 
         <div class="conn-actions">
           <span v-if="inUse" class="conn-inuse"><Icon name="check" :size="13" /> 当前出图渠道</span>
           <button
             v-else
-            class="bbi-btn conn-use"
+            class="changye-btn conn-use"
             type="button"
             title="TAG 书写规范会切到 NAI"
             @click="settings.defaultBackend = 'nai'"
           >
             使用此渠道出图
           </button>
-          <button class="bbi-btn" type="button" :disabled="testing" @click="onTestConnection">
+          <button class="changye-btn" type="button" :disabled="testing" @click="onTestConnection">
             <Icon name="plug" />
             {{ testing ? '连接中…' : '测试连接' }}
           </button>
@@ -771,11 +771,11 @@ async function removeVibe(vibe: NaiVibe) {
       <Collapsible title="提示词" :open="false">
         <!-- 画师串库:形制与 ComfyUI 工作流库一致,多一个「不使用」选项 -->
         <div class="art-row">
-          <span class="bbi-field-label">画师串</span>
+          <span class="changye-field-label">画师串</span>
           <input
             v-if="renamingArtist"
             ref="artistNameInput"
-            class="bbi-input"
+            class="changye-input"
             type="text"
             v-model="artistNameDraft"
             placeholder="画师串名称"
@@ -785,7 +785,7 @@ async function removeVibe(vibe: NaiVibe) {
             @keydown.esc.stop.prevent="renamingArtist = false"
             @blur="commitRenameArtist"
           />
-          <BbiSelect
+          <ChangYeSelect
             v-else
             class="art-select"
             v-model="activeArtistId"
@@ -794,7 +794,7 @@ async function removeVibe(vibe: NaiVibe) {
           />
           <span v-if="!renamingArtist" class="art-ops">
             <button
-              class="bbi-icon-btn art-op"
+              class="changye-icon-btn art-op"
               type="button"
               title="管理画师串库：搜索、预览图、批量删除"
               aria-label="管理画师串库"
@@ -803,7 +803,7 @@ async function removeVibe(vibe: NaiVibe) {
               <Icon name="grid" :size="14" />
             </button>
             <button
-              class="bbi-icon-btn art-op"
+              class="changye-icon-btn art-op"
               type="button"
               :disabled="!hasArtist || isBuiltinArtist"
               :title="
@@ -819,7 +819,7 @@ async function removeVibe(vibe: NaiVibe) {
               <Icon name="edit" :size="14" />
             </button>
             <button
-              class="bbi-icon-btn art-op"
+              class="changye-icon-btn art-op"
               type="button"
               title="新建一条空画师串"
               aria-label="新建一条空画师串"
@@ -828,7 +828,7 @@ async function removeVibe(vibe: NaiVibe) {
               <Icon name="plus" :size="14" />
             </button>
             <button
-              class="bbi-icon-btn art-op"
+              class="changye-icon-btn art-op"
               type="button"
               :disabled="!hasArtist"
               :title="
@@ -844,7 +844,7 @@ async function removeVibe(vibe: NaiVibe) {
               <Icon name="copy" :size="14" />
             </button>
             <button
-              class="bbi-icon-btn art-op art-remove"
+              class="changye-icon-btn art-op art-remove"
               type="button"
               :disabled="!hasArtist || isBuiltinArtist"
               :title="
@@ -866,7 +866,7 @@ async function removeVibe(vibe: NaiVibe) {
 
         <!-- 内容内联编辑:画师串通常就几个 tag,让「选中哪条」与「这条写了什么」一眼同框 -->
         <template v-if="artist">
-          <BbiTextarea
+          <ChangYeTextarea
             v-model="artist.prompt"
             :rows="3"
             :max-rows="8"
@@ -874,27 +874,27 @@ async function removeVibe(vibe: NaiVibe) {
             :readonly="isBuiltinArtist"
             placeholder="artist:xxx, artist:yyy"
           />
-          <p v-if="isBuiltinArtist" class="bbi-field-hint art-hint">
+          <p v-if="isBuiltinArtist" class="changye-field-hint art-hint">
             内置画师串随插件版本更新，不可直接改；点上方复制按钮建一条自己的再改。
           </p>
           <!-- 仅 V5 模型下提醒:V5 与 4.5 的画师串响应差异大,4.5 及以下不需要这条噪音 -->
-          <p v-if="isV5Model" class="bbi-field-hint art-hint art-hint-warn">
+          <p v-if="isV5Model" class="changye-field-hint art-hint art-hint-warn">
             NAI 5 对画师串的响应与 4.5 差异很大，旧画师串直接套用效果可能跑偏，建议重新调试。
           </p>
 
           <!-- 随画师串一起切换的正/负面词:设置了覆盖下面渠道级,没设置就用下面的 -->
-          <ul class="bbi-prompt-list art-bound-list">
-            <li v-for="t in artistBoundTargets" :key="t.key" class="bbi-prompt-item">
-              <button class="bbi-prompt-open" type="button" @click="openNaiPrompt(t)">
-                <span class="bbi-prompt-name">{{ t.label }}</span>
-                <span class="bbi-prompt-state" :class="{ 'is-custom': isTargetCustom(t) }">
+          <ul class="changye-prompt-list art-bound-list">
+            <li v-for="t in artistBoundTargets" :key="t.key" class="changye-prompt-item">
+              <button class="changye-prompt-open" type="button" @click="openNaiPrompt(t)">
+                <span class="changye-prompt-name">{{ t.label }}</span>
+                <span class="changye-prompt-state" :class="{ 'is-custom': isTargetCustom(t) }">
                   {{ isTargetCustom(t) ? '已设置' : '未设置' }}
                 </span>
-                <Icon name="edit" class="bbi-prompt-edit" />
+                <Icon name="edit" class="changye-prompt-edit" />
               </button>
             </li>
           </ul>
-          <p class="bbi-field-hint art-hint">
+          <p class="changye-field-hint art-hint">
             这里设置的提示词会覆盖下面的，随画师串一起切换；这里没设置，就会用下面的。
           </p>
         </template>
@@ -903,78 +903,78 @@ async function removeVibe(vibe: NaiVibe) {
         <hr class="art-divider" />
 
         <!-- 渠道级质量词/负面词:只读列表行,点行进弹窗编辑(与设置页「自定义提示词」同款) -->
-        <ul class="bbi-prompt-list">
-          <li v-for="t in CHANNEL_PROMPT_TARGETS" :key="t.key" class="bbi-prompt-item">
-            <button class="bbi-prompt-open" type="button" @click="openNaiPrompt(t)">
-              <span class="bbi-prompt-name">{{ t.label }}</span>
-              <span v-if="isShadowedByArtist(t.key)" class="bbi-prompt-state is-shadowed">
+        <ul class="changye-prompt-list">
+          <li v-for="t in CHANNEL_PROMPT_TARGETS" :key="t.key" class="changye-prompt-item">
+            <button class="changye-prompt-open" type="button" @click="openNaiPrompt(t)">
+              <span class="changye-prompt-name">{{ t.label }}</span>
+              <span v-if="isShadowedByArtist(t.key)" class="changye-prompt-state is-shadowed">
                 已被画师串覆盖
               </span>
-              <span v-else class="bbi-prompt-state" :class="{ 'is-custom': isTargetCustom(t) }">
+              <span v-else class="changye-prompt-state" :class="{ 'is-custom': isTargetCustom(t) }">
                 {{ isTargetCustom(t) ? '已自定义' : '默认' }}
               </span>
-              <Icon name="edit" class="bbi-prompt-edit" />
+              <Icon name="edit" class="changye-prompt-edit" />
             </button>
           </li>
         </ul>
-        <p class="bbi-field-hint art-hint">
+        <p class="changye-field-hint art-hint">
           画师串里没设置正/负面词时，就会用这里的；这里也留空，则按模型取官方词。
         </p>
       </Collapsible>
 
       <Collapsible title="默认参数" :open="false">
         <!-- 语义配对紧凑行:双字段行两列、数字参数行四列;说明统一收进行下的一行 hint -->
-        <div class="bbi-field">
-          <div class="bbi-field-head">
-            <span class="bbi-field-label">模型</span>
+        <div class="changye-field">
+          <div class="changye-field-head">
+            <span class="changye-field-label">模型</span>
           </div>
-          <BbiSelect style="width:100%" :model-value="settings.nai.model" @update:model-value="settings.nai.model = $event as typeof settings.nai.model" :options="NAI_MODELS" aria-label="NAI 模型" />
+          <ChangYeSelect style="width:100%" :model-value="settings.nai.model" @update:model-value="settings.nai.model = $event as typeof settings.nai.model" :options="NAI_MODELS" aria-label="NAI 模型" />
         </div>
 
         <div class="be-row">
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">竖屏尺寸（宽×高）</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">竖屏尺寸（宽×高）</span>
             </div>
-            <BbiCombo v-model="settings.nai.portraitSize" :options="['832×1216', '1024×1536', '1024×1024']" aria-label="竖屏尺寸" placeholder="832×1216" />
+            <ChangYeCombo v-model="settings.nai.portraitSize" :options="['832×1216', '1024×1536', '1024×1024']" aria-label="竖屏尺寸" placeholder="832×1216" />
           </div>
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">横屏尺寸（宽×高）</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">横屏尺寸（宽×高）</span>
             </div>
-            <BbiCombo v-model="settings.nai.landscapeSize" :options="['1216×832', '1536×1024', '1024×1024']" aria-label="横屏尺寸" placeholder="1216×832" />
+            <ChangYeCombo v-model="settings.nai.landscapeSize" :options="['1216×832', '1536×1024', '1024×1024']" aria-label="横屏尺寸" placeholder="1216×832" />
           </div>
         </div>
-        <p class="bbi-field-hint">竖屏用于单人、特写、立绘；横屏用于群像、远景、全景；方向由自动 TAG 判定。</p>
+        <p class="changye-field-hint">竖屏用于单人、特写、立绘；横屏用于群像、远景、全景；方向由自动 TAG 判定。</p>
 
         <div class="be-row">
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">采样器</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">采样器</span>
             </div>
-            <BbiSelect style="width:100%" :model-value="settings.nai.sampler" @update:model-value="settings.nai.sampler = $event as typeof settings.nai.sampler" :options="samplerOptions" aria-label="NAI 采样器" />
+            <ChangYeSelect style="width:100%" :model-value="settings.nai.sampler" @update:model-value="settings.nai.sampler = $event as typeof settings.nai.sampler" :options="samplerOptions" aria-label="NAI 采样器" />
           </div>
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">噪声表</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">噪声表</span>
             </div>
-            <BbiSelect style="width:100%" :model-value="settings.nai.noiseSchedule" @update:model-value="settings.nai.noiseSchedule = $event as typeof settings.nai.noiseSchedule" :options="NAI_NOISE_SCHEDULES" aria-label="噪声表" />
+            <ChangYeSelect style="width:100%" :model-value="settings.nai.noiseSchedule" @update:model-value="settings.nai.noiseSchedule = $event as typeof settings.nai.noiseSchedule" :options="NAI_NOISE_SCHEDULES" aria-label="噪声表" />
           </div>
         </div>
 
         <div class="be-row be-row--nums">
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">步数</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">步数</span>
             </div>
-            <input class="bbi-input" type="number" v-model.number="settings.nai.steps" min="1" max="50" />
+            <input class="changye-input" type="number" v-model.number="settings.nai.steps" min="1" max="50" />
           </div>
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">Scale</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">Scale</span>
             </div>
             <input
-              class="bbi-input"
+              class="changye-input"
               type="number"
               v-model.number="settings.nai.scale"
               min="0"
@@ -982,12 +982,12 @@ async function removeVibe(vibe: NaiVibe) {
               step="0.1"
             />
           </div>
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">Rescale</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">Rescale</span>
             </div>
             <input
-              class="bbi-input"
+              class="changye-input"
               type="number"
               v-model.number="settings.nai.cfgRescale"
               min="0"
@@ -995,67 +995,67 @@ async function removeVibe(vibe: NaiVibe) {
               step="0.05"
             />
           </div>
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">种子</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">种子</span>
             </div>
-            <input class="bbi-input" type="number" v-model.number="settings.nai.seed" min="0" />
+            <input class="changye-input" type="number" v-model.number="settings.nai.seed" min="0" />
           </div>
         </div>
-        <p class="bbi-field-hint">Scale = 提示词相关性；Rescale = 相关性调整；种子 0 = 随机。</p>
+        <p class="changye-field-hint">Scale = 提示词相关性；Rescale = 相关性调整；种子 0 = 随机。</p>
 
-        <label class="bbi-switch-row">
-          <span class="bbi-field-label">Variety Boost（画面多样性，按尺寸自动计算）</span>
-          <input v-model="settings.nai.varietyBoost" type="checkbox" class="bbi-checkbox" />
+        <label class="changye-switch-row">
+          <span class="changye-field-label">Variety Boost（画面多样性，按尺寸自动计算）</span>
+          <input v-model="settings.nai.varietyBoost" type="checkbox" class="changye-checkbox" />
         </label>
 
-        <div class="bbi-num-row">
-          <span class="bbi-field-label">同时出图数</span>
+        <div class="changye-num-row">
+          <span class="changye-field-label">同时出图数</span>
           <input
-            class="bbi-input bbi-num"
+            class="changye-input changye-num"
             type="number"
             v-model.number="settings.nai.concurrency"
             min="1"
             max="4"
           />
         </div>
-        <p class="bbi-field-hint">
+        <p class="changye-field-hint">
           NAI 服务端不排队，并发高容易被限流(429)，建议保持 1；超出的请求自动排队等待。
           被限流时会自动退避重试（最多 3 次），并让所有排队任务一起冷却，不会连着撞上去。
         </p>
       </Collapsible>
 
       <Collapsible title="Vibe 库（氛围转移）" :open="false">
-        <p v-if="vibesSupported" class="bbi-field-hint vibe-hint">
+        <p v-if="vibesSupported" class="changye-field-hint vibe-hint">
           上传参考图，生成时叠加其风格/氛围；编码按当前选中的模型进行，会消耗一次接口调用。
         </p>
-        <p v-else class="bbi-field-hint vibe-hint">
+        <p v-else class="changye-field-hint vibe-hint">
           Current model does not support Vibe Transfer.
         </p>
 
         <div class="vibe-actions">
-          <button class="bbi-btn" type="button" :disabled="vibeEncoding || !vibesSupported" @click="vibeFileInput?.click()">
+          <button class="changye-btn" type="button" :disabled="vibeEncoding || !vibesSupported" @click="vibeFileInput?.click()">
             <Icon name="plus" />
             {{ vibeEncoding ? '编码中…' : '上传图片编码' }}
           </button>
-          <button class="bbi-btn" type="button" @click="vibeImportInput?.click()">
+          <button class="changye-btn" type="button" @click="vibeImportInput?.click()">
             <Icon name="download" />
             导入 .naiv4vibe
           </button>
-          <label class="bbi-switch-row vibe-normalize">
-            <span class="bbi-field-label">强度归一化</span>
-            <input v-model="settings.nai.normalizeRefStrength" type="checkbox" class="bbi-checkbox" :disabled="!vibesSupported" />
+          <label class="changye-switch-row vibe-normalize">
+            <span class="changye-field-label">强度归一化</span>
+            <input v-model="settings.nai.normalizeRefStrength" type="checkbox" class="changye-checkbox" :disabled="!vibesSupported" />
           </label>
           <input ref="vibeFileInput" type="file" accept="image/*" hidden @change="onVibeFileChange" />
           <input ref="vibeImportInput" type="file" accept=".naiv4vibe" hidden @change="onVibeImportChange" />
         </div>
 
-        <p v-if="!settings.nai.vibes.length" class="bbi-field-hint">还没有 vibe；上传一张参考图开始。</p>
+        <p v-if="!settings.nai.vibes.length" class="changye-field-hint">还没有 vibe；上传一张参考图开始。</p>
 
         <template v-else>
           <div class="vibe-toolbar">
             <input
-              class="bbi-input vibe-search"
+              class="changye-input vibe-search"
               type="search"
               v-model="vibeSearch"
               placeholder="搜索名称或分组…"
@@ -1067,7 +1067,7 @@ async function removeVibe(vibe: NaiVibe) {
             </span>
             <button
               v-if="prefixGroupPlans.length"
-              class="bbi-btn bbi-btn-sm"
+              class="changye-btn changye-btn-sm"
               type="button"
               title="旧版迁移把组名拼进了名字，点此还原成真正的分组"
               @click="applyPrefixGroups"
@@ -1077,7 +1077,7 @@ async function removeVibe(vibe: NaiVibe) {
             </button>
           </div>
 
-          <p v-if="!matchedCount" class="bbi-field-hint">没有匹配「{{ vibeSearch }}」的 Vibe。</p>
+          <p v-if="!matchedCount" class="changye-field-hint">没有匹配「{{ vibeSearch }}」的 Vibe。</p>
 
           <div v-for="group in vibeGroups" :key="group.key" class="vibe-group">
             <div class="vibe-group-head">
@@ -1100,13 +1100,13 @@ async function removeVibe(vibe: NaiVibe) {
                     · 显示 {{ group.items.length }}
                   </template>
                 </span>
-                <span v-if="groupActive(group)" class="bbi-prompt-state vibe-group-active">
+                <span v-if="groupActive(group)" class="changye-prompt-state vibe-group-active">
                   生效中
                 </span>
               </button>
               <span class="vibe-group-ops">
                 <button
-                  class="bbi-btn bbi-btn-sm bbi-btn-primary"
+                  class="changye-btn changye-btn-sm changye-btn-primary"
                   type="button"
                   title="只叠加这一组：关掉组外全部勾选，开启本组"
                   @click="soloGroup(group)"
@@ -1114,7 +1114,7 @@ async function removeVibe(vibe: NaiVibe) {
                   只开这组
                 </button>
                 <button
-                  class="bbi-btn bbi-btn-sm"
+                  class="changye-btn changye-btn-sm"
                   type="button"
                   title="开启本组，不影响其它组（用来叠加多组）"
                   @click="setGroupEnabled(group, true)"
@@ -1122,7 +1122,7 @@ async function removeVibe(vibe: NaiVibe) {
                   全开
                 </button>
                 <button
-                  class="bbi-btn bbi-btn-sm"
+                  class="changye-btn changye-btn-sm"
                   type="button"
                   title="关闭本组"
                   @click="setGroupEnabled(group, false)"
@@ -1131,7 +1131,7 @@ async function removeVibe(vibe: NaiVibe) {
                 </button>
                 <button
                   v-if="group.name"
-                  class="bbi-icon-mini"
+                  class="changye-icon-mini"
                   type="button"
                   title="重命名分组"
                   aria-label="重命名分组"
@@ -1141,7 +1141,7 @@ async function removeVibe(vibe: NaiVibe) {
                 </button>
                 <button
                   v-if="group.name"
-                  class="bbi-icon-mini"
+                  class="changye-icon-mini"
                   type="button"
                   title="解散分组（只取消归类，不删除 Vibe）"
                   aria-label="解散分组"
@@ -1165,16 +1165,16 @@ async function removeVibe(vibe: NaiVibe) {
                 <div v-else class="vibe-thumb vibe-thumb--empty"><Icon name="generate" /></div>
                 <div class="vibe-main">
                   <div class="vibe-head">
-                    <input class="bbi-input vibe-name" type="text" v-model="vibe.name" spellcheck="false" />
+                    <input class="changye-input vibe-name" type="text" v-model="vibe.name" spellcheck="false" />
                     <label class="vibe-enable" title="生成时叠加此 vibe">
-                      <input v-model="vibe.enabled" type="checkbox" class="bbi-checkbox" />
+                      <input v-model="vibe.enabled" type="checkbox" class="changye-checkbox" />
                       启用
                     </label>
                   </div>
                   <div class="vibe-strength">
                     <span class="vibe-strength-label">强度</span>
                     <input
-                      class="bbi-range"
+                      class="changye-range"
                       type="range"
                       min="0"
                       max="1"
@@ -1184,7 +1184,7 @@ async function removeVibe(vibe: NaiVibe) {
                       @input="setVibeStrength(vibe, ($event.target as HTMLInputElement).value)"
                     />
                     <input
-                      class="bbi-input vibe-strength-num"
+                      class="changye-input vibe-strength-num"
                       type="number"
                       min="0"
                       max="1"
@@ -1195,7 +1195,7 @@ async function removeVibe(vibe: NaiVibe) {
                     />
                   </div>
                   <div class="vibe-ops">
-                    <BbiSelect
+                    <ChangYeSelect
                       class="vibe-group-select"
                       :model-value="groupKey(vibe.group)"
                       :options="groupOptions"
@@ -1204,7 +1204,7 @@ async function removeVibe(vibe: NaiVibe) {
                     />
                     <button
                       v-if="vibesSupported && !vibe.modelKeys.includes(currentVibeKey) && vibe.hasImage"
-                      class="bbi-btn bbi-btn-sm"
+                      class="changye-btn changye-btn-sm"
                       type="button"
                       :disabled="vibeEncoding"
                       title="该 vibe 缺当前模型的编码，生成时会被跳过；点击按当前模型补编码"
@@ -1219,14 +1219,14 @@ async function removeVibe(vibe: NaiVibe) {
                       缺当前模型编码且无原图，无法使用
                     </span>
                     <button
-                      class="bbi-btn bbi-btn-sm"
+                      class="changye-btn changye-btn-sm"
                       type="button"
                       title="导出 .naiv4vibe"
                       @click="exportVibe(vibe)"
                     >
                       <Icon name="upload" :size="12" /> 导出
                     </button>
-                    <button class="bbi-btn bbi-btn-sm" type="button" title="删除" @click="removeVibe(vibe)">
+                    <button class="changye-btn changye-btn-sm" type="button" title="删除" @click="removeVibe(vibe)">
                       <Icon name="trash" :size="12" /> 删除
                     </button>
                   </div>
@@ -1238,10 +1238,10 @@ async function removeVibe(vibe: NaiVibe) {
       </Collapsible>
 
       <Collapsible title="从智绘姬迁移" :open="false">
-        <p class="bbi-field-hint vibe-hint">
+        <p class="changye-field-hint vibe-hint">
           复制智绘姬(st-chatu8)的 vibe 到本库：只建副本、不改源数据，重复的自动跳过。
         </p>
-        <p class="bbi-field-hint">
+        <p class="changye-field-hint">
           <template v-if="!chatu8Detect.found">未检测到智绘姬（插件未安装或未启用）。</template>
           <template v-else-if="!chatu8Detect.total">智绘姬里没有找到 vibe。</template>
           <template v-else>
@@ -1251,7 +1251,7 @@ async function removeVibe(vibe: NaiVibe) {
         </p>
         <div class="migrate-actions">
           <button
-            class="bbi-btn"
+            class="changye-btn"
             type="button"
             :disabled="migrating || !chatu8Detect.total"
             @click="migrateConfirmOpen = true"
@@ -1260,22 +1260,22 @@ async function removeVibe(vibe: NaiVibe) {
             {{ migrating ? '迁移中…' : '迁移智绘姬的 vibe' }}
           </button>
         </div>
-        <p v-if="migrateMsg" class="bbi-field-hint">{{ migrateMsg }}</p>
+        <p v-if="migrateMsg" class="changye-field-hint">{{ migrateMsg }}</p>
 
         <hr class="art-divider" />
 
         <!-- 提示词预设导入:与 vibe 同区同级;有没有新预设不在这里报,点开弹窗看预览 -->
-        <p class="bbi-field-hint vibe-hint">
+        <p class="changye-field-hint vibe-hint">
           提示词预设同理：前置固定正向 → 画师串，后置固定正向 → 正面质量词，固定负向 → 负面提示词（自动带上当前模型官方基线）。
         </p>
-        <p class="bbi-field-hint">
+        <p class="changye-field-hint">
           <template v-if="!chatu8ArtistDetect.found">未检测到智绘姬（插件未安装或未启用）。</template>
           <template v-else-if="!chatu8ArtistDetect.total">智绘姬里没有找到提示词预设。</template>
           <template v-else>检测到智绘姬有 {{ chatu8ArtistDetect.total }} 个提示词预设。</template>
         </p>
         <div class="migrate-actions">
           <button
-            class="bbi-btn"
+            class="changye-btn"
             type="button"
             :disabled="!chatu8ArtistDetect.total"
             @click="openArtistImport"
@@ -1288,38 +1288,38 @@ async function removeVibe(vibe: NaiVibe) {
     </div>
 
     <ModalMask :open="migrateConfirmOpen" @close="migrateConfirmOpen = false">
-      <div class="bbi-modal" role="dialog" aria-modal="true" aria-label="从智绘姬迁移">
-        <header class="bbi-modal-head">
-          <span class="bbi-modal-title">从智绘姬迁移 vibe</span>
-          <button class="bbi-icon-mini" type="button" title="关闭" @click="migrateConfirmOpen = false">
+      <div class="changye-modal" role="dialog" aria-modal="true" aria-label="从智绘姬迁移">
+        <header class="changye-modal-head">
+          <span class="changye-modal-title">从智绘姬迁移 vibe</span>
+          <button class="changye-icon-mini" type="button" title="关闭" @click="migrateConfirmOpen = false">
             <Icon name="close" />
           </button>
         </header>
-        <p class="bbi-modal-label">
+        <p class="changye-modal-label">
           将把智绘姬的 {{ chatu8Detect.total }} 个 vibe 复制到长夜的绘图器 Vibe
           库，只是创建副本，不会改动智绘姬的数据。内容相同的会自动跳过，重复迁移不会产生重复条目。
         </p>
-        <p class="bbi-modal-label">
+        <p class="changye-modal-label">
           注意：智绘姬未开「酒馆储存」时 vibe 存在浏览器本地存储里，只有本设备本浏览器读得到。
         </p>
-        <footer class="bbi-modal-foot">
-          <span class="bbi-modal-foot-spacer"></span>
-          <button class="bbi-btn" type="button" @click="migrateConfirmOpen = false">取消</button>
-          <button class="bbi-btn bbi-btn-primary" type="button" @click="runMigrate">开始迁移</button>
+        <footer class="changye-modal-foot">
+          <span class="changye-modal-foot-spacer"></span>
+          <button class="changye-btn" type="button" @click="migrateConfirmOpen = false">取消</button>
+          <button class="changye-btn changye-btn-primary" type="button" @click="runMigrate">开始迁移</button>
         </footer>
       </div>
     </ModalMask>
 
     <!-- ===== 从智绘姬导入提示词预设:预览 + 确认(打开时算一次结果,纯函数不落盘) ===== -->
     <ModalMask :open="artistImportOpen" @close="artistImportOpen = false">
-      <div class="bbi-modal" role="dialog" aria-modal="true" aria-label="从智绘姬导入提示词预设">
-        <header class="bbi-modal-head">
-          <span class="bbi-modal-title">从智绘姬导入提示词预设</span>
-          <button class="bbi-icon-mini" type="button" title="关闭" @click="artistImportOpen = false">
+      <div class="changye-modal" role="dialog" aria-modal="true" aria-label="从智绘姬导入提示词预设">
+        <header class="changye-modal-head">
+          <span class="changye-modal-title">从智绘姬导入提示词预设</span>
+          <button class="changye-icon-mini" type="button" title="关闭" @click="artistImportOpen = false">
             <Icon name="close" />
           </button>
         </header>
-        <p class="bbi-modal-label">
+        <p class="changye-modal-label">
           把智绘姬的全部 {{ artistImportResult?.plans.length ?? 0 }} 个提示词预设复制到长夜的绘图器，只建副本、不改动智绘姬的数据。
           映射：前置固定正向 → 画师串，后置固定正向 → 正面质量词，固定负向 → 负面提示词（前面自动拼上当前模型的官方基线）。
           同名条目会覆盖更新（之前导入过的可直接重新导入修复），内容完全相同的自动跳过。
@@ -1353,11 +1353,11 @@ async function removeVibe(vibe: NaiVibe) {
             <code>{{ chatu8ActiveRef.source }}</code>
           </span>
         </label>
-        <footer class="bbi-modal-foot">
-          <span class="bbi-modal-foot-spacer"></span>
-          <button class="bbi-btn" type="button" @click="artistImportOpen = false">取消</button>
+        <footer class="changye-modal-foot">
+          <span class="changye-modal-foot-spacer"></span>
+          <button class="changye-btn" type="button" @click="artistImportOpen = false">取消</button>
           <button
-            class="bbi-btn bbi-btn-primary"
+            class="changye-btn changye-btn-primary"
             type="button"
             :disabled="!artistImportResult || artistImportResult.imported + artistImportResult.overwritten === 0"
             @click="runArtistImport"
@@ -1386,43 +1386,43 @@ async function removeVibe(vibe: NaiVibe) {
     <ModalMask :open="!!editingNaiPrompt" @close="closeNaiPrompt">
       <div
         v-if="editingNaiPrompt"
-        class="bbi-modal bbi-modal-wide"
+        class="changye-modal changye-modal-wide"
         role="dialog"
         aria-modal="true"
         :aria-label="`编辑${editingNaiPrompt.label}`"
       >
-        <header class="bbi-modal-head">
-          <span class="bbi-modal-title">
+        <header class="changye-modal-head">
+          <span class="changye-modal-title">
             {{ editingNaiPrompt.readonly ? '查看' : '编辑' }}{{ editingNaiPrompt.label }}
           </span>
-          <button class="bbi-icon-mini" type="button" title="关闭" @click="closeNaiPrompt">
+          <button class="changye-icon-mini" type="button" title="关闭" @click="closeNaiPrompt">
             <Icon name="close" />
           </button>
         </header>
 
-        <p class="bbi-modal-label">{{ editingNaiPrompt.hint }}</p>
+        <p class="changye-modal-label">{{ editingNaiPrompt.hint }}</p>
 
-        <BbiTextarea
+        <ChangYeTextarea
           v-model="naiPromptDraft"
-          class="bbi-prompt-area"
+          class="changye-prompt-area"
           :rows="12"
           :max-rows="28"
           mono
           :readonly="editingNaiPrompt.readonly"
         />
 
-        <footer class="bbi-modal-foot">
+        <footer class="changye-modal-foot">
           <template v-if="!editingNaiPrompt.readonly">
-            <button class="bbi-btn bbi-btn-danger" type="button" @click="resetNaiPromptDraft">
+            <button class="changye-btn changye-btn-danger" type="button" @click="resetNaiPromptDraft">
               <Icon name="refresh" /> 恢复默认
             </button>
-            <span class="bbi-modal-foot-spacer"></span>
-            <button class="bbi-btn" type="button" @click="closeNaiPrompt">取消</button>
-            <button class="bbi-btn bbi-btn-primary" type="button" @click="saveNaiPrompt">完成</button>
+            <span class="changye-modal-foot-spacer"></span>
+            <button class="changye-btn" type="button" @click="closeNaiPrompt">取消</button>
+            <button class="changye-btn changye-btn-primary" type="button" @click="saveNaiPrompt">完成</button>
           </template>
           <template v-else>
-            <span class="bbi-modal-foot-spacer"></span>
-            <button class="bbi-btn bbi-btn-primary" type="button" @click="closeNaiPrompt">关闭</button>
+            <span class="changye-modal-foot-spacer"></span>
+            <button class="changye-btn changye-btn-primary" type="button" @click="closeNaiPrompt">关闭</button>
           </template>
         </footer>
       </div>
@@ -1434,7 +1434,7 @@ async function removeVibe(vibe: NaiVibe) {
 /* 默认参数的语义配对紧凑行:双字段行两列、数字参数行四列;
    窄屏双字段行落单列、数字行落 2×2。
    垂直节奏由行容器统一管(行内字段的 margin-bottom 归零),
-   不靠 .bbi-field 自带的:last-child 规则——行尾字段会被它吃掉下间距。 */
+   不靠 .changye-field 自带的:last-child 规则——行尾字段会被它吃掉下间距。 */
 .be-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1442,7 +1442,7 @@ async function removeVibe(vibe: NaiVibe) {
   margin-bottom: 18px;
 }
 
-.be-row .bbi-field {
+.be-row .changye-field {
   margin-bottom: 0;
 }
 
@@ -1463,7 +1463,7 @@ async function removeVibe(vibe: NaiVibe) {
   display: flex;
   gap: 8px;
 }
-.key-row .bbi-input {
+.key-row .changye-input {
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -1483,7 +1483,7 @@ async function removeVibe(vibe: NaiVibe) {
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: var(--bbi-accent);
+  color: var(--changye-accent);
 }
 .vibe-hint {
   margin-top: 0;
@@ -1499,10 +1499,10 @@ async function removeVibe(vibe: NaiVibe) {
   gap: 12px;
   padding: 8px 0;
 }
-.art-row > .bbi-field-label:first-child {
+.art-row > .changye-field-label:first-child {
   white-space: nowrap;
 }
-.art-row > .bbi-input {
+.art-row > .changye-input {
   min-width: 0;
 }
 /* 下拉不吃满:名称通常很短,拉满只会拖出半截空白(子组件根类默认 180px/不伸缩,此处 0,2,0 压过) */
@@ -1527,11 +1527,11 @@ async function removeVibe(vibe: NaiVibe) {
   cursor: default;
 }
 .art-remove:not(:disabled) {
-  color: var(--bbi-danger);
+  color: var(--changye-danger);
 }
 .art-remove:not(:disabled):hover {
-  color: var(--bbi-danger);
-  background: var(--bbi-danger-soft);
+  color: var(--changye-danger);
+  background: var(--changye-danger-soft);
 }
 .art-hint {
   margin-top: 8px;
@@ -1539,12 +1539,12 @@ async function removeVibe(vibe: NaiVibe) {
 
 /* V5 画师串差异提醒:警示色,与常规说明区分开 */
 .art-hint-warn {
-  color: var(--bbi-warning);
+  color: var(--changye-warning);
 }
 /* 画师串与下方质量词/负面词的分界 */
 .art-divider {
   border: 0;
-  border-top: 1px dashed var(--bbi-line);
+  border-top: 1px dashed var(--changye-line);
   margin: 12px 0;
 }
 /* 绑定列表与上方画师串编辑区拉开一点;「已被画师串覆盖」用警示色——渠道值正被覆盖,
@@ -1552,8 +1552,8 @@ async function removeVibe(vibe: NaiVibe) {
 .art-bound-list {
   margin-top: 10px;
 }
-.bbi-prompt-state.is-shadowed {
-  color: var(--bbi-warning);
+.changye-prompt-state.is-shadowed {
+  color: var(--changye-warning);
   background: transparent;
 }
 
@@ -1573,8 +1573,8 @@ async function removeVibe(vibe: NaiVibe) {
   flex-direction: column;
   gap: 2px;
   padding: 5px 8px;
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface-2);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface-2);
 }
 .art-import-head {
   display: flex;
@@ -1609,22 +1609,22 @@ async function removeVibe(vibe: NaiVibe) {
 .art-import-badge {
   font-size: 11px;
   padding: 1px 7px;
-  border-radius: var(--bbi-radius-pill);
-  background: var(--bbi-accent-soft);
-  color: var(--bbi-accent);
+  border-radius: var(--changye-radius-pill);
+  background: var(--changye-accent-soft);
+  color: var(--changye-accent);
   white-space: nowrap;
 }
 .art-import-badge.is-skip {
-  background: var(--bbi-line);
-  color: var(--bbi-ink-muted);
+  background: var(--changye-line);
+  color: var(--changye-ink-muted);
 }
 .art-import-badge.is-overwrite {
-  background: var(--bbi-warning-soft);
-  color: var(--bbi-warning);
+  background: var(--changye-warning-soft);
+  color: var(--changye-warning);
 }
 .art-import-badge.is-active {
-  background: var(--bbi-accent);
-  color: var(--bbi-accent-ink);
+  background: var(--changye-accent);
+  color: var(--changye-accent-ink);
 }
 .art-import-switch {
   display: flex;
@@ -1636,36 +1636,36 @@ async function removeVibe(vibe: NaiVibe) {
 }
 .art-import-switch code {
   font-size: 12px;
-  background: var(--bbi-surface-2);
+  background: var(--changye-surface-2);
   border-radius: 4px;
   padding: 0 4px;
 }
 
-/* 操作按钮基类:.bbi-icon-btn 只在 App.vue 的 scoped 块里声明,此处补一份
+/* 操作按钮基类:.changye-icon-btn 只在 App.vue 的 scoped 块里声明,此处补一份
    (与 ComfyUIPanel 同款处理;漏了会渲染成浏览器原生按钮,shadow DOM 里也拿不到 ST 样式) */
-.bbi-icon-btn {
+.changye-icon-btn {
   width: 36px;
   height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface-2);
-  color: var(--bbi-ink-soft);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface-2);
+  color: var(--changye-ink-soft);
   cursor: pointer;
   font-size: 15px;
   transition:
-    color var(--bbi-dur) var(--bbi-ease),
-    background var(--bbi-dur) var(--bbi-ease);
+    color var(--changye-dur) var(--changye-ease),
+    background var(--changye-dur) var(--changye-ease);
 }
-.bbi-icon-btn:hover {
-  color: var(--bbi-ink);
-  background: var(--bbi-line-strong);
+.changye-icon-btn:hover {
+  color: var(--changye-ink);
+  background: var(--changye-line-strong);
 }
 
 /* —— 质量词/负面词列表行 + 弹窗:样式随设置页「自定义提示词」,scoped 不跨组件故补一份 —— */
-.bbi-prompt-list {
+.changye-prompt-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1673,47 +1673,47 @@ async function removeVibe(vibe: NaiVibe) {
   flex-direction: column;
   gap: 8px;
 }
-/* 整行可点进弹窗编辑(状态药丸 .bbi-prompt-state 在 base.css 全局,无需补) */
-.bbi-prompt-open {
+/* 整行可点进弹窗编辑(状态药丸 .changye-prompt-state 在 base.css 全局,无需补) */
+.changye-prompt-open {
   width: 100%;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius);
-  background: var(--bbi-surface-2);
-  color: var(--bbi-ink);
-  font-family: var(--bbi-font-sans);
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius);
+  background: var(--changye-surface-2);
+  color: var(--changye-ink);
+  font-family: var(--changye-font-sans);
   cursor: pointer;
   text-align: left;
   transition:
-    border-color var(--bbi-dur) var(--bbi-ease),
-    background var(--bbi-dur) var(--bbi-ease);
+    border-color var(--changye-dur) var(--changye-ease),
+    background var(--changye-dur) var(--changye-ease);
 }
-.bbi-prompt-open:hover {
-  border-color: var(--bbi-accent);
-  background: var(--bbi-surface);
+.changye-prompt-open:hover {
+  border-color: var(--changye-accent);
+  background: var(--changye-surface);
 }
-.bbi-prompt-name {
+.changye-prompt-name {
   flex: 1 1 auto;
   min-width: 0;
   font-size: 13px;
   font-weight: 600;
 }
-.bbi-prompt-edit {
+.changye-prompt-edit {
   flex: 0 0 auto;
   font-size: 16px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
 }
-.bbi-prompt-open:hover .bbi-prompt-edit {
-  color: var(--bbi-accent);
+.changye-prompt-open:hover .changye-prompt-edit {
+  color: var(--changye-accent);
 }
 /* 弹窗:更宽 + 大文本框 */
-.bbi-modal-wide {
+.changye-modal-wide {
   max-width: 680px;
 }
-.bbi-prompt-area {
+.changye-prompt-area {
   line-height: 1.6;
   font-size: 12.5px;
   white-space: pre-wrap;
@@ -1721,19 +1721,19 @@ async function removeVibe(vibe: NaiVibe) {
   tab-size: 2;
 }
 /* 把「恢复默认」推到最左(本文件的迁移弹窗此前裸用过此类名,靠 foot 的 flex-end 蒙对) */
-.bbi-modal-foot-spacer {
+.changye-modal-foot-spacer {
   flex: 1 1 auto;
 }
 /* 危险按钮:与设置页/ConfirmDialog 同一份口径。base 规则不能只写 :hover ——
    scoped 不跨组件、base.css 里也没有,只写 hover 的话平时是默认墨色,鼠标一过才变红。 */
-.bbi-btn-danger {
-  color: var(--bbi-danger);
-  border-color: var(--bbi-line-strong);
+.changye-btn-danger {
+  color: var(--changye-danger);
+  border-color: var(--changye-line-strong);
 }
-.bbi-btn-danger:hover {
-  color: var(--bbi-danger);
-  border-color: var(--bbi-danger);
-  background: var(--bbi-danger-soft);
+.changye-btn-danger:hover {
+  color: var(--changye-danger);
+  border-color: var(--changye-danger);
+  background: var(--changye-danger-soft);
 }
 
 .migrate-actions {
@@ -1755,7 +1755,7 @@ async function removeVibe(vibe: NaiVibe) {
   display: flex;
   gap: 10px;
   padding: 10px 0;
-  border-top: 1px solid var(--bbi-border, rgba(127, 127, 127, 0.2));
+  border-top: 1px solid var(--changye-border, rgba(127, 127, 127, 0.2));
 }
 .vibe-thumb {
   width: 56px;
@@ -1769,7 +1769,7 @@ async function removeVibe(vibe: NaiVibe) {
   align-items: center;
   justify-content: center;
   background: rgba(127, 127, 127, 0.12);
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
 }
 .vibe-main {
   flex: 1 1 auto;
@@ -1794,7 +1794,7 @@ async function removeVibe(vibe: NaiVibe) {
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   white-space: nowrap;
 }
 .vibe-strength {
@@ -1804,13 +1804,13 @@ async function removeVibe(vibe: NaiVibe) {
 }
 .vibe-strength-label {
   font-size: 12px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   white-space: nowrap;
 }
 .vibe-strength input[type='range'] {
   flex: 1 1 auto;
   min-width: 0;
-  /* .bbi-range 的 margin 是给「整行占一栏」的设置页留的,这里在同一行里要压掉 */
+  /* .changye-range 的 margin 是给「整行占一栏」的设置页留的,这里在同一行里要压掉 */
   margin: 0;
 }
 /* 数字框窄一档:四位小数够用,再宽就把滑块挤没了 */
@@ -1861,7 +1861,7 @@ async function removeVibe(vibe: NaiVibe) {
 }
 .vibe-count {
   font-size: 12px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   white-space: nowrap;
 }
 /* 组头:整块浅底,把「组」和组内条目在视觉上分层;粘顶让长组滚动时组名不丢 */
@@ -1874,8 +1874,8 @@ async function removeVibe(vibe: NaiVibe) {
   gap: 8px;
   flex-wrap: wrap;
   padding: 6px 10px;
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface-2);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface-2);
 }
 /* 组名区整体可点(折叠):按钮撑满剩余宽度,点空白处也能收起 */
 .vibe-group-toggle {
@@ -1887,8 +1887,8 @@ async function removeVibe(vibe: NaiVibe) {
   padding: 2px 0;
   border: 0;
   background: transparent;
-  color: var(--bbi-ink);
-  font-family: var(--bbi-font-sans);
+  color: var(--changye-ink);
+  font-family: var(--changye-font-sans);
   font-size: 13px;
   font-weight: 600;
   text-align: left;
@@ -1896,8 +1896,8 @@ async function removeVibe(vibe: NaiVibe) {
 }
 .vibe-group-chevron {
   flex: 0 0 auto;
-  color: var(--bbi-ink-muted);
-  transition: transform var(--bbi-dur) var(--bbi-ease);
+  color: var(--changye-ink-muted);
+  transition: transform var(--changye-dur) var(--changye-ease);
 }
 /* 展开态朝下(与 Collapsible 同口径:收起时回到未旋转的朝右/朝上) */
 .vibe-group-chevron.is-collapsed {
@@ -1912,13 +1912,13 @@ async function removeVibe(vibe: NaiVibe) {
   flex: 0 0 auto;
   font-size: 12px;
   font-weight: 400;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   font-variant-numeric: tabular-nums;
 }
 /* 「生效中」复用状态药丸基样式,上色口径与 wf-state.is-ok 一致 */
 .vibe-group-active {
-  color: var(--bbi-accent);
-  background: var(--bbi-accent-soft);
+  color: var(--changye-accent);
+  background: var(--changye-accent-soft);
   border-color: transparent;
 }
 .vibe-group-ops {
@@ -1938,24 +1938,24 @@ async function removeVibe(vibe: NaiVibe) {
 .vibe-group-select {
   width: 130px;
 }
-/* 组头操作里的小图标钮:.bbi-icon-mini 只在其它页的 scoped 块里声明,此处补一份 */
-.bbi-icon-mini {
+/* 组头操作里的小图标钮:.changye-icon-mini 只在其它页的 scoped 块里声明,此处补一份 */
+.changye-icon-mini {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 26px;
   height: 26px;
-  border: 1px solid var(--bbi-line-strong);
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface);
-  color: var(--bbi-ink-soft);
+  border: 1px solid var(--changye-line-strong);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface);
+  color: var(--changye-ink-soft);
   cursor: pointer;
   font-size: 12px;
 }
-.bbi-icon-mini:hover {
-  color: var(--bbi-accent);
-  border-color: var(--bbi-accent);
+.changye-icon-mini:hover {
+  color: var(--changye-accent);
+  border-color: var(--changye-accent);
 }
 @media (max-width: 640px) {
   /* 窄屏:组头两行——组名一行,操作另起一行靠右,避免按钮把组名挤成一条缝 */
@@ -1972,7 +1972,7 @@ async function removeVibe(vibe: NaiVibe) {
     grid-template-columns: minmax(0, 1fr) auto;
     row-gap: 8px;
   }
-  .art-row > .bbi-field-label:first-child {
+  .art-row > .changye-field-label:first-child {
     grid-column: 1 / -1;
   }
   .art-row > .art-select {

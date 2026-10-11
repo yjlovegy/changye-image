@@ -4,12 +4,12 @@ import { modalHost } from '@/state/ui';
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
 
 /**
- * 自绘下拉选择(替代原生 <select>):触发器与弹出菜单都跟随 --bbi-* 主题,
- * 选项可带图标;与设置页的 bbi-select-row 行布局配套。
+ * 自绘下拉选择(替代原生 <select>):触发器与弹出菜单都跟随 --changye-* 主题,
+ * 选项可带图标;与设置页的 changye-select-row 行布局配套。
  *
  * 菜单为什么 Teleport 到 modalHost 而不是就地绝对定位:
- * 设置项都在 Collapsible(overflow:hidden)与 .bbi-body 滚动容器里,就地定位会被裁剪
- * (角色记忆插件踩过同款坑)。modalHost 是 .bbi-root 直接子级,菜单用视口级 fixed 定位,
+ * 设置项都在 Collapsible(overflow:hidden)与 .changye-body 滚动容器里,就地定位会被裁剪
+ * (角色记忆插件踩过同款坑)。modalHost 是 .changye-root 直接子级,菜单用视口级 fixed 定位,
  * 由触发器的 getBoundingClientRect 推算,下方空间不足时向上翻。
  * 窗口元素平时无 transform(仅移动端拖动抽屉时临时有),fixed 相对视口成立。
  *
@@ -49,7 +49,7 @@ function cancelDrag() {
 }
 function positionDrag(y: number) {
   if (!dragId.value || !menu.value) return;
-  const rows = [...menu.value.querySelectorAll<HTMLElement>('.bbi-select-option')];
+  const rows = [...menu.value.querySelectorAll<HTMLElement>('.changye-select-option')];
   const over = rows.find(row => { const r = row.getBoundingClientRect(); return y >= r.top && y <= r.bottom; });
   if (!over?.dataset.value || over.dataset.value === dragId.value) return;
   const next = [...dragOrder.value], from = next.indexOf(dragId.value), to = next.indexOf(over.dataset.value);
@@ -167,7 +167,7 @@ function onDocMousedown(event: MouseEvent) {
 
 function scrollActiveIntoView() {
   menu.value
-    ?.querySelectorAll('.bbi-select-option')
+    ?.querySelectorAll('.changye-select-option')
     [activeIndex.value]?.scrollIntoView({ block: 'nearest' });
 }
 
@@ -215,12 +215,12 @@ onBeforeUnmount(() => closeMenu());
 </script>
 
 <template>
-  <!-- 根类名不能叫 bbi-select:base.css 里那个类是给美化原生 <select> 用的,
+  <!-- 根类名不能叫 changye-select:base.css 里那个类是给美化原生 <select> 用的,
        带背景图三角 + padding-right,撞上会在触发器右边多画一个三角 -->
-  <div class="bbi-select-box">
+  <div class="changye-select-box">
     <button
       ref="trigger"
-      class="bbi-select-trigger"
+      class="changye-select-trigger"
       type="button"
       aria-haspopup="listbox"
       :aria-expanded="open"
@@ -229,20 +229,20 @@ onBeforeUnmount(() => closeMenu());
       @click="toggle"
       @keydown="onTriggerKeydown"
     >
-      <span class="bbi-select-current">
+      <span class="changye-select-current">
         <Icon v-if="current?.icon" :name="current.icon" :size="14" />
-        <span class="bbi-select-label">{{ current?.label ?? modelValue }}</span>
+        <span class="changye-select-label">{{ current?.label ?? modelValue }}</span>
       </span>
-      <Icon name="chevron" class="bbi-select-caret" :class="{ 'is-open': open }" :size="12" />
+      <Icon name="chevron" class="changye-select-caret" :class="{ 'is-open': open }" :size="12" />
     </button>
 
     <Teleport :to="modalHost" :disabled="!modalHost">
-      <ul v-if="open" ref="menu" class="bbi-select-menu" :class="{ 'is-sortable': reorderable, 'is-dragging': dragId }" role="listbox" :aria-label="ariaLabel" :style="menuStyle"
+      <ul v-if="open" ref="menu" class="changye-select-menu" :class="{ 'is-sortable': reorderable, 'is-dragging': dragId }" role="listbox" :aria-label="ariaLabel" :style="menuStyle"
         @pointermove="pointerMove" @pointerup="pointerUp" @pointercancel="cancelDrag" @lostpointercapture="cancelDrag">
         <li
           v-for="(option, i) in displayedOptions"
           :key="option.value"
-          class="bbi-select-option"
+          class="changye-select-option"
           :class="{ 'is-active': i === activeIndex, 'is-selected': option.value === modelValue, 'is-grabbed': option.value === dragId }"
           :data-value="option.value"
           :title="reorderable ? '长按拖动排序，或按 Alt＋方向键调整' : undefined"
@@ -254,11 +254,11 @@ onBeforeUnmount(() => closeMenu());
           @contextmenu="reorderable && $event.preventDefault()"
         >
           <Icon v-if="option.icon" :name="option.icon" :size="14" />
-          <span class="bbi-select-option-label">{{ option.label }}</span>
+          <span class="changye-select-option-label">{{ option.label }}</span>
           <Icon
             v-if="option.value === modelValue"
             name="check"
-            class="bbi-select-check"
+            class="changye-select-check"
             :size="13"
           />
         </li>
@@ -268,59 +268,59 @@ onBeforeUnmount(() => closeMenu());
 </template>
 
 <style scoped>
-.bbi-select-box {
+.changye-select-box {
   width: 180px;
   flex: none;
 }
-.bbi-select-trigger {
+.changye-select-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   width: 100%;
   padding: 6px 10px;
-  border: 1px solid var(--bbi-line-strong);
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface);
-  color: var(--bbi-ink);
-  font-family: var(--bbi-font-sans);
+  border: 1px solid var(--changye-line-strong);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface);
+  color: var(--changye-ink);
+  font-family: var(--changye-font-sans);
   font-size: 13px;
   line-height: 1.5;
   cursor: pointer;
   transition:
-    border-color var(--bbi-dur) var(--bbi-ease),
-    background var(--bbi-dur) var(--bbi-ease);
+    border-color var(--changye-dur) var(--changye-ease),
+    background var(--changye-dur) var(--changye-ease);
 }
-.bbi-select-trigger:hover,
-.bbi-select-trigger[aria-expanded="true"] {
-  background: var(--bbi-surface-2);
+.changye-select-trigger:hover,
+.changye-select-trigger[aria-expanded="true"] {
+  background: var(--changye-surface-2);
 }
-.bbi-select-trigger:focus-visible {
-  outline: 2px solid var(--bbi-accent);
+.changye-select-trigger:focus-visible {
+  outline: 2px solid var(--changye-accent);
   outline-offset: 1px;
 }
-.bbi-select-current {
+.changye-select-current {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
 }
-.bbi-select-label {
+.changye-select-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.bbi-select-caret {
+.changye-select-caret {
   flex: none;
-  color: var(--bbi-ink-soft);
-  transition: transform var(--bbi-dur) var(--bbi-ease);
+  color: var(--changye-ink-soft);
+  transition: transform var(--changye-dur) var(--changye-ease);
 }
-.bbi-select-caret.is-open {
+.changye-select-caret.is-open {
   transform: rotate(180deg);
 }
 
 /* 菜单 Teleport 到 modalHost(scoped 样式在同 shadow root 内照常生效) */
-.bbi-select-menu {
+.changye-select-menu {
   position: fixed;
   /* 10003:高于普通弹窗遮罩(10001)与叠加层遮罩(10002)。
      本组件现在也用在弹窗内部(渠道弹窗的「思考强度」),菜单与遮罩会同时存在;
@@ -331,41 +331,41 @@ onBeforeUnmount(() => closeMenu());
   padding: 4px;
   list-style: none;
   overflow-y: auto;
-  background: var(--bbi-surface);
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius);
-  box-shadow: var(--bbi-shadow);
+  background: var(--changye-surface);
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius);
+  box-shadow: var(--changye-shadow);
 }
-.bbi-select-option {
+.changye-select-option {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 7px 10px;
-  border-radius: var(--bbi-radius-sm);
+  border-radius: var(--changye-radius-sm);
   font-size: 13px;
-  color: var(--bbi-ink);
+  color: var(--changye-ink);
   cursor: pointer;
 }
-.bbi-select-option.is-active {
-  background: var(--bbi-surface-2);
+.changye-select-option.is-active {
+  background: var(--changye-surface-2);
 }
-.bbi-select-option.is-selected {
-  background: var(--bbi-surface-2);
-  color: var(--bbi-accent);
+.changye-select-option.is-selected {
+  background: var(--changye-surface-2);
+  color: var(--changye-accent);
   font-weight: 600;
 }
-.bbi-select-option-label {
+.changye-select-option-label {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.bbi-select-check {
+.changye-select-check {
   flex: none;
-  color: var(--bbi-accent);
+  color: var(--changye-accent);
 }
-.is-sortable .bbi-select-option { touch-action: none; user-select: none; -webkit-user-select: none; }
-.is-dragging .bbi-select-option { cursor: grabbing; }
-.bbi-select-option.is-grabbed { outline: 2px solid var(--bbi-accent); outline-offset: -2px; background: var(--bbi-surface-2); }
+.is-sortable .changye-select-option { touch-action: none; user-select: none; -webkit-user-select: none; }
+.is-dragging .changye-select-option { cursor: grabbing; }
+.changye-select-option.is-grabbed { outline: 2px solid var(--changye-accent); outline-offset: -2px; background: var(--changye-surface-2); }
 </style>

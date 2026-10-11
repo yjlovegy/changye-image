@@ -3,9 +3,9 @@
  * 通用确认弹窗。替代浏览器原生 confirm()——原生弹窗在 Shadow DOM 外、样式不统一。
  * 受控:用 v-model:open 控制显隐;点确定 emit confirm,点取消/遮罩/关闭 emit cancel。
  *
- * Teleport 到 modalHost(.bbi-root 直接子级,在 .bbi-body 滚动容器之外):
+ * Teleport 到 modalHost(.changye-root 直接子级,在 .changye-body 滚动容器之外):
  * 避开 iOS「可滚动祖先内 fixed 后代定位错乱」。宿主仍在 shadow root 内,
- * scoped 样式与 --bbi-* 变量照常生效——故 to 的是 shadow 内元素,而非 Teleport to="body"。
+ * scoped 样式与 --changye-* 变量照常生效——故 to 的是 shadow 内元素,而非 Teleport to="body"。
  */
 import Icon from '@/components/Icon.vue';
 import { modalHost } from '@/state/ui';
@@ -57,26 +57,26 @@ function confirm() {
 
 <template>
   <Teleport :to="modalHost" :disabled="!modalHost">
-    <Transition name="bbi-modal">
+    <Transition name="changye-modal">
       <div
         v-if="open"
-        class="bbi-modal-mask"
-        :class="{ 'bbi-modal-mask-top': topLayer }"
+        class="changye-modal-mask"
+        :class="{ 'changye-modal-mask-top': topLayer }"
         @mousedown.self="cancel"
       >
-        <div class="bbi-modal bbi-modal-confirm" role="dialog" aria-modal="true" :aria-label="title">
-          <header class="bbi-modal-head">
-            <span class="bbi-modal-title">{{ title }}</span>
+        <div class="changye-modal changye-modal-confirm" role="dialog" aria-modal="true" :aria-label="title">
+          <header class="changye-modal-head">
+            <span class="changye-modal-title">{{ title }}</span>
           </header>
-          <p class="bbi-confirm-text">
+          <p class="changye-confirm-text">
             <slot />
           </p>
-          <footer class="bbi-modal-foot">
-            <span class="bbi-modal-foot-spacer"></span>
-            <button class="bbi-btn" type="button" @click="cancel">{{ cancelText }}</button>
+          <footer class="changye-modal-foot">
+            <span class="changye-modal-foot-spacer"></span>
+            <button class="changye-btn" type="button" @click="cancel">{{ cancelText }}</button>
             <button
-              class="bbi-btn"
-              :class="tone === 'danger' ? 'bbi-btn-danger' : 'bbi-btn-primary'"
+              class="changye-btn"
+              :class="tone === 'danger' ? 'changye-btn-danger' : 'changye-btn-primary'"
               type="button"
               :disabled="busy"
               @click="confirm"
@@ -92,30 +92,30 @@ function confirm() {
 </template>
 
 <style scoped>
-/* 确认弹窗特有样式(基础 .bbi-modal* 在 base.css 全局)。 */
-.bbi-modal-mask-top {
+/* 确认弹窗特有样式(基础 .changye-modal* 在 base.css 全局)。 */
+.changye-modal-mask-top {
   z-index: 10002;
 }
-.bbi-modal-confirm {
+.changye-modal-confirm {
   max-width: 380px;
 }
-.bbi-confirm-text {
+.changye-confirm-text {
   margin: 4px 0 0;
   font-size: 13px;
   line-height: 1.7;
-  color: var(--bbi-ink-soft);
+  color: var(--changye-ink-soft);
 }
-.bbi-modal-foot-spacer {
+.changye-modal-foot-spacer {
   flex: 1 1 auto;
 }
 /* 危险操作按钮:描边低调,hover 才显红,避免误触 */
-.bbi-btn-danger {
-  color: var(--bbi-danger);
-  border-color: var(--bbi-line-strong);
+.changye-btn-danger {
+  color: var(--changye-danger);
+  border-color: var(--changye-line-strong);
 }
-.bbi-btn-danger:hover {
-  color: var(--bbi-danger);
-  border-color: var(--bbi-danger);
-  background: var(--bbi-danger-soft);
+.changye-btn-danger:hover {
+  color: var(--changye-danger);
+  border-color: var(--changye-danger);
+  background: var(--changye-danger-soft);
 }
 </style>

@@ -25,13 +25,13 @@ defineExpose({ dirty, prepare, prepareDraft, draftSignature, expand });
 </script>
 <template>
  <Collapsible ref="disclosure" class="repair" title="出图后自动修复" :open="false">
-  <div class="repair-row"><span class="bbi-field-label">自动修复</span><button class="bbi-toggle" type="button" role="switch" :aria-checked="draft.enabled" aria-label="自动修复" :class="{'is-on':draft.enabled}" :disabled="busy" @click="draft.enabled=!draft.enabled;status=''"/></div>
-  <p class="bbi-field-hint">每次出图后，对检测到的指定部位进行一次局部重绘。</p>
+  <div class="repair-row"><span class="changye-field-label">自动修复</span><button class="changye-toggle" type="button" role="switch" :aria-checked="draft.enabled" aria-label="自动修复" :class="{'is-on':draft.enabled}" :disabled="busy" @click="draft.enabled=!draft.enabled;status=''"/></div>
+  <p class="changye-field-hint">每次出图后，对检测到的指定部位进行一次局部重绘。</p>
   <div class="parts"><label><input v-model="draft.hands" type="checkbox" :disabled="!draft.enabled||busy">手部</label><label><input v-model="draft.feet" type="checkbox" :disabled="!draft.enabled||busy">脚部</label></div>
-  <p class="bbi-field-hint">保留修复前的原图，修复结果另存为一个版本。识别部位不等于判断画错，可与原图对比。</p>
+  <p class="changye-field-hint">保留修复前的原图，修复结果另存为一个版本。识别部位不等于判断画错，可与原图对比。</p>
  </Collapsible>
 </template>
 <style scoped>
-.bbi-toggle{width:44px;height:25px;border:1px solid var(--bbi-line-strong);border-radius:20px;background:var(--bbi-surface-2);padding:3px;cursor:pointer;display:flex;align-items:center}.bbi-toggle::after{content:'';width:17px;height:17px;border-radius:50%;background:var(--bbi-ink-muted);transition:transform .15s}.bbi-toggle.is-on{background:var(--bbi-accent)}.bbi-toggle.is-on::after{background:white;transform:translateX(18px)}.bbi-toggle:focus-visible{outline:2px solid var(--bbi-accent);outline-offset:3px}
-.repair{margin:18px 0}.repair-row,footer{display:flex;align-items:center;justify-content:space-between;gap:14px}.parts{display:flex;gap:30px;margin:20px 0}.parts label{display:flex;align-items:center;gap:8px}.parts input{accent-color:var(--bbi-accent);width:16px;height:16px}footer{margin-top:18px}.bbi-btn{flex-shrink:0;justify-content:center}footer span{overflow-wrap:anywhere}
+.changye-toggle{width:44px;height:25px;border:1px solid var(--changye-line-strong);border-radius:20px;background:var(--changye-surface-2);padding:3px;cursor:pointer;display:flex;align-items:center}.changye-toggle::after{content:'';width:17px;height:17px;border-radius:50%;background:var(--changye-ink-muted);transition:transform .15s}.changye-toggle.is-on{background:var(--changye-accent)}.changye-toggle.is-on::after{background:white;transform:translateX(18px)}.changye-toggle:focus-visible{outline:2px solid var(--changye-accent);outline-offset:3px}
+.repair{margin:18px 0}.repair-row,footer{display:flex;align-items:center;justify-content:space-between;gap:14px}.parts{display:flex;gap:30px;margin:20px 0}.parts label{display:flex;align-items:center;gap:8px}.parts input{accent-color:var(--changye-accent);width:16px;height:16px}footer{margin-top:18px}.changye-btn{flex-shrink:0;justify-content:center}footer span{overflow-wrap:anywhere}
 </style>

@@ -35,7 +35,7 @@ describe('chat-local current appearance', () => {
   });
   it('reuses cached state without model calls, including after new image markup', async () => {
     await syncCurrentAppearance(ctx, entries, 1);
-    ctx.chat[0].mes += '<bbi_image>new drawing</bbi_image>';
+    ctx.chat[0].mes += '<changye_image>new drawing</changye_image>';
     await syncCurrentAppearance(ctx, entries, 1);
     expect(mock.request).toHaveBeenCalledTimes(1);
   });

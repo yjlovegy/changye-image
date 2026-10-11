@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { readCompatibleLocal } from '@/legacyCompatibility';
 import Icon from '@/components/Icon.vue';
 import { openPanel, ui } from '@/state/ui';
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
@@ -22,7 +23,7 @@ const orbW = computed(() => (ui.orbShape === 'bookmark' ? Math.round(ui.orbSize 
 const orbH = computed(() => ui.orbSize);
 const SNAP_ZONE = 56; // 松手时距左/右边缘 ≤ 此值即吸附贴边
 const CLICK_SLOP = 6; // 位移 < 此值视为点击而非拖动
-const POS_KEY = 'bbi.orb.pos.v1';
+const POS_KEY = 'changye.orb.pos.v1';
 
 type Dock = 'left' | 'right' | 'none';
 interface OrbPos {
@@ -35,7 +36,7 @@ interface OrbPos {
 
 function loadPos(): OrbPos {
   try {
-    const raw = localStorage.getItem(POS_KEY);
+    const raw = readCompatibleLocal(POS_KEY);
     if (raw) {
       const p = JSON.parse(raw) as Partial<OrbPos>;
       if (p && (p.dock === 'left' || p.dock === 'right' || p.dock === 'none')) {
@@ -177,7 +178,7 @@ onUnmounted(() => window.removeEventListener('resize', onResize));
 
 <template>
   <div
-    class="bbi-orb"
+    class="changye-orb"
     :class="[`shape-${ui.orbShape}`, { 'is-dragging': dragging, 'has-image': !!orbImage }]"
     :style="orbStyle"
     role="button"
@@ -193,20 +194,20 @@ onUnmounted(() => window.removeEventListener('resize', onResize));
     @blur="awake = false"
     @keydown="onKey"
   >
-    <img v-if="orbImage" :src="orbImage" class="bbi-orb-img" alt="" draggable="false" />
-    <Icon v-else name="edit" class="bbi-orb-icon" />
+    <img v-if="orbImage" :src="orbImage" class="changye-orb-img" alt="" draggable="false" />
+    <Icon v-else name="edit" class="changye-orb-icon" />
   </div>
 </template>
 
 <style scoped>
-.bbi-orb {
+.changye-orb {
   position: fixed;
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bbi-surface);
-  color: var(--bbi-accent);
+  background: var(--changye-surface);
+  color: var(--changye-accent);
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -214,49 +215,49 @@ onUnmounted(() => window.removeEventListener('resize', onResize));
   filter: drop-shadow(0 6px 14px oklch(0 0 0 / 0.28));
   opacity: var(--orb-rest-opacity, 0.62);
   transition:
-    transform var(--bbi-dur) var(--bbi-ease),
-    opacity var(--bbi-dur) var(--bbi-ease);
+    transform var(--changye-dur) var(--changye-ease),
+    opacity var(--changye-dur) var(--changye-ease);
 }
 
 /* —— 形状 —— */
 /* 书签:缎带轮廓 + 底部燕尾缺口。clip-path 天然裁切自定义图。 */
-.bbi-orb.shape-bookmark {
+.changye-orb.shape-bookmark {
   clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
 }
 /* 圆 / 方:border-radius + overflow 裁切自定义图 */
-.bbi-orb.shape-circle {
+.changye-orb.shape-circle {
   border-radius: 999px;
   overflow: hidden;
 }
-.bbi-orb.shape-square {
+.changye-orb.shape-square {
   border-radius: 12px;
   overflow: hidden;
 }
 
 /* 唤起(hover/聚焦/拖动)或停在中间(free) → 全显 */
-.bbi-orb:hover,
-.bbi-orb:focus-visible,
-.bbi-orb.is-dragging {
+.changye-orb:hover,
+.changye-orb:focus-visible,
+.changye-orb.is-dragging {
   opacity: 1;
 }
-.bbi-orb:focus-visible {
+.changye-orb:focus-visible {
   outline: none;
-  color: var(--bbi-accent);
+  color: var(--changye-accent);
 }
-.bbi-orb:active {
+.changye-orb:active {
   cursor: grabbing;
 }
 
-.bbi-orb-icon {
+.changye-orb-icon {
   font-size: var(--orb-icon-size, 22px);
   pointer-events: none;
 }
 /* 书签:图标上移,避开底部燕尾缺口(圆/方无缺口,居中即可) */
-.bbi-orb.shape-bookmark .bbi-orb-icon {
+.changye-orb.shape-bookmark .changye-orb-icon {
   margin-bottom: 6px;
 }
 
-.bbi-orb-img {
+.changye-orb-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -264,7 +265,7 @@ onUnmounted(() => window.removeEventListener('resize', onResize));
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bbi-orb {
+  .changye-orb {
     transition: none;
   }
 }

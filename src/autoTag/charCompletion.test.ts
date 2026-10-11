@@ -20,7 +20,7 @@ vi.mock('@/st/context', async importOriginal => ({
 
 function context(): STContext {
   return {
-    chat: [{ name: '小雪', is_user: false, is_system: false, mes: '小雪抬头。<bbi_image>obsolete drawing prompt</bbi_image>' }],
+    chat: [{ name: '小雪', is_user: false, is_system: false, mes: '小雪抬头。<changye_image>obsolete drawing prompt</changye_image>' }],
     name1: '玩家', name2: '小雪', characterId: 0, getCurrentChatId: () => 'chat-one',
   } as STContext;
 }
@@ -164,7 +164,7 @@ describe('appearance reference completion', () => {
 
   it('rejects unknown fields, invalid sources, injection markup and unsupported quotes', () => {
     const parsed = parseAppearanceCompletion(JSON.stringify({
-      fields: { face: 'oval face', eyes: '<bbi_image>blue eyes', pose: 'standing', nose: 'straight nose' },
+      fields: { face: 'oval face', eyes: '<changye_image>blue eyes', pose: 'standing', nose: 'straight nose' },
       evidence: {
         face: { source: 'missing', quote: '椭圆脸' },
         eyes: { source: 'card', quote: '椭圆脸' },

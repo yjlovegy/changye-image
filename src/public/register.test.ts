@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { STBaiBaiImageApi } from '@/public/types';
+import type { STChangYeImageApi } from '@/public/types';
 import { charTagLib, emptyCharFields, type CharTagEntry } from '@/state/charTags';
 
 vi.mock('@/st/context', () => ({ getContext: () => ({ getCurrentChatId: () => 'chat-a' }) }));
@@ -13,8 +13,8 @@ vi.stubGlobal('window', new EventTarget());
 const { PUBLIC_CHANGED_EVENT, PUBLIC_READY_EVENT, registerPublicInterface } =
   await import('@/public/register');
 
-function api(): STBaiBaiImageApi {
-  return (globalThis as { STBaiBaiImage?: STBaiBaiImageApi }).STBaiBaiImage!;
+function api(): STChangYeImageApi {
+  return (globalThis as { STChangYeImage?: STChangYeImageApi }).STChangYeImage!;
 }
 
 function entry(name: string): CharTagEntry {
@@ -33,6 +33,8 @@ beforeEach(() => {
 describe('registerPublicInterface', () => {
   it('publishes on globalThis and announces readiness (the two ways to find it)', async () => {
     const ready = vi.fn();
+    const legacyReady = vi.fn();
+    window.addEventListener('st-baibai-image:ready', legacyReady);
     // 比长夜的绘图器先加载的第三方只能靠事件——只给 globalThis 会逼它自己写轮询
     window.addEventListener(PUBLIC_READY_EVENT, ready);
     vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -41,6 +43,8 @@ describe('registerPublicInterface', () => {
     await settle();
 
     expect(api()).toBeDefined();
+    expect((globalThis as Record<string, unknown>).STBaiBaiImage).toBe(api());
+    expect(legacyReady).toHaveBeenCalledTimes(1);
     expect(ready).toHaveBeenCalledTimes(1);
     const detail = (ready.mock.calls[0][0] as CustomEvent).detail as Record<string, unknown>;
     expect(detail).toMatchObject({ type: 'ready', apiVersion: 1, chatId: 'chat-a' });

@@ -11,15 +11,15 @@ describe('positive story scope', () => {
     expect(target.segments.map(s => [s.text, s.sourceLine])).toEqual([['她在窗边读书。',2],['她合上书。',3]]);
     const plan = parseImagePlan(JSON.stringify({images:[{position:'P1',sourceParagraphs:['P1'],tag:'reading'}]}),target.segments,1,1);
     const result = injectImageTags(source, plan.images);
-    expect(result.indexOf('<bbi_image')).toBeGreaterThan(result.indexOf('她在窗边读书。'));
-    expect(result.indexOf('<bbi_image')).toBeLessThan(result.indexOf('她合上书。'));
+    expect(result.indexOf('<changye_image')).toBeGreaterThan(result.indexOf('她在窗边读书。'));
+    expect(result.indexOf('<changye_image')).toBeLessThan(result.indexOf('她合上书。'));
   });
   it('keeps images inside inline closing wrappers', () => {
     const source = '<game>她在窗边读书。</game>状态栏<think><game>隐藏示例</game></think>';
     const target = prepareTargetText(source, [], ['game']);
     const plan = parseImagePlan(JSON.stringify({images:[{position:'P1',sourceParagraphs:['P1'],tag:'reading'}]}),target.segments,1,1);
     const result = injectImageTags(source,plan.images);
-    expect(result.indexOf('</bbi_image>')).toBeLessThan(result.indexOf('</game>'));
+    expect(result.indexOf('</changye_image>')).toBeLessThan(result.indexOf('</game>'));
     expect(result.endsWith('</game>状态栏<think><game>隐藏示例</game></think>')).toBe(true);
   });
   it('supports alternatives, repeated and nested blocks without duplicates', () => {

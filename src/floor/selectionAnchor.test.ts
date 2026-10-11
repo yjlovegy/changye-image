@@ -19,7 +19,7 @@ describe('selection source anchor', () => {
       const next = insertSelectionImage(source, source, { tag: 'test', nl: '', negative: '', characters: [], size: 'portrait' }, anchor.offset)!;
       expect(next.text.slice(0, offset)).toBe(source.slice(0, offset));
       expect(next.text.endsWith(source.slice(offset))).toBe(true);
-      expect(next.text.indexOf('<bbi_image>')).toBeLessThan(next.text.indexOf(end));
+      expect(next.text.indexOf('<changye_image>')).toBeLessThan(next.text.indexOf(end));
     }
   });
   it('keeps a source Markdown paragraph inside a styled narrative wrapper', () => {
@@ -31,7 +31,7 @@ describe('selection source anchor', () => {
     // paragraphs. Other rolecard panels are rewritten independently of the story.
     const p1 = '她走到书架旁边，取下一本蓝色封面的画册。';
     const p2 = '窗外的阳光落在书页上，她仔细看着画册中的风景。';
-    const old = '<bbi_image>existing<size>portrait</size></bbi_image>';
+    const old = '<changye_image>existing<size>portrait</size></changye_image>';
     const source = `<think_nya~>private panel</think_nya~>\n<${wrapper}>\n开头。\n${old}\n\n${p1}\n\n${p2}\n\n后续正文。\n${old}\n结尾。\n</${wrapper}>\n<UpdateVariable>state</UpdateVariable>`;
     const visible = `显示前端代码块开头。${p1}${p2}后续正文。结尾。当前变量状态监控`;
     const anchor = locateSelectionSourceEnd(source, visible, '显示前端代码块开头。', p1 + p2, [], [
@@ -41,7 +41,7 @@ describe('selection source anchor', () => {
     expect(anchor).toEqual({ offset });
     const inserted = insertSelectionImage(source, source, { tag: 'new', nl: '', negative: '', characters: [], size: 'portrait' }, anchor.offset)!;
     expect(inserted.seq).toBe(1);
-    expect(inserted.text).toContain(`${p2}\n<bbi_image>new`);
+    expect(inserted.text).toContain(`${p2}\n<changye_image>new`);
     expect(inserted.text.endsWith(source.slice(offset))).toBe(true);
     expect(inserted.text.split(old)).toHaveLength(3);
   });
@@ -50,7 +50,7 @@ describe('selection source anchor', () => {
     ['[她微笑。后文](https://example.com)', '她微笑。后文'],
     ['~~她微笑。后文~~', '她微笑。后文'],
   ])('keeps partial selection prompts unchanged and inserts outside %s', (formatted, visible) => {
-    const existing = '<bbi_image>old prompt<size>portrait</size></bbi_image>';
+    const existing = '<changye_image>old prompt<size>portrait</size></changye_image>';
     const source = `<content>${formatted}\n${existing}\n下一段。</content>`;
     const selected = '她微笑。';
     const anchor = locateSelectionSourceEnd(source, visible + '下一段。', '', selected);
@@ -59,9 +59,9 @@ describe('selection source anchor', () => {
     const image = { tag: '1girl', nl: 'A woman smiles.', negative: '', size: 'portrait' as const, characters: [] };
     const inserted = insertSelectionImage(source, source, image, anchor.offset)!;
     expect(inserted.seq).toBe(0);
-    expect(inserted.text).toContain(`${formatted}\n<bbi_image>1girl`);
+    expect(inserted.text).toContain(`${formatted}\n<changye_image>1girl`);
     expect(inserted.text).toContain(existing);
-    expect(inserted.text.replace(/\n<bbi_image>1girl[\s\S]*?<\/bbi_image>/, '')).toBe(source);
+    expect(inserted.text.replace(/\n<changye_image>1girl[\s\S]*?<\/changye_image>/, '')).toBe(source);
   });
   it('does not invent a closing boundary for malformed HTML', () => {
     for (const source of ['<p>她微笑。后文', '<div><p>她微笑。后文</div>']) {
@@ -74,7 +74,7 @@ describe('selection source anchor', () => {
     expect(locateSelectionSourceEnd(source, '她回头。她回头。继续走。', '', '她回')).toEqual({ offset: 2 });
   });
   it('ignores existing image prompts and preserves the raw insertion coordinate', () => {
-    const source = '前段。\n<bbi_image>前段。 secret</bbi_image>\n后段。剩余。';
+    const source = '前段。\n<changye_image>前段。 secret</changye_image>\n后段。剩余。';
     expect(locateSelectionSourceEnd(source, '前段。后段。剩余。', '前段。', '后段。')).toEqual({ offset: source.indexOf('后段。') + 3 });
   });
   it('maps Markdown formatting, links, headings and entities without inserting inside closing syntax', () => {
@@ -131,7 +131,7 @@ describe('selection source anchor', () => {
       expect(locateSelectionSourceEnd(source, '前段。后段。普通正文。', '前段。后段。', '普通正文。')).toEqual({ offset: source.length });
     }
   });
-  it('matches the installed BaiBai Book time hiding syntax only when the displayed message agrees', () => {
+  it('matches the installed legacy memory extension time hiding syntax only when the displayed message agrees', () => {
     const source = '<bbs_start>2026-09-16 08:00</bbs_start>\n正文。\n<bbs_end>2026-09-16 08:01</bbs_end>';
     expect(locateSelectionSourceEnd(source, '正文。', '', '正文。')).toEqual({ offset: source.indexOf('正文。') + 3 });
     expect(locateSelectionSourceEnd(source, '2026-09-16 08:00正文。2026-09-16 08:01', '2026-09-16 08:00', '正文。').reason).toBeTruthy();

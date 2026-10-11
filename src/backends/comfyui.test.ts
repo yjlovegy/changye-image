@@ -427,7 +427,7 @@ describe('generateComfyImage 简易模式', () => {
           return json({
             'pid-1': {
               status: { completed: true },
-              outputs: { '8': { images: [{ filename: 'BaiBai_00001_.png', type: 'output' }] } },
+              outputs: { '8': { images: [{ filename: 'ChangYe_00001_.png', type: 'output' }] } },
             },
           });
         }
@@ -448,7 +448,7 @@ describe('generateComfyImage 简易模式', () => {
       seed: 42,
       size: 'portrait',
     });
-    expect(result.filename).toBe('BaiBai_00001_.png');
+    expect(result.filename).toBe('ChangYe_00001_.png');
 
     const submit = calls.find(c => c.url.endsWith('/prompt'));
     const prompt = (submit?.body as { prompt: Record<string, { class_type: string; inputs: Record<string, unknown> }> }).prompt;

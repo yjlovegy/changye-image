@@ -25,7 +25,7 @@ import { hasImageTagTrace } from '@/st/imageTagRegex';
  * (该有的补、该撤的撤)。
  */
 
-const BUTTON_CLASS = 'bbi-tag-action';
+const BUTTON_CLASS = 'changye-tag-action';
 // 与扩展菜单入口同款调色板图标
 const ICON_CLASS = 'fa-palette';
 

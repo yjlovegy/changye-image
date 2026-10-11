@@ -17,11 +17,11 @@ describe('selection image preparation', () => {
     expect(target.promptText).not.toContain('不应画这里');
     expect(() => prepareSelectionImageText('   ', [])).toThrow();
     expect(() => prepareSelectionImageText('字'.repeat(12_001), [])).toThrow(/过长/);
-    expect(() => prepareSelectionImageText('<bbi_image>旧图</bbi_image>', [])).toThrow(/没有可绘制/);
+    expect(() => prepareSelectionImageText('<changye_image>旧图</changye_image>', [])).toThrow(/没有可绘制/);
   });
 
   it('inserts directly after the selection while retaining both surrounding text and exact existing tags', () => {
-    const source = '第一段\r\n<bbi_image>old one</bbi_image>\r\n第二段\r\n<bbi_image>old two</bbi_image>';
+    const source = '第一段\r\n<changye_image>old one</changye_image>\r\n第二段\r\n<changye_image>old two</changye_image>';
     const offset = source.indexOf('第二段') + '第二段'.length;
     const next = insertSelectionImage(source, source, image, offset)!;
     expect(next.seq).toBe(1);
@@ -39,10 +39,10 @@ describe('selection image preparation', () => {
 
   it('rejects dangling and nested open tags that would consume the appended image', () => {
     for (const source of [
-      '正文\n<bbi_image>unfinished',
-      '正文\n<bbi_image>outer <bbi_image>inner',
-      '<bbi_image>old</bbi_image>\n<bbi_image>unfinished',
-      '<bbi_image>outer <bbi_image>inner</bbi_image>\n<bbi_image>unfinished',
+      '正文\n<changye_image>unfinished',
+      '正文\n<changye_image>outer <changye_image>inner',
+      '<changye_image>old</changye_image>\n<changye_image>unfinished',
+      '<changye_image>outer <changye_image>inner</changye_image>\n<changye_image>unfinished',
     ]) {
       expect(canInsertSelectionImage(source, source.length)).toBe(false);
       expect(insertSelectionImage(source, source, image, source.length)).toBeNull();
@@ -50,7 +50,7 @@ describe('selection image preparation', () => {
   });
 
   it('rejects a stale complete layout even when a duplicated tag still matches at the old seq', () => {
-    const tag = '<bbi_image>same</bbi_image>';
+    const tag = '<changye_image>same</changye_image>';
     const source = `选区${tag}${tag}`;
     const layout = parseImageTags(source);
     const next = insertSelectionImage(source, source, image, 2)!;

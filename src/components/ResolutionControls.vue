@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { validResolution } from '@/backends/resolution';
-import BbiSelect from '@/components/BbiSelect.vue';
+import ChangYeSelect from '@/components/ChangYeSelect.vue';
 const props = defineProps<{ width: number; height: number; sizes: { width: number; height: number }[]; scope: string; disabled?: boolean }>();
 const emit = defineEmits<{ (e: 'change', width: number, height: number): void; (e: 'save', width: number, height: number): void; (e: 'remove', width: number, height: number): void }>();
 const notice = ref('');
@@ -17,19 +17,19 @@ function remove() { emit('remove',props.width,props.height); notice.value='已�
 </script>
 <template>
   <fieldset class="resolution-fields" :disabled="disabled">
-    <div class="preview-field"><span class="bbi-field-label">常用尺寸</span><div class="size-select-row"><BbiSelect :model-value="selected" :options="options" :aria-label="scope + '常用尺寸'" @update:model-value="select" /><button type="button" class="bbi-btn" :disabled="selected === 'custom'" @click="remove">移出收藏</button></div></div>
+    <div class="preview-field"><span class="changye-field-label">常用尺寸</span><div class="size-select-row"><ChangYeSelect :model-value="selected" :options="options" :aria-label="scope + '常用尺寸'" @update:model-value="select" /><button type="button" class="changye-btn" :disabled="selected === 'custom'" @click="remove">移出收藏</button></div></div>
     <div class="dimension-row">
-      <div class="preview-field"><span class="bbi-field-label">宽度（px）</span><input class="bbi-input" type="number" min="64" max="4096" step="1" :value="width || ''" :aria-label="scope + '宽度'" @input="change('width',$event)" /></div>
+      <div class="preview-field"><span class="changye-field-label">宽度（px）</span><input class="changye-input" type="number" min="64" max="4096" step="1" :value="width || ''" :aria-label="scope + '宽度'" @input="change('width',$event)" /></div>
       <span class="times" aria-hidden="true">×</span>
-      <div class="preview-field"><span class="bbi-field-label">高度（px）</span><input class="bbi-input" type="number" min="64" max="4096" step="1" :value="height || ''" :aria-label="scope + '高度'" @input="change('height',$event)" /></div>
-      <button type="button" class="bbi-btn" @click="emit('change',height,width)">交换宽高</button>
-      <button type="button" class="bbi-btn" :disabled="!valid" @click="save">收藏尺寸</button>
+      <div class="preview-field"><span class="changye-field-label">高度（px）</span><input class="changye-input" type="number" min="64" max="4096" step="1" :value="height || ''" :aria-label="scope + '高度'" @input="change('height',$event)" /></div>
+      <button type="button" class="changye-btn" @click="emit('change',height,width)">交换宽高</button>
+      <button type="button" class="changye-btn" :disabled="!valid" @click="save">收藏尺寸</button>
     </div>
     <p v-if="!valid" class="feedback error" role="alert">宽度和高度必须是 64–4096 范围内的整数。</p>
     <p v-else-if="notice" class="feedback" role="status">{{ notice }}</p>
   </fieldset>
 </template>
 <style scoped>
-.resolution-fields{border:0;padding:0;margin:0;display:grid;gap:16px;min-width:0}.preview-field{display:grid;gap:8px;min-width:0}.bbi-field-label{margin:0}.size-select-row{display:flex;align-items:center;gap:10px;min-width:0}.size-select-row>:first-child{flex:1;min-width:0;width:0}.dimension-row{display:grid;grid-template-columns:minmax(0,1fr) 12px minmax(0,1fr) auto auto;align-items:end;gap:12px}.times{display:flex;align-items:center;justify-content:center;height:38px;color:var(--bbi-ink-muted)}.bbi-input{width:100%;min-width:0;height:38px}.bbi-btn{min-height:38px;justify-content:center;text-align:center}.feedback{margin:0;font-size:12px;color:var(--bbi-accent)}.error{color:var(--bbi-danger)}
-@media(max-width:620px){.dimension-row{grid-template-columns:minmax(0,1fr) 12px minmax(0,1fr);gap:10px}.dimension-row>.bbi-btn:nth-last-child(2){grid-column:1 / 2}.dimension-row>.bbi-btn:last-child{grid-column:3 / 4}}
+.resolution-fields{border:0;padding:0;margin:0;display:grid;gap:16px;min-width:0}.preview-field{display:grid;gap:8px;min-width:0}.changye-field-label{margin:0}.size-select-row{display:flex;align-items:center;gap:10px;min-width:0}.size-select-row>:first-child{flex:1;min-width:0;width:0}.dimension-row{display:grid;grid-template-columns:minmax(0,1fr) 12px minmax(0,1fr) auto auto;align-items:end;gap:12px}.times{display:flex;align-items:center;justify-content:center;height:38px;color:var(--changye-ink-muted)}.changye-input{width:100%;min-width:0;height:38px}.changye-btn{min-height:38px;justify-content:center;text-align:center}.feedback{margin:0;font-size:12px;color:var(--changye-accent)}.error{color:var(--changye-danger)}
+@media(max-width:620px){.dimension-row{grid-template-columns:minmax(0,1fr) 12px minmax(0,1fr);gap:10px}.dimension-row>.changye-btn:nth-last-child(2){grid-column:1 / 2}.dimension-row>.changye-btn:last-child{grid-column:3 / 4}}
 </style>

@@ -15,7 +15,7 @@ if (!version) {
   throw new Error('package.json version is required');
 }
 
-const build = pkg.bbiBuild ? `&build=${encodeURIComponent(pkg.bbiBuild)}` : '';
+const build = pkg.changyeBuild ? `&build=${encodeURIComponent(pkg.changyeBuild)}` : '';
 const expectedJs = `dist/index.js?ver=${encodeURIComponent(version)}${build}`;
 manifest.version = version;
 manifest.js = expectedJs;

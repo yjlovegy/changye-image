@@ -51,7 +51,7 @@ describe('prompt body cleaning', () => {
 <bbs_start>2026/8/16 10:00</bbs_start>
 第一段正文
 <snow>自定义状态</snow>
-<bbi_image>1girl, silver hair<size>portrait</size></bbi_image>
+<changye_image>1girl, silver hair<size>portrait</size></changye_image>
 第二段正文
 <bbs_end>2026/8/16 10:05</bbs_end>
 <bbs_items>
@@ -59,12 +59,12 @@ describe('prompt body cleaning', () => {
 </bbs_items>
 尾部状态`;
 
-  it('cleans historical floors like BaiBai Book while preserving image tags', () => {
-    expect(cleanHistoryText(source, ['snow', 'bbi_image'])).toBe(
+  it('cleans historical floors like legacy memory extension while preserving image tags', () => {
+    expect(cleanHistoryText(source, ['snow', 'changye_image'])).toBe(
       `(起始时间:2026/8/16 10:00)
 第一段正文
 
-<bbi_image>1girl, silver hair<size>portrait</size></bbi_image>
+<changye_image>1girl, silver hair<size>portrait</size></changye_image>
 第二段正文
 (结束时间:2026/8/16 10:05)`,
     );
@@ -74,7 +74,7 @@ describe('prompt body cleaning', () => {
     expect(cleanTargetText(source, ['snow'])).toBe(
       `第一段正文
 
-<bbi_image>1girl, silver hair<size>portrait</size></bbi_image>
+<changye_image>1girl, silver hair<size>portrait</size></changye_image>
 
 第二段正文`,
     );
@@ -84,7 +84,7 @@ describe('prompt body cleaning', () => {
     expect(prepareTargetText(source, ['snow'])).toEqual({
       promptText: `第一段正文 ⟦P1⟧
 
-<bbi_image>1girl, silver hair<size>portrait</size></bbi_image> ⟦P2⟧
+<changye_image>1girl, silver hair<size>portrait</size></changye_image> ⟦P2⟧
 
 第二段正文 ⟦P3⟧`,
       segments: [
@@ -92,7 +92,7 @@ describe('prompt body cleaning', () => {
         {
           id: 'P2',
           sourceLine: 5,
-          text: '<bbi_image>1girl, silver hair<size>portrait</size></bbi_image>',
+          text: '<changye_image>1girl, silver hair<size>portrait</size></changye_image>',
         },
         { id: 'P3', sourceLine: 6, text: '第二段正文' },
       ],

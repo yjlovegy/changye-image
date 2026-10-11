@@ -3,13 +3,13 @@ import type { SelectionImageSnapshot } from '@/autoTag/selection';
 import { locateSelectionSourceEnd, type SelectionAnchorContext } from '@/floor/selectionAnchor';
 import { settings } from '@/state/settings';
 
-const HOST_ID = 'bbi-selection-menu-host';
+const HOST_ID = 'changye-selection-menu-host';
 const TEXT_SELECTOR = '#chat .mes[mesid] .mes_text';
 const EXCLUDED_SELECTOR = [
   'input', 'textarea', 'select', 'button', 'iframe', 'object', 'embed', 'img', 'video', 'audio',
   'script', 'style', 'pre', 'code', 'table', '[hidden]', '[aria-hidden="true"]',
-  '[contenteditable]:not([contenteditable="false"])', '[data-bbi-slot]',
-  '[id^="bbi-"]', '[class^="bbi-"]', '[class*=" bbi-"]', '[role="dialog"]', '[role="menu"]',
+  '[contenteditable]:not([contenteditable="false"])', '[data-changye-slot]', '[data-bbi-slot]',
+  '[id^="changye-"]', '[class^="changye-"]', '[class*=" changye-"]', '[role="dialog"]', '[role="menu"]',
   '.TH-render', '.TH-collapse-code-block-button',
 ].join(',');
 
@@ -31,18 +31,18 @@ interface SelectedMessage {
 const MENU_CSS = `
 :host { all: initial; position: fixed; z-index: 10020; display: block; }
 .menu { box-sizing: border-box; width: min(310px, calc(100vw - 16px)); padding: 7px;
-  border: 1px solid var(--bbi-line-strong, #d6d4d0); border-radius: 10px;
-  background: var(--bbi-surface, #fff); color: var(--bbi-ink, #14213d);
-  box-shadow: 0 8px 32px #0003; font: 13px/1.5 var(--bbi-font-sans, system-ui, sans-serif);
+  border: 1px solid var(--changye-line-strong, #d6d4d0); border-radius: 10px;
+  background: var(--changye-surface, #fff); color: var(--changye-ink, #14213d);
+  box-shadow: 0 8px 32px #0003; font: 13px/1.5 var(--changye-font-sans, system-ui, sans-serif);
   text-align: left; text-shadow: none; letter-spacing: normal; direction: ltr; }
 button { box-sizing: border-box; width: 100%; padding: 9px 10px; border: 0; border-radius: 6px;
   color: inherit; background: transparent; font: inherit; text-align: left; cursor: pointer; }
-button:hover, button:focus-visible { background: var(--bbi-accent-soft, #ac630419); }
+button:hover, button:focus-visible { background: var(--changye-accent-soft, #ac630419); }
 button[aria-disabled="true"] { opacity: .55; cursor: default; }
-button:focus-visible { outline: 2px solid var(--bbi-accent, #ac6304); outline-offset: -2px; }
+button:focus-visible { outline: 2px solid var(--changye-accent, #ac6304); outline-offset: -2px; }
 .hint, .preview { display: block; margin: 0; padding: 0 10px 7px;
-  color: var(--bbi-ink-soft, #4d586f); font-size: 12px; overflow-wrap: anywhere; }
-.preview { border-top: 1px solid var(--bbi-line, #e2e1de); padding-top: 7px;
+  color: var(--changye-ink-soft, #4d586f); font-size: 12px; overflow-wrap: anywhere; }
+.preview { border-top: 1px solid var(--changye-line, #e2e1de); padding-top: 7px;
   max-height: 4.5em; overflow: hidden; white-space: pre-wrap; }
 `;
 
@@ -236,11 +236,11 @@ function matchesEvent(selected: SelectedMessage, event: MouseEvent, keyboard = f
 }
 
 function copyTheme(host: HTMLElement): void {
-  const root = document.getElementById('bbi-app-host')?.shadowRoot?.querySelector('.bbi-root');
+  const root = document.getElementById('changye-app-host')?.shadowRoot?.querySelector('.changye-root');
   if (!root) return;
   const style = window.getComputedStyle(root);
   for (const name of ['font-sans', 'surface', 'ink', 'ink-soft', 'line', 'line-strong', 'accent', 'accent-soft']) {
-    const variable = `--bbi-${name}`;
+    const variable = `--changye-${name}`;
     const value = style.getPropertyValue(variable);
     if (value.trim()) host.style.setProperty(variable, value);
   }

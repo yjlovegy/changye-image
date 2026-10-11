@@ -13,7 +13,7 @@ import { modalHost } from '@/state/ui';
  * expandMessageMedia 读的是 `chat[mesid].extra.media[data-index]` 数据模型,且该函数
  * 模块私有、未导出到 context——光加 class 会直接 bail。走官方 extra.media 那条路能白嫖
  * 灯箱,但图片会被挂到 `.mes_media_wrapper`(.mes_text 的兄弟节点),脱离 tag 的行内位置,
- * 与「图出现在 tag 所在段落」的核心设计冲突,还得再维护一份与 extra.bbiImage 平行的存储。
+ * 与「图出现在 tag 所在段落」的核心设计冲突,还得再维护一份与 extra.changyeImage 平行的存储。
  *
  * 【长按保存】移动端能长按保存图片,靠三条约束共同保证,改动时务必保留:
  * 1. 只监听 click,绝不在图片上 preventDefault touchstart/touchend——长按唤出系统菜单时
@@ -136,19 +136,19 @@ const promptText = computed(() => (props.prompt ?? '').trim());
 </script>
 
 <template>
-  <!-- Teleport 到 modalHost(.bbi-root 直接子级):灯箱需要 --bbi-* 主题变量,
-       而 lightbox.ts 的容器挂在 shadow root 顶层、在 .bbi-root 之外拿不到变量。
+  <!-- Teleport 到 modalHost(.changye-root 直接子级):灯箱需要 --changye-* 主题变量,
+       而 lightbox.ts 的容器挂在 shadow root 顶层、在 .changye-root 之外拿不到变量。
        与 ConfirmDialog 同款手法。 -->
   <Teleport :to="modalHost" :disabled="!modalHost">
     <!-- 遮罩自身承接关闭点击;图片与操作栏 stop 掉,避免误关 -->
-    <div class="bbi-lightbox" @click="emit('close')">
-      <div class="bbi-lightbox__bar" @click.stop>
-        <button class="bbi-lb-btn" type="button" title="保存图片" @click="save">
+    <div class="changye-lightbox" @click="emit('close')">
+      <div class="changye-lightbox__bar" @click.stop>
+        <button class="changye-lb-btn" type="button" title="保存图片" @click="save">
           <Icon name="download" :size="18" />
         </button>
         <button
           v-if="promptText"
-          class="bbi-lb-btn"
+          class="changye-lb-btn"
           type="button"
           title="复制提示词"
           @click="copyPrompt"
@@ -157,14 +157,14 @@ const promptText = computed(() => (props.prompt ?? '').trim());
         </button>
         <button
           v-if="deletable"
-          class="bbi-lb-btn bbi-lb-btn--danger"
+          class="changye-lb-btn changye-lb-btn--danger"
           type="button"
           title="删除这张图"
           @click="emit('delete')"
         >
           <Icon name="trash" :size="18" />
         </button>
-        <button class="bbi-lb-btn" type="button" title="关闭 (Esc)" @click="emit('close')">
+        <button class="changye-lb-btn" type="button" title="关闭 (Esc)" @click="emit('close')">
           <Icon name="close" :size="18" />
         </button>
       </div>
@@ -172,12 +172,12 @@ const promptText = computed(() => (props.prompt ?? '').trim());
       <!-- 图片容器:zoomed 时滚动(触屏)/ 鼠标拖拽查看原图 -->
       <div
         ref="stage"
-        class="bbi-lightbox__stage"
+        class="changye-lightbox__stage"
         :data-zoomed="zoomed ? '1' : ''"
         @click.stop="emit('close')"
       >
         <img
-          class="bbi-lightbox__img"
+          class="changye-lightbox__img"
           :src="src"
           alt="生图结果"
           :data-zoomed="zoomed ? '1' : ''"
@@ -190,13 +190,13 @@ const promptText = computed(() => (props.prompt ?? '').trim());
         />
       </div>
 
-      <p v-if="promptText" class="bbi-lightbox__prompt" @click.stop>{{ promptText }}</p>
+      <p v-if="promptText" class="changye-lightbox__prompt" @click.stop>{{ promptText }}</p>
     </div>
   </Teleport>
 </template>
 
 <style scoped>
-.bbi-lightbox {
+.changye-lightbox {
   position: fixed;
   top: 0;
   right: 0;
@@ -215,57 +215,57 @@ const promptText = computed(() => (props.prompt ?? '').trim());
   backdrop-filter: blur(6px);
 }
 
-.bbi-lightbox__bar {
+.changye-lightbox__bar {
   flex: 0 0 auto;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
 }
 
-.bbi-lb-btn {
+.changye-lb-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 38px;
   height: 38px;
   border: 1px solid oklch(1 0 0 / 0.18);
-  border-radius: var(--bbi-radius-pill);
+  border-radius: var(--changye-radius-pill);
   background: oklch(1 0 0 / 0.1);
   color: oklch(1 0 0 / 0.92);
   cursor: pointer;
   transition:
-    background var(--bbi-dur) var(--bbi-ease),
-    border-color var(--bbi-dur) var(--bbi-ease);
+    background var(--changye-dur) var(--changye-ease),
+    border-color var(--changye-dur) var(--changye-ease);
 }
 
-.bbi-lb-btn:hover {
+.changye-lb-btn:hover {
   background: oklch(1 0 0 / 0.2);
   border-color: oklch(1 0 0 / 0.4);
 }
 
-.bbi-lb-btn--danger:hover {
-  background: var(--bbi-danger);
-  border-color: var(--bbi-danger);
+.changye-lb-btn--danger:hover {
+  background: var(--changye-danger);
+  border-color: var(--changye-danger);
   color: #fff;
 }
 
 /* 居中不用 justify-content/align-items:center:放大后图片比容器宽时,flex 居中
    会把左/上两侧的溢出挤出滚动可达区(移动端「只能上下滚」的元凶)。
    改用图片自身 margin:auto——小时居中,大时自动边距归零、起点对齐,四向皆可滚。 */
-.bbi-lightbox__stage {
+.changye-lightbox__stage {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   overflow: auto;
 }
 
-.bbi-lightbox__img {
+.changye-lightbox__img {
   display: block;
   margin: auto;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  border-radius: var(--bbi-radius-sm);
+  border-radius: var(--changye-radius-sm);
   cursor: zoom-in;
   /* 抵消 ST 的 body{touch-action:none}(css/mobile-styles.css:251):
      它会干扰部分引擎的长按保存判定,也会挡住放大后的触屏原生滚动。见 <script> 顶部注释。 */
@@ -273,41 +273,41 @@ const promptText = computed(() => (props.prompt ?? '').trim());
 }
 
 /* 原始尺寸:超出部分由 __stage 滚动(触屏)/ 鼠标拖拽查看 */
-.bbi-lightbox__img[data-zoomed='1'] {
+.changye-lightbox__img[data-zoomed='1'] {
   max-width: none;
   max-height: none;
   cursor: grab;
 }
 
-.bbi-lightbox__img[data-zoomed='1']:active {
+.changye-lightbox__img[data-zoomed='1']:active {
   cursor: grabbing;
 }
 
-/* 放大态找回细滚动条(base.css 在 .bbi-root 内全局隐藏了滚动条),
+/* 放大态找回细滚动条(base.css 在 .changye-root 内全局隐藏了滚动条),
    给个「现在看到哪了」的位置感 */
-.bbi-lightbox__stage[data-zoomed='1'] {
+.changye-lightbox__stage[data-zoomed='1'] {
   scrollbar-width: thin;
   scrollbar-color: oklch(1 0 0 / 0.3) transparent;
 }
 
-.bbi-lightbox__stage[data-zoomed='1']::-webkit-scrollbar {
+.changye-lightbox__stage[data-zoomed='1']::-webkit-scrollbar {
   width: 6px;
   height: 6px;
   display: block;
 }
 
-.bbi-lightbox__stage[data-zoomed='1']::-webkit-scrollbar-thumb {
+.changye-lightbox__stage[data-zoomed='1']::-webkit-scrollbar-thumb {
   background: oklch(1 0 0 / 0.25);
   border-radius: 3px;
 }
 
-.bbi-lightbox__prompt {
+.changye-lightbox__prompt {
   flex: 0 0 auto;
   max-height: 22%;
   overflow-y: auto;
   margin: 0;
   padding: 10px 12px;
-  border-radius: var(--bbi-radius-sm);
+  border-radius: var(--changye-radius-sm);
   background: oklch(1 0 0 / 0.08);
   color: oklch(1 0 0 / 0.85);
   font-size: 12px;

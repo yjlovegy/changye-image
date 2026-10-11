@@ -36,16 +36,16 @@ describe('vibeStore', () => {
     const meta = vibeMetaFromData(
       'v1',
       '测试',
-      '/user/files/bbi-vibe-v1.json',
-      '/user/files/bbi-vibe-thumb-v1.jpg',
+      '/user/files/changye-vibe-v1.json',
+      '/user/files/changye-vibe-thumb-v1.jpg',
       data,
       0.6,
       true,
     );
     expect(meta).toMatchObject({
       id: 'v1',
-      dataPath: '/user/files/bbi-vibe-v1.json',
-      thumbnailPath: '/user/files/bbi-vibe-thumb-v1.jpg',
+      dataPath: '/user/files/changye-vibe-v1.json',
+      thumbnailPath: '/user/files/changye-vibe-thumb-v1.jpg',
       modelKeys: ['v4-5full'],
       hasImage: true,
     });
@@ -56,15 +56,15 @@ describe('vibeStore', () => {
 
   it('正文和缩略图使用稳定文件名分别上传', async () => {
     fileStore.upload
-      .mockResolvedValueOnce('/user/files/bbi-vibe-v1.json')
-      .mockResolvedValueOnce('/user/files/bbi-vibe-thumb-v1.jpg');
+      .mockResolvedValueOnce('/user/files/changye-vibe-v1.json')
+      .mockResolvedValueOnce('/user/files/changye-vibe-thumb-v1.jpg');
 
     await expect(saveVibeFiles(data, null, 'v1')).resolves.toEqual({
-      dataPath: '/user/files/bbi-vibe-v1.json',
-      thumbnailPath: '/user/files/bbi-vibe-thumb-v1.jpg',
+      dataPath: '/user/files/changye-vibe-v1.json',
+      thumbnailPath: '/user/files/changye-vibe-thumb-v1.jpg',
     });
-    expect(fileStore.upload).toHaveBeenNthCalledWith(1, 'bbi-vibe-v1.json', expect.any(String));
-    expect(fileStore.upload).toHaveBeenNthCalledWith(2, 'bbi-vibe-thumb-v1.jpg', 'dGh1bWI=');
+    expect(fileStore.upload).toHaveBeenNthCalledWith(1, 'changye-vibe-v1.json', expect.any(String));
+    expect(fileStore.upload).toHaveBeenNthCalledWith(2, 'changye-vibe-thumb-v1.jpg', 'dGh1bWI=');
   });
 
   it('按路径读取正文并删除两份文件', async () => {
@@ -72,8 +72,8 @@ describe('vibeStore', () => {
     const vibe = vibeMetaFromData(
       'v1',
       '测试',
-      '/user/files/bbi-vibe-v1.json',
-      '/user/files/bbi-vibe-thumb-v1.jpg',
+      '/user/files/changye-vibe-v1.json',
+      '/user/files/changye-vibe-thumb-v1.jpg',
       data,
       0.6,
       true,

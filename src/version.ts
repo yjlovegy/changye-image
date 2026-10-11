@@ -1,4 +1,4 @@
-export const PLUGIN_VERSION = __BBI_VERSION__;
+export const PLUGIN_VERSION = __CHANGYE_VERSION__;
 
 export function versionedAssetUrl(assetPath: string, baseUrl: string): string {
   const url = new URL(assetPath, baseUrl);

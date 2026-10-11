@@ -42,7 +42,7 @@ export function prepareSelectionImageText(text: string, stripTags: string[]): Pr
   if (selected.length > MAX_SELECTION_IMAGE_TEXT_LENGTH) {
     throw new Error(`选中文字过长，请缩小到 ${MAX_SELECTION_IMAGE_TEXT_LENGTH} 字以内`);
   }
-  const prepared = prepareTargetText(selected, [...stripTags, 'bbi_image']);
+  const prepared = prepareTargetText(selected, [...stripTags, 'changye_image', 'bbi_image']);
   if (!prepared.segments.length) throw new Error('选区清洗后没有可绘制的正文，请重新选择剧情文字');
   return prepared;
 }
@@ -64,7 +64,7 @@ export function prepareSelectionCharState(
 /** 纯解析预检；探针只在内存中检查，不会返回给 UI 或写入正文。 */
 export function canInsertSelectionImage(currentText: string, insertionOffset: number | undefined): boolean {
   return insertSelectionImage(currentText, currentText, {
-    tag: 'bbi insertion probe', nl: '', negative: '', characters: [], size: 'portrait',
+    tag: 'changye insertion probe', nl: '', negative: '', characters: [], size: 'portrait',
   }, insertionOffset) !== null;
 }
 

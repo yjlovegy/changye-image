@@ -1,11 +1,12 @@
+import { readCompatibleLocal } from '@/legacyCompatibility';
 import { onSettingsReady, settings } from '@/state/settings';
 import { reactive, ref, watch } from 'vue';
 
 /**
- * 弹窗 Teleport 宿主:由 App.vue 挂在 .bbi-root 的直接子级(在 .bbi-body 滚动容器之外)。
- * 所有 .bbi-modal-mask 弹窗都 Teleport 到这里,避开 iOS Safari 的老问题——
+ * 弹窗 Teleport 宿主:由 App.vue 挂在 .changye-root 的直接子级(在 .changye-body 滚动容器之外)。
+ * 所有 .changye-modal-mask 弹窗都 Teleport 到这里,避开 iOS Safari 的老问题——
  * 「可滚动祖先内的 position:fixed 后代」会相对滚动内容而非视口定位,设置页滚动后弹窗顶出屏幕。
- * 仍在 shadow root 内,scoped 样式与 --bbi-* 主题变量照常生效(故不能用 Teleport to="body")。
+ * 仍在 shadow root 内,scoped 样式与 --changye-* 主题变量照常生效(故不能用 Teleport to="body")。
  */
 export const modalHost = ref<HTMLElement | null>(null);
 
@@ -14,7 +15,7 @@ export type NavPosition = 'top' | 'bottom' | 'auto';
 
 /**
  * 主题。新增主题只需:
- *   1) theme.css 里加一套 .bbi-root[data-theme='xxx'] 变量;
+ *   1) theme.css 里加一套 .changye-root[data-theme='xxx'] 变量;
  *   2) 这里给 ThemeName 加上 'xxx',并往 THEMES 注册表加一条。
  * 设置页与题首切换按钮都从 THEMES 自动读取,无需再改别处。
  */
@@ -70,11 +71,11 @@ function validOrbShape(s: string): OrbShape {
 
 // activePage(上次停在哪一页)是纯本机临时导航态,跨设备同步无意义、且翻页即回写服务器太频繁,
 // 故仍存本机 localStorage;主题/导航位置是真·设置,改存进 settings.ui(→ ST 跨设备同步)。
-const PAGE_STORAGE_KEY = 'bbi.ui.page.v1';
+const PAGE_STORAGE_KEY = 'changye.ui.page.v1';
 
 function loadActivePage(): string {
   try {
-    return localStorage.getItem(PAGE_STORAGE_KEY) || 'backend';
+    return readCompatibleLocal(PAGE_STORAGE_KEY) || 'backend';
   } catch {
     return 'backend';
   }

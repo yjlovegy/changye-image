@@ -6,7 +6,7 @@ import { probeUserImage } from '@/st/images';
  * 「文件已不在」的图片路径册(模块级、会话内有效)。
  *
  * 为什么需要它:图库现在能直接删 user/images 下的文件,但那张图的指针还躺在某个聊天的
- * `message.extra.bbiImage` 里——图库按**目录**列图,指针在**某个聊天**里,两者之间没有反向
+ * `message.extra.changyeImage` 里——图库按**目录**列图,指针在**某个聊天**里,两者之间没有反向
  * 索引,而扫全库反查不可行(实测单用户 chats 目录 7 GB / 1243 个 jsonl,且 /api/chats/get
  * 无分页)。所以删文件必然留下破指针,卡片侧只能靠「运行时发现它 404」来降级。
  *

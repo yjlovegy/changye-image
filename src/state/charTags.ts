@@ -1,3 +1,4 @@
+import { readCompatibleField, LEGACY_KEYS } from '@/legacyCompatibility';
 import { getContext, type STMessage } from '@/st/context';
 import { reactive } from 'vue';
 
@@ -8,7 +9,7 @@ import { reactive } from 'vue';
  * - 全局库(跨聊天):extensionSettings,由 globalCharTags.ts 管理,仅用户手动维护,
  *   AI 的 changes 对锁定名一律无效;经 setGlobalCharTagSource 注入,本模块不反向依赖它。
  * - 手动条目/旧版快照:chatMetadata[META_KEY],不随楼层删除。
- * - 自动建档与变化:目标消息 extra[BBI_CHAR_EXTRA_KEY],随消息/swipe 一起保存和删除。
+ * - 自动建档与变化:目标消息 extra[CHANGYE_CHAR_EXTRA_KEY],随消息/swipe 一起保存和删除。
  *
  * charTagLib 只是响应式派生缓存:合并基线(本聊天优先,全局补同名空缺) + 按楼层物理顺序重放自动变化。
  */
@@ -126,8 +127,8 @@ export interface CharTagFloorDelta {
   ops: CharTagAutoOp[];
 }
 
-export const BBI_CHAR_EXTRA_KEY = 'bbiCharChanges';
-const META_KEY = 'baibai_image_char_tags';
+export const CHANGYE_CHAR_EXTRA_KEY = 'changyeCharChanges';
+const META_KEY = 'changye_image_char_tags';
 const HISTORY_CAP = 50;
 
 interface CharTagStore {
@@ -337,7 +338,7 @@ function normalizeAutoOp(raw: unknown): CharTagAutoOp | null {
 }
 
 export function readCharTagFloorDelta(message: STMessage | undefined): CharTagFloorDelta | null {
-  const raw = message?.extra?.[BBI_CHAR_EXTRA_KEY];
+  const raw = readCompatibleField(message?.extra, CHANGYE_CHAR_EXTRA_KEY);
   if (!raw || typeof raw !== 'object') return null;
   const value = raw as Partial<CharTagFloorDelta>;
   if (value.v !== 1 || !Array.isArray(value.ops)) return null;
@@ -490,7 +491,7 @@ export function recomputeCharTags(): void {
 }
 
 export function hydrateCharTags(): void {
-  const raw = getContext()?.chatMetadata?.[META_KEY];
+  const raw = readCompatibleField(getContext()?.chatMetadata, META_KEY);
   // v2 的整库快照无法可靠反推来源楼层,迁移时作为基线保留,避免丢用户现有数据。
   baseEntries = normalizeCharTagStore(raw);
   recomputeCharTags();
@@ -509,7 +510,7 @@ function persistBase(): void {
 
 function stripOpsFromExtra(extra: Record<string, unknown> | undefined, names: Set<string>): boolean {
   if (!extra) return false;
-  const raw = extra[BBI_CHAR_EXTRA_KEY];
+  const raw = readCompatibleField(extra, CHANGYE_CHAR_EXTRA_KEY);
   if (!raw || typeof raw !== 'object') return false;
   const value = raw as Partial<CharTagFloorDelta>;
   if (value.v !== 1 || !Array.isArray(value.ops)) return false;
@@ -518,13 +519,14 @@ function stripOpsFromExtra(extra: Record<string, unknown> | undefined, names: Se
     .filter((op): op is CharTagAutoOp => !!op && !names.has(op.name));
   if (nextOps.length === value.ops.length) return false;
   if (nextOps.length) {
-    extra[BBI_CHAR_EXTRA_KEY] = {
+    extra[CHANGYE_CHAR_EXTRA_KEY] = {
       v: 1,
       swipe: typeof value.swipe === 'number' ? value.swipe : 0,
       ops: nextOps,
     } satisfies CharTagFloorDelta;
   } else {
-    delete extra[BBI_CHAR_EXTRA_KEY];
+    delete extra[CHANGYE_CHAR_EXTRA_KEY];
+    delete extra[LEGACY_KEYS[CHANGYE_CHAR_EXTRA_KEY]];
   }
   return true;
 }

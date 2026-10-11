@@ -217,10 +217,10 @@ describe('auto tag position protocol', () => {
     ).toThrow('P编号');
   });
 
-  it('rejects nested bbi tags in prompts', () => {
+  it('rejects nested changye tags in prompts', () => {
     expect(() =>
       parseImagePlan(
-        '{"images":[{"position":"P1","tag":"<bbi_image>bad</bbi_image>"}]}',
+        '{"images":[{"position":"P1","tag":"<changye_image>bad</changye_image>"}]}',
         segments,
         1,
       ),
@@ -262,7 +262,7 @@ describe('auto tag position protocol', () => {
         { position: 'P1', sourceLine: 0, tag: 'prompt b', nl: '', negative: '', characters: [], size: 'landscape' },
       ]),
     ).toBe(
-      '第一行\n<bbi_image>prompt a<size>portrait</size></bbi_image>\n<bbi_image>prompt b<size>landscape</size></bbi_image>\n第二行',
+      '第一行\n<changye_image>prompt a<size>portrait</size></changye_image>\n<changye_image>prompt b<size>landscape</size></changye_image>\n第二行',
     );
   });
 
@@ -280,7 +280,7 @@ describe('auto tag position protocol', () => {
         },
       ]),
     ).toBe(
-      '第一行\n<bbi_image>1girl, moonlight<nl>A girl in moonlight.</nl><size>portrait</size></bbi_image>',
+      '第一行\n<changye_image>1girl, moonlight<nl>A girl in moonlight.</nl><size>portrait</size></changye_image>',
     );
   });
 
@@ -298,7 +298,7 @@ describe('auto tag position protocol', () => {
         },
       ]),
     ).toBe(
-      '第一行\n<bbi_image>1girl<negative>extra people, duplicate character</negative><size>portrait</size></bbi_image>',
+      '第一行\n<changye_image>1girl<negative>extra people, duplicate character</negative><size>portrait</size></changye_image>',
     );
   });
 
@@ -318,7 +318,7 @@ describe('auto tag position protocol', () => {
         { position: 'P2', sourceLine: 2, tag: 'prompt c', nl: '', negative: '', characters: [], size: 'portrait' },
       ]),
     ).toBe(
-      '第一行\r\n<bbi_image>prompt a<size>portrait</size></bbi_image>\r\n\r\n第三行\r\n<bbi_image>prompt c<size>portrait</size></bbi_image>',
+      '第一行\r\n<changye_image>prompt a<size>portrait</size></changye_image>\r\n\r\n第三行\r\n<changye_image>prompt c<size>portrait</size></changye_image>',
     );
   });
 });

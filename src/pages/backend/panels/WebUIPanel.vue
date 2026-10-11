@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import BbiSelect from '@/components/BbiSelect.vue';
+import ChangYeSelect from '@/components/ChangYeSelect.vue';
 import Collapsible from '@/components/Collapsible.vue';
 import Icon from '@/components/Icon.vue';
 import { settings } from '@/state/settings';
@@ -11,16 +11,16 @@ const hiresFix = ref(false);
 
 <template>
   <div class="panel">
-    <p class="bbi-page-intro">Stable Diffusion WebUI(A1111 / Forge / reForge)，走其 /sdapi/v1 接口。</p>
+    <p class="changye-page-intro">Stable Diffusion WebUI(A1111 / Forge / reForge)，走其 /sdapi/v1 接口。</p>
 
-    <div class="bbi-sections">
+    <div class="changye-sections">
       <Collapsible title="配置" :open="false">
-        <div class="bbi-field">
-          <div class="bbi-field-head">
-            <span class="bbi-field-label">服务地址</span>
+        <div class="changye-field">
+          <div class="changye-field-head">
+            <span class="changye-field-label">服务地址</span>
           </div>
           <input
-            class="bbi-input"
+            class="changye-input"
             type="text"
             v-model="settings.webui.url"
             placeholder="http://127.0.0.1:7860"
@@ -28,26 +28,26 @@ const hiresFix = ref(false);
           />
         </div>
 
-        <div class="bbi-field">
-          <div class="bbi-field-head">
-            <span class="bbi-field-label">正面质量词</span>
+        <div class="changye-field">
+          <div class="changye-field-head">
+            <span class="changye-field-label">正面质量词</span>
           </div>
           <input
-            class="bbi-input"
+            class="changye-input"
             type="text"
             v-model="settings.webui.qualityTags"
             placeholder="masterpiece, best quality, ..."
             spellcheck="false"
           />
-          <p class="bbi-field-hint">生成时自动拼到正向提示词前面</p>
+          <p class="changye-field-hint">生成时自动拼到正向提示词前面</p>
         </div>
 
-        <div class="bbi-field">
-          <div class="bbi-field-head">
-            <span class="bbi-field-label">负面提示词</span>
+        <div class="changye-field">
+          <div class="changye-field-head">
+            <span class="changye-field-label">负面提示词</span>
           </div>
           <input
-            class="bbi-input"
+            class="changye-input"
             type="text"
             v-model="settings.webui.negativePrompt"
             placeholder="lowres, bad anatomy, ..."
@@ -55,12 +55,12 @@ const hiresFix = ref(false);
           />
         </div>
 
-        <div class="bbi-field">
-          <div class="bbi-field-head">
-            <span class="bbi-field-label">分辨率</span>
+        <div class="changye-field">
+          <div class="changye-field-head">
+            <span class="changye-field-label">分辨率</span>
           </div>
           <input
-            class="bbi-input"
+            class="changye-input"
             type="text"
             v-model="settings.webui.resolution"
             placeholder="如 832×1216"
@@ -69,7 +69,7 @@ const hiresFix = ref(false);
         </div>
 
         <div class="conn-actions">
-          <button class="bbi-btn" type="button" disabled title="功能开发中">
+          <button class="changye-btn" type="button" disabled title="功能开发中">
             <Icon name="plug" />
             测试连接
           </button>
@@ -78,48 +78,48 @@ const hiresFix = ref(false);
 
       <Collapsible title="默认参数" :open="true">
         <div class="be-grid">
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">模型(Checkpoint)</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">模型(Checkpoint)</span>
             </div>
-            <BbiSelect style="width:100%" model-value="" :options="[{ value: '', label: '(连接后自动拉取)' }]" disabled />
+            <ChangYeSelect style="width:100%" model-value="" :options="[{ value: '', label: '(连接后自动拉取)' }]" disabled />
           </div>
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">采样器</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">采样器</span>
             </div>
-            <BbiSelect style="width:100%" model-value="" :options="[{ value: '', label: '(连接后自动拉取)' }]" disabled />
+            <ChangYeSelect style="width:100%" model-value="" :options="[{ value: '', label: '(连接后自动拉取)' }]" disabled />
           </div>
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">步数</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">步数</span>
             </div>
-            <input class="bbi-input" type="number" placeholder="28" disabled />
+            <input class="changye-input" type="number" placeholder="28" disabled />
           </div>
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">CFG Scale</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">CFG Scale</span>
             </div>
-            <input class="bbi-input" type="number" placeholder="7" disabled />
+            <input class="changye-input" type="number" placeholder="7" disabled />
           </div>
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">宽</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">宽</span>
             </div>
-            <input class="bbi-input" type="number" placeholder="832" disabled />
+            <input class="changye-input" type="number" placeholder="832" disabled />
           </div>
-          <div class="bbi-field">
-            <div class="bbi-field-head">
-              <span class="bbi-field-label">高</span>
+          <div class="changye-field">
+            <div class="changye-field-head">
+              <span class="changye-field-label">高</span>
             </div>
-            <input class="bbi-input" type="number" placeholder="1216" disabled />
+            <input class="changye-input" type="number" placeholder="1216" disabled />
           </div>
         </div>
-        <label class="bbi-switch-row">
-          <span class="bbi-field-label">Hires. fix（高清修复）</span>
-          <input v-model="hiresFix" type="checkbox" class="bbi-checkbox" disabled />
+        <label class="changye-switch-row">
+          <span class="changye-field-label">Hires. fix（高清修复）</span>
+          <input v-model="hiresFix" type="checkbox" class="changye-checkbox" disabled />
         </label>
-        <p class="bbi-field-hint">参数功能开发中，当前仅展示。</p>
+        <p class="changye-field-hint">参数功能开发中，当前仅展示。</p>
       </Collapsible>
     </div>
   </div>

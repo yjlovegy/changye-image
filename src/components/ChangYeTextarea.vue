@@ -37,7 +37,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>();
 
-// 透传 class/style(合并到根 textarea,保持 .bbi-input 等既有工具类可用)
+// 透传 class/style(合并到根 textarea,保持 .changye-input 等既有工具类可用)
 const attrs = useAttrs();
 
 const el = ref<HTMLTextAreaElement | null>(null);
@@ -130,7 +130,7 @@ defineOptions({ inheritAttrs: false });
 <template>
   <textarea
     ref="el"
-    class="bbi-textarea"
+    class="changye-textarea"
     :class="{ 'is-mono': mono }"
     v-bind="attrs"
     :value="modelValue"
@@ -144,14 +144,14 @@ defineOptions({ inheritAttrs: false });
 </template>
 
 <style scoped>
-.bbi-textarea {
+.changye-textarea {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--bbi-line-strong);
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface);
-  color: var(--bbi-ink);
-  font-family: var(--bbi-font-sans);
+  border: 1px solid var(--changye-line-strong);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface);
+  color: var(--changye-ink);
+  font-family: var(--changye-font-sans);
   font-size: 13px;
   line-height: 1.6;
   box-sizing: border-box;
@@ -159,18 +159,18 @@ defineOptions({ inheritAttrs: false });
   resize: none;
   overflow-y: hidden;
 }
-.bbi-textarea.is-mono {
-  font-family: var(--bbi-font-mono);
+.changye-textarea.is-mono {
+  font-family: var(--changye-font-mono);
   font-variant-ligatures: none;
 }
-.bbi-textarea:focus {
+.changye-textarea:focus {
   outline: none;
-  border-color: var(--bbi-accent);
+  border-color: var(--changye-accent);
 }
-.bbi-textarea::placeholder {
-  color: var(--bbi-ink-muted);
+.changye-textarea::placeholder {
+  color: var(--changye-ink-muted);
 }
-.bbi-textarea:disabled {
+.changye-textarea:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }

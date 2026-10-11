@@ -27,7 +27,7 @@ describe('Krea2 natural-language pipeline', () => {
   it('serializes mode as metadata, without leaking it into prompt text', () => {
     const parsed = parseImageTagContent(serializeImageTag(content));
     expect(parsed).toEqual(content);
-    expect(parseImageTagContent('<bbi_image>old tags<nl>Old description.</nl></bbi_image>')).not.toHaveProperty('promptMode');
+    expect(parseImageTagContent('<changye_image>old tags<nl>Old description.</nl></changye_image>')).not.toHaveProperty('promptMode');
     expect(containsTagMarkup('<prompt_mode>krea2</prompt_mode>')).toBe(true);
   });
   it.each(['%prompt%', '%nl%', '%prompt%\n%nl%'])('fills %s once, preserving fixed words and negatives', marker => {

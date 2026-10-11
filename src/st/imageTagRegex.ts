@@ -8,24 +8,24 @@ import { getContext } from '@/st/context';
 /**
  * 长夜的绘图器生图 tag 的两条托管正则（DESIGN-FLOOR-UI.md §4）：
  *
- * - bbi-image-tag-slot（markdownOnly）：显示路径把 <bbi_image>…</bbi_image> 整体
- *   替换为空锚点 <div data-bbi-slot=""></div>，提示词永不进 DOM。
- * - bbi-image-tag-hide（promptOnly）：提示词路径把同一 tag 替换为空字符串。
+ * - changye-image-tag-slot（markdownOnly）：显示路径把 <changye_image>…</changye_image> 整体
+ *   替换为空锚点 <div data-changye-slot=""></div>，提示词永不进 DOM。
+ * - changye-image-tag-hide（promptOnly）：提示词路径把同一 tag 替换为空字符串。
  *
  * 两条规则 find 相同、生效路径互斥（引擎条件 markdownOnly&&isMarkdown 与
  * promptOnly&&isPrompt 不会同时命中），可安全共存。
  */
 
-export const IMAGE_TAG_FIND_REGEX_LITERAL = '/<bbi_image>[\\s\\S]+?<\\/bbi_image>/gi';
+export const IMAGE_TAG_FIND_REGEX_LITERAL = '/<(?:changye_image|bbi_image)>[\\s\\S]+?<\\/(?:changye_image|bbi_image)>/gi';
 
 /** 与托管脚本同源的运行时正则：解析 message.mes 原文里的 tag（水合配对用）。 */
-export const IMAGE_TAG_FIND_REGEX = /<bbi_image>[\s\S]+?<\/bbi_image>/gi;
+export const IMAGE_TAG_FIND_REGEX = /<(?:changye_image|bbi_image)>[\s\S]+?<\/(?:changye_image|bbi_image)>/gi;
 
 /** 显示侧锚点 DOM 选择器（锚点只用 data 属性，class 会被 DOMPurify 加 custom- 前缀）。 */
-export const BBI_SLOT_SELECTOR = 'div[data-bbi-slot]';
+export const CHANGYE_SLOT_SELECTOR = 'div[data-changye-slot], div[data-bbi-slot]';
 
-export const IMAGE_TAG_SLOT_REGEX_ID = 'bbi-image-tag-slot';
-export const IMAGE_TAG_HIDE_REGEX_ID = 'bbi-image-tag-hide';
+export const IMAGE_TAG_SLOT_REGEX_ID = 'changye-image-tag-slot';
+export const IMAGE_TAG_HIDE_REGEX_ID = 'changye-image-tag-hide';
 
 // regex_placement：0=MD_DISPLAY(已弃用) / 1=USER_INPUT / 2=AI_OUTPUT / 3=SLASH_COMMAND。
 // 显示路径的 placement 随消息类型变化（script.js getRegexPlacement）：
@@ -39,7 +39,7 @@ const PLACEMENT_AI_OUTPUT = 2;
  * 必须带上它:`/narrator` 造出的楼是 `is_system:false` + `extra.type:'narrator'`,
  * 于是 st/context.ts 的 isAiStoryMessage **认它是剧情楼**——自动 tag 会往里写 tag。
  * 而显示侧 getRegexPlacement 给这种楼派的是 3,只写 [1,2] 的话锚点正则整条不命中:
- * tag 原文不被替换,DOMPurify 剥掉不认识的 `<bbi_image>` 壳、把里面的提示词当正文留下,
+ * tag 原文不被替换,DOMPurify 剥掉不认识的 `<changye_image>` 壳、把里面的提示词当正文留下,
  * 用户直接看到一串 danbooru tag,且没有锚点 = 没有卡片。
  * 「tag 永不进 DOM」这条不变式在这一类楼上是破的。
  *
@@ -74,7 +74,7 @@ export function imageTagSlotScript(): ManagedRegexScript {
     id: IMAGE_TAG_SLOT_REGEX_ID,
     scriptName: '长夜的绘图器 · 生图标签占位',
     findRegex: IMAGE_TAG_FIND_REGEX_LITERAL,
-    replaceString: '<div data-bbi-slot=""></div>',
+    replaceString: '<div data-changye-slot=""></div>',
     trimStrings: [],
     placement: [...DISPLAY_AND_PROMPT_PLACEMENTS],
     disabled: false,
@@ -122,11 +122,11 @@ export function matchesImageTagLayout(text: string, expected: readonly string[])
  *
  * **只有这一份**:楼层按钮判断「要不要先弹重新生成确认」与 runner 判断「要不要跳过
  * 已有 tag 的楼」共用它。两侧各写一条正则的后果:按钮那份只认开标签,正文里只剩一个
- * `</bbi_image>` 时按钮以为没 tag(不弹确认、传 replace=false),runner 那份认开也认闭、
+ * `</changye_image>` 时按钮以为没 tag(不弹确认、传 replace=false),runner 那份认开也认闭、
  * 于是以为有 tag 而静默放弃——用户看到的就是「按钮点了永远没反应」。
  */
 export function hasImageTagTrace(mes: string): boolean {
-  return /<\/?bbi_image\b/i.test(mes ?? '');
+  return /<\/?(?:changye_image|bbi_image)\b/i.test(mes ?? '');
 }
 
 /**
@@ -135,8 +135,8 @@ export function hasImageTagTrace(mes: string): boolean {
  * 恰好还原注入前原文；手写内联 tag 前面没有换行，仅删 tag 本身。
  *
  * 为什么不能直接 `.replace(查找正则, '')`:那条正则是非贪婪的,正文里多出一个半截的
- * `<bbi_image>`(AI 照着上下文模仿只写了一半、或 tag 被别的插件截断)时,它会从这个
- * 残骸一路吃到下一个 `</bbi_image>`,把中间的正文连同后面那条真 tag 一起删掉。
+ * `<changye_image>`(AI 照着上下文模仿只写了一半、或 tag 被别的插件截断)时,它会从这个
+ * 残骸一路吃到下一个 `</changye_image>`,把中间的正文连同后面那条真 tag 一起删掉。
  * 故改为逐 token 扫:闭标签与**最近一个未配对的开标签**成对(整段删),扫完仍落单的
  * 开/闭标签只删自己。残骸必须清干净——留着它,ST 显示侧那条同样非贪婪的锚点正则
  * 会把正文吞进锚点(破图)。
@@ -144,7 +144,7 @@ export function hasImageTagTrace(mes: string): boolean {
 export function stripImageTags(mes: string): string {
   const source = String(mes ?? '');
   // 就地新建:模块级带 /g 的正则实例 lastIndex 有状态,exec 循环不能共用(同 replaceImageTagAt)
-  const tokens = /<\/?bbi_image\b[^>]*>/gi;
+  const tokens = /<\/?(?:changye_image|bbi_image)\b[^>]*>/gi;
   const ranges: Array<{ start: number; end: number }> = [];
   const openStack: Array<{ start: number; end: number }> = [];
   for (let match = tokens.exec(source); match; match = tokens.exec(source)) {
@@ -173,16 +173,16 @@ export function stripImageTags(mes: string): string {
 }
 
 /**
- * tag / nl / negative 内容里不允许出现的子标签字面量（会污染 bbi_image 内部解析）。
+ * tag / nl / negative 内容里不允许出现的子标签字面量（会污染 changye_image 内部解析）。
  *
  * 唯一口径：AI 侧(autoTag/protocol.ts 的 sanitizeContent)与手输侧(提示词编辑弹窗)
- * 共用这一份。**绝不再抄第二份** —— 查找正则 `<bbi_image>…</bbi_image>` 是非贪婪的，
- * 内容里混进一个 `</bbi_image>` 就会让 tag 提前截断、后半截漏进 DOM 与提示词，
+ * 共用这一份。**绝不再抄第二份** —— 查找正则 `<changye_image>…</changye_image>` 是非贪婪的，
+ * 内容里混进一个 `</changye_image>` 就会让 tag 提前截断、后半截漏进 DOM 与提示词，
  * 正好破掉「tag 永不进 DOM、永不进提示词」这条不变式。
  */
-export const FORBIDDEN_SUBTAG = /<\/?(?:bbi_image|tag|nl|negative|characters|size|pose|resolution|prompt_mode)\b/i;
+export const FORBIDDEN_SUBTAG = /<\/?(?:(?:changye_image|bbi_image)|tag|nl|negative|characters|size|pose|resolution|prompt_mode)\b/i;
 
-/** 文本里是否含 bbi_image 子标签字面量（手输校验用；口径同 AI 侧）。 */
+/** 文本里是否含 changye_image 子标签字面量（手输校验用；口径同 AI 侧）。 */
 export function containsTagMarkup(text: string): boolean {
   return FORBIDDEN_SUBTAG.test(text);
 }
@@ -206,17 +206,17 @@ export interface ImageTagContent {
 }
 
 /**
- * 解析 tag 原文（含 <bbi_image> 壳）的内部内容。一条容忍式规则覆盖三种形态：
- * - <bbi_image>xxxx</bbi_image>                    裸文本 = tag（存量兼容）
- * - <bbi_image>xxxx<nl>yyyy</nl></bbi_image>       裸文本 = tag，<nl> = nl
- * - <bbi_image><tag>x</tag><negative>y</negative></bbi_image> 显式子标签（手写容忍）
+ * 解析 tag 原文（含 <changye_image> 壳）的内部内容。一条容忍式规则覆盖三种形态：
+ * - <changye_image>xxxx</changye_image>                    裸文本 = tag（存量兼容）
+ * - <changye_image>xxxx<nl>yyyy</nl></changye_image>       裸文本 = tag，<nl> = nl
+ * - <changye_image><tag>x</tag><negative>y</negative></changye_image> 显式子标签（手写容忍）
  * 裸文本与显式 <tag> 同时存在时按「裸文本在前」以 ", " 合并进 tag 部分，不丢内容。
  * <size>/<nl>/<negative> 必须先剥掉，不能漏进正向提示词。
  */
 export function parseImageTagContent(raw: string): ImageTagContent {
   // 内容统一折叠成单行:手写 tag 可能跨行,而提示词里换行没有意义
   const oneLine = (text: string) => text.trim().replace(/[\r\n]+/g, ' ');
-  const inner = raw.replace(/^<bbi_image[^>]*>/i, '').replace(/<\/bbi_image>$/i, '');
+  const inner = raw.replace(/^<(?:changye_image|bbi_image)[^>]*>/i, '').replace(/<\/(?:changye_image|bbi_image)>$/i, '');
   const modeMatch = inner.match(/<prompt_mode>(anima|krea2)<\/prompt_mode>/i);
   const promptMode = modeMatch?.[1].toLowerCase() as PromptMode | undefined;
   const nlMatch = inner.match(/<nl>([\s\S]*?)<\/nl>/i);
@@ -271,7 +271,7 @@ export function parseImageTagContent(raw: string): ImageTagContent {
 }
 
 /**
- * 序列化成 tag 原文（含 <bbi_image> 壳）—— parseImageTagContent 的反向操作。
+ * 序列化成 tag 原文（含 <changye_image> 壳）—— parseImageTagContent 的反向操作。
  *
  * **格式的读与写只有这一份**：注入(autoTag/protocol.ts 的 injectImageTags)与手动编辑
  * (floor/promptEditor.ts)共用，两处漂移会让「解析得到的字段」与「落进正文的原文」对不上，
@@ -289,7 +289,7 @@ export function serializeImageTag(content: ImageTagContent): string {
     : '';
   const pose = content.pose ? `<pose>${JSON.stringify(validatePose(content.pose)).replace(/</g, '\\u003c')}</pose>` : '';
   const resolution = content.resolution ? `<resolution>${resolutionText(content.resolution)}</resolution>` : '';
-  return `<bbi_image>${content.tag}${nl}${negative}${characters}${pose}${resolution}${mode}<size>${content.size}</size></bbi_image>`;
+  return `<changye_image>${content.tag}${nl}${negative}${characters}${pose}${resolution}${mode}<size>${content.size}</size></changye_image>`;
 }
 
 /**
@@ -328,7 +328,7 @@ export function replaceImageTagAt(mes: string, seq: number, nextTag: string): st
   if (!Number.isInteger(seq) || seq < 0) return null;
   let index = 0;
   let replaced = false;
-  const output = mes.replace(/<bbi_image>[\s\S]+?<\/bbi_image>/gi, match => {
+  const output = mes.replace(/<(?:changye_image|bbi_image)>[\s\S]+?<\/(?:changye_image|bbi_image)>/gi, match => {
     if (index++ !== seq) return match;
     replaced = true;
     return nextTag;
@@ -344,7 +344,7 @@ const MANAGED_SCRIPTS: Array<() => ManagedRegexScript> = [
 /**
  * 向 ST 全局正则列表注册长夜的绘图器托管规则。
  * 固定 id 保证幂等：旧版本或用户改动过的同 id 规则会被更新，其它正则原样保留，
- * 不重复添加。旧版单条 bbi-image-tag-hide（markdownOnly+promptOnly 双开）会被
+ * 不重复添加。旧版单条 changye-image-tag-hide（markdownOnly+promptOnly 双开）会被
  * 新 hide 定义原位覆盖，并新增 slot 规则，存量用户无缝迁移。
  */
 export function ensureImageTagRegexRegistered(): boolean {
@@ -354,6 +354,10 @@ export function ensureImageTagRegexRegistered(): boolean {
   if (!Array.isArray(extensionSettings.regex)) extensionSettings.regex = [];
 
   const list = extensionSettings.regex as Array<Record<string, unknown>>;
+  // Replace only our historical managed rules; keep user-authored regexes intact.
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (list[i]?.id === 'bbi-image-tag-slot' || list[i]?.id === 'bbi-image-tag-hide') list.splice(i, 1);
+  }
   for (const make of MANAGED_SCRIPTS) {
     const script = make();
     const index = list.findIndex(item => item?.id === script.id);

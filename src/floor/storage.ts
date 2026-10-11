@@ -1,3 +1,4 @@
+import { readCompatibleField } from '@/legacyCompatibility';
 import type { ComfyImageResult } from '@/backends/comfyui';
 import { utf8ToBase64 } from '@/base64';
 import { normalizeImagePath } from '@/floor/missingImages';
@@ -11,28 +12,28 @@ import { isGenerationFloorLocked, trackGenerationOperation } from '@/floor/genSt
  * 楼层卡片结果存储层（DESIGN-FLOOR-UI.md §7）。
  *
  * 两层分离：
- * - 新图片二进制 → ST 文件系统（user/images/柏宝绘_<角色名>/），extra 只存指针 path。
+ * - 新图片二进制 → ST 文件系统（user/images/长夜绘图器_<角色名>/），extra 只存指针 path。
  *   旧 user/files 图片保留原位，不迁移、不删除。
- * - 元数据 → message.extra.bbiImage = { [swipeId]: { [promptHash]: BbiImageEntry[] } }
+ * - 元数据 → message.extra.changyeImage = { [swipeId]: { [promptHash]: ChangYeImageEntry[] } }
  *   按 swipeId 分桶（滑动互不污染）；promptHash 键下是历史列表（时间正序，
  *   最新在末尾，卡片翻页浏览）；水合时用当前 tag 原文重算 hash 做 stale 检测。
  *
  * 文件夹名由 ST 上传接口清洗，目录内保留原有文件命名：
- *   bbi_<characterNameHash>_<swipeId>_<promptHash>-<generationId>.<ext>
+ *   changye_<characterNameHash>_<swipeId>_<promptHash>-<generationId>.<ext>
  *
  * 另有第三层「侧写」（sidecar，见 sidecarFileName）：与图片同名的 .json，落在 user/files。
  * 只为图库服务——图库跨全部聊天按目录列图，而提示词只存在某一个聊天的 extra 里，
  * 扫全库 JSONL 反查不可行（实测单个角色目录就有 GB 级、且 /api/chats/get 无分页）。
  */
 
-export interface BbiImageEntry {
+export interface ChangYeImageEntry {
   workflowId?: string;
   originalGenerationId?: string;
   /** 本次生成唯一 id。 */
   generationId: string;
   /** ST 静态路径 /user/images/... 或旧 /user/files/...（<img src> 直接引用）。 */
   path: string;
-  /** 生成时使用的完整 tag 原文（含 <bbi_image> 壳），与 promptHash 输入一致。 */
+  /** 生成时使用的完整 tag 原文（含 <changye_image> 壳），与 promptHash 输入一致。 */
   prompt: string;
   /** 本次生成种子；第四步种子策略落地前固定 null。 */
   seed: number | null;
@@ -44,9 +45,9 @@ export interface BbiImageEntry {
 }
 
 /** [swipeId][promptHash] = 历史 entry 列表。 */
-export type BbiImageStore = Record<string, Record<string, BbiImageEntry[]>>;
+export type ChangYeImageStore = Record<string, Record<string, ChangYeImageEntry[]>>;
 
-export const BBI_IMAGE_EXTRA_KEY = 'bbiImage';
+export const CHANGYE_IMAGE_EXTRA_KEY = 'changyeImage';
 
 /* —— hash 与命名 —— */
 
@@ -77,18 +78,18 @@ export function imageFileName(
   ext: string,
 ): string {
   const characterHash = promptHash(characterName.trim() || 'unknown');
-  return `bbi_${characterHash}_${swipeId}_${hash}-${genId}.${ext}`;
+  return `changye_${characterHash}_${swipeId}_${hash}-${genId}.${ext}`;
 }
 
 /* —— 侧写元数据（sidecar） —— */
 
 /** 侧写 json 的内容。v 是版本号：日后想加 backend/model 时靠它分辨老文件。 */
-export interface BbiImageSidecar {
+export interface ChangYeImageSidecar {
   workflowId?: string;
   v: 1;
   /** 可读角色名（图片文件名里那个是哈希，还原不回来）。 */
   character: string;
-  /** 生成时使用的完整 tag 原文（含 <bbi_image> 壳），与 entry.prompt 同源。 */
+  /** 生成时使用的完整 tag 原文（含 <changye_image> 壳），与 entry.prompt 同源。 */
   prompt: string;
   seed: number | null;
   createdAt: number;
@@ -99,7 +100,7 @@ export interface BbiImageSidecar {
  *
  * 之所以能这么算、不用维护索引：/api/files/upload 是 `path.join(dir, body.name)` 原样落盘
  * （files.js，只校验不清洗），故上传时给什么名字、事后就能凭同一个纯函数算回来。
- * 而图片名 bbi_<hash>_<swipe>_<promptHash>-<genId> 恰好全在
+ * 而图片名 changye_<hash>_<swipe>_<promptHash>-<genId> 恰好全在
  * validateAssetFileName 的白名单 /^[a-zA-Z0-9_\-.]+$/ 内，天然合规。
  *
  * 侧写只能放 user/files:/api/images/upload 的 format 必须是媒体扩展名，json 不在其列，
@@ -114,28 +115,29 @@ export function sidecarFileName(imageFile: string): string {
 export function sidecarPathFor(imagePath: string): string {
   const file = imagePath.split('/').pop() ?? '';
   // 只认自家命名的图:外来文件算出来的名字必然 404，白刷一轮请求
-  if (!/^bbi_[a-zA-Z0-9_]+-[a-zA-Z0-9]+\.[a-z0-9]+$/i.test(file)) return '';
+  if (!/^(?:changye|bbi)_[a-zA-Z0-9_]+-[a-zA-Z0-9]+\.[a-z0-9]+$/i.test(file)) return '';
   return `/user/files/${sidecarFileName(file)}`;
 }
 
 /* —— extra 读写（纯函数） —— */
 
-export function readStore(message: STMessage): BbiImageStore | null {
+export function readStore(message: STMessage): ChangYeImageStore | null {
   const extra = message.extra;
-  if (!extra || typeof extra[BBI_IMAGE_EXTRA_KEY] !== 'object' || extra[BBI_IMAGE_EXTRA_KEY] === null) {
+  const value = readCompatibleField(extra, CHANGYE_IMAGE_EXTRA_KEY);
+  if (!value || typeof value !== 'object') {
     return null;
   }
-  return extra[BBI_IMAGE_EXTRA_KEY] as BbiImageStore;
+  return value as ChangYeImageStore;
 }
 
 /** hash 匹配的最新一条结果（卡片 ready）。 */
 /** 旧数据（无 slotSeq 字段）回退为槽位 0。 */
-function entrySeq(entry: BbiImageEntry): number {
+function entrySeq(entry: ChangYeImageEntry): number {
   return entry.slotSeq ?? 0;
 }
 
 /** 中间新增一张图时，同 swipe 的全部历史桶一并让出槽位；保留文件路径与其它 swipe。 */
-export function shiftImageHistoryForInsertion(store: BbiImageStore, swipeId: number, seq: number): BbiImageStore {
+export function shiftImageHistoryForInsertion(store: ChangYeImageStore, swipeId: number, seq: number): ChangYeImageStore {
   const key = String(swipeId);
   const bucket = store[key];
   if (!bucket) return store;
@@ -148,11 +150,11 @@ export function shiftImageHistoryForInsertion(store: BbiImageStore, swipeId: num
 
 /** 同槽位的全部历史（时间正序，最新在末尾）。卡片翻页用。 */
 export function historyEntries(
-  store: BbiImageStore | null,
+  store: ChangYeImageStore | null,
   swipeId: number,
   hash: string,
   seq: number,
-): BbiImageEntry[] {
+): ChangYeImageEntry[] {
   const list = store?.[String(swipeId)]?.[hash];
   if (!list) return [];
   return list.filter(entry => entrySeq(entry) === seq);
@@ -160,11 +162,11 @@ export function historyEntries(
 
 /** hash 匹配且位于同一槽位的最新一条结果（卡片 ready）。 */
 export function latestEntry(
-  store: BbiImageStore | null,
+  store: ChangYeImageStore | null,
   swipeId: number,
   hash: string,
   seq: number,
-): BbiImageEntry | null {
+): ChangYeImageEntry | null {
   const list = store?.[String(swipeId)]?.[hash];
   if (!list || list.length === 0) return null;
   for (let i = list.length - 1; i >= 0; i--) {
@@ -176,14 +178,14 @@ export function latestEntry(
 /** 当前 hash 无该槽位结果时，其它提示词（stale）在同一槽位的最新一条（卡片 stale）。
  *  只取同槽位：相邻 tag 的结果不会被误当成这个 tag 的历史。 */
 export function latestStaleEntry(
-  store: BbiImageStore | null,
+  store: ChangYeImageStore | null,
   swipeId: number,
   hash: string,
   seq: number,
-): BbiImageEntry | null {
+): ChangYeImageEntry | null {
   const bucket = store?.[String(swipeId)];
   if (!bucket) return null;
-  let latest: BbiImageEntry | null = null;
+  let latest: ChangYeImageEntry | null = null;
   for (const [key, list] of Object.entries(bucket)) {
     if (key === hash || list.length === 0) continue;
     for (let i = list.length - 1; i >= 0; i--) {
@@ -198,13 +200,13 @@ export function latestStaleEntry(
 
 /** 不可变式追加一条历史（返回新 store，原 store 不动）。 */
 export function appendEntry(
-  store: BbiImageStore,
+  store: ChangYeImageStore,
   swipeId: number,
   hash: string,
-  entry: BbiImageEntry,
-): BbiImageStore {
+  entry: ChangYeImageEntry,
+): ChangYeImageStore {
   const swipeKey = String(swipeId);
-  const next: BbiImageStore = { ...store };
+  const next: ChangYeImageStore = { ...store };
   next[swipeKey] = { ...(store[swipeKey] ?? {}) };
   next[swipeKey][hash] = [...(store[swipeKey]?.[hash] ?? []), entry];
   return next;
@@ -219,7 +221,7 @@ export function appendEntry(
 export async function mutateStore(
   ctx: STContext,
   messageId: number,
-  mutate: (store: BbiImageStore) => BbiImageStore,
+  mutate: (store: ChangYeImageStore) => ChangYeImageStore,
 ): Promise<boolean> {
   const chatId = ctx.getCurrentChatId?.() ?? '-';
   if (isGenerationFloorLocked(chatId, messageId)) return false;
@@ -229,15 +231,16 @@ export async function mutateStore(
       const message = ctx.chat[messageId];
       if (!message) return false;
       if (!message.extra) message.extra = {};
-      let store = message.extra[BBI_IMAGE_EXTRA_KEY] as BbiImageStore | undefined;
+      let store = readStore(message) ?? undefined;
+      if (store && !Object.prototype.hasOwnProperty.call(message.extra, CHANGYE_IMAGE_EXTRA_KEY)) message.extra[CHANGYE_IMAGE_EXTRA_KEY] = store;
       if (!store) {
         // 首次建立：同步写回空对象确立引用（无 await，无竞态窗口）
-        message.extra[BBI_IMAGE_EXTRA_KEY] = {};
-        store = message.extra[BBI_IMAGE_EXTRA_KEY] as BbiImageStore;
+        message.extra[CHANGYE_IMAGE_EXTRA_KEY] = {};
+        store = message.extra[CHANGYE_IMAGE_EXTRA_KEY] as ChangYeImageStore;
       }
       const next = mutate(store);
-      if (message.extra[BBI_IMAGE_EXTRA_KEY] !== store) continue; // 并发写入，重试
-      message.extra[BBI_IMAGE_EXTRA_KEY] = next;
+      if (message.extra[CHANGYE_IMAGE_EXTRA_KEY] !== store) continue; // 并发写入，重试
+      message.extra[CHANGYE_IMAGE_EXTRA_KEY] = next;
       await ctx.saveChat();
       return true;
     }
@@ -358,9 +361,9 @@ export async function prepareImageForStorage(result: ComfyImageResult): Promise<
  * (第三方自己决定图显示在哪,图不进任何楼层正文)。
  *
  * 文件名与目录必须走这里,不能各自另起一套:
- * - 目录 `柏宝绘_<角色名>` 是图库的**唯一**分组依据(index.vue 只列 FOLDER_PREFIX 开头的目录),
+ * - 目录 `长夜绘图器_<角色名>` 是图库的**唯一**分组依据(index.vue 只列 FOLDER_PREFIX 开头的目录),
  *   名字换个前缀,图存下去了但图库里看不见;
- * - 文件名 `bbi_…-<genId>.<ext>` 要能被 sidecarPathFor 的正则认出来,否则它返回空串、
+ * - 文件名 `changye_…-<genId>.<ext>` 要能被 sidecarPathFor 的正则认出来,否则它返回空串、
  *   图库压根不去请求侧写 —— 症状是图在、提示词空白、**且没有任何报错**。
  */
 async function uploadImageWithSidecar(
@@ -375,13 +378,13 @@ async function uploadImageWithSidecar(
   // 先按设置决定落盘格式(开关开启时重编码为 JPG),文件名后缀跟随实际格式
   const { base64, format } = await prepareImageForStorage(result);
   const imageFile = imageFileName(characterName, swipeId, hash, genId, format);
-  const path = await uploadUserImage(`柏宝绘_${characterName}`, imageFile, base64, format);
+  const path = await uploadUserImage(`长夜绘图器_${characterName}`, imageFile, base64, format);
   const createdAt = Date.now();
 
   // 侧写:图库跨聊天浏览时,提示词只能从这里拿。
   // **失败只警告不抛** —— 图已经存好了,绝不能因为一个附属 json 让整次存图失败;
   // 用户宁可少看一段提示词,也不能丢图。
-  const sidecar: BbiImageSidecar = { v: 1, character: characterName, prompt: tag, seed, createdAt, ...(result.workflowId ? { workflowId: result.workflowId } : {}) };
+  const sidecar: ChangYeImageSidecar = { v: 1, character: characterName, prompt: tag, seed, createdAt, ...(result.workflowId ? { workflowId: result.workflowId } : {}) };
   try {
     await uploadBase64File(sidecarFileName(imageFile), utf8ToBase64(JSON.stringify(sidecar)));
   } catch (error) {
@@ -392,7 +395,7 @@ async function uploadImageWithSidecar(
 }
 
 /**
- * 存一张**不属于任何楼层**的图(公开接口 STBaiBaiImage.generate 的 save 路径)。
+ * 存一张**不属于任何楼层**的图(公开接口 STChangYeImage.generate 的 save 路径)。
  *
  * 与 saveImageResult 的分工:那个存完还要写 extra 指针、触发重水合,让楼层卡片显示它;
  * 这个只把文件放进图库就收工 —— 第三方插件自己决定图显示在哪(这正是公开接口的意义),
@@ -427,7 +430,7 @@ export async function saveImageResult(
   tag: string,
   seed: number,
   result: ComfyImageResult,
-): Promise<BbiImageEntry> {
+): Promise<ChangYeImageEntry> {
   const ctx = getContext();
   if (!ctx?.saveChat) throw new Error('SillyTavern 上下文不可用');
   const chatId = ctx.getCurrentChatId();
@@ -454,7 +457,7 @@ export async function saveImageResult(
     result,
   );
 
-  const entry: BbiImageEntry = {
+  const entry: ChangYeImageEntry = {
     ...(result.workflowId ? { workflowId: result.workflowId } : {}),
     generationId: genId,
     path,
@@ -528,7 +531,7 @@ export async function deleteImageResult(
     if (index < 0) return store;
     pathToDelete = list[index].path;
     const nextList = list.filter((_, i) => i !== index);
-    const next: BbiImageStore = { ...store };
+    const next: ChangYeImageStore = { ...store };
     next[String(swipeId)] = { ...bucket };
     if (nextList.length) {
       next[String(swipeId)][hash] = nextList;

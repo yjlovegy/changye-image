@@ -3,7 +3,7 @@ import { injectPose, POSE_ADAPTER, preparePose, uploadPose, validatePose, type C
 import type { ComfyWorkflow } from './comfyui';
 import { parseImageTagContent, serializeImageTag } from '@/st/imageTagRegex';
 
-const pose: ComfyPose = { enabled: true, server: 'http://127.0.0.1:8188', image: 'baibai_pose/test.png', strength: 1, kind: 'skeleton' };
+const pose: ComfyPose = { enabled: true, server: 'http://127.0.0.1:8188', image: 'changye_pose/test.png', strength: 1, kind: 'skeleton' };
 const graph = (): ComfyWorkflow => ({
   '1': { class_type: 'UNETLoader', inputs: { unet_name: 'anima_baseV10.safetensors' } },
   '2': { class_type: 'LoraLoaderModelOnly', inputs: { model: ['1', 0], lora_name: 'style.safetensors', strength_model: 0.7 } },
@@ -46,8 +46,8 @@ describe('per-image Anima pose', () => {
   it('roundtrips control separately from text, leaves other images unchanged, and flags broken controls', () => {
     const c = { tag: 'adult person', nl: 'A person waves.', negative: 'extra limbs', characters: [], size: 'portrait' as const, pose };
     expect(parseImageTagContent(serializeImageTag(c))).toEqual(c);
-    expect(parseImageTagContent('<bbi_image>landscape</bbi_image>').pose).toBeUndefined();
-    const invalid = parseImageTagContent('<bbi_image>adult person<pose>{broken}</pose></bbi_image>');
+    expect(parseImageTagContent('<changye_image>landscape</changye_image>').pose).toBeUndefined();
+    const invalid = parseImageTagContent('<changye_image>adult person<pose>{broken}</pose></changye_image>');
     expect(invalid.tag).toBe('adult person'); expect(invalid.poseInvalid).toBe(true);
   });
   it('blocks wrong servers and missing nodes before queueing', async () => {
@@ -58,10 +58,10 @@ describe('per-image Anima pose', () => {
     expect(fetch.mock.calls.every(c => !String(c[0]).endsWith('/prompt'))).toBe(true);
   });
   it('uploads unique file to isolated input folder and validates returned path', async () => {
-    const fetch = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ name: 'unique.png', subfolder: 'baibai_pose', type: 'input' })));
+    const fetch = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ name: 'unique.png', subfolder: 'changye_pose', type: 'input' })));
     vi.stubGlobal('fetch', fetch);
     const result = await uploadPose(pose.server, new File(['png'], 'ref.png', { type: 'image/png' }));
-    expect(result.image).toBe('baibai_pose/unique.png');
+    expect(result.image).toBe('changye_pose/unique.png');
     expect(fetch.mock.calls[0][0]).toBe(pose.server + '/upload/image');
     await expect(uploadPose(pose.server, new File(['bad'], 'ref.svg', { type: 'image/svg+xml' }))).rejects.toThrow('PNG');
   });

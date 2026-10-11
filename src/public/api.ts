@@ -317,7 +317,7 @@ async function saveToGallery(
   seed: number,
   result: Parameters<typeof saveExternalImage>[3],
 ): Promise<string | null> {
-  // 存的是 **tag 原文**(含 <bbi_image> 壳),不是拼好的展示文本:
+  // 存的是 **tag 原文**(含 <changye_image> 壳),不是拼好的展示文本:
   // 图库读侧写后要 parseImageTagContent 再 formatPromptText(与楼层卡片同一口径),
   // 这里存展示文本会让图库解析出一团糊在一起的裸 tag。
   const tag = serializeImageTag({ tag: prompt, nl, negative, characters, size });

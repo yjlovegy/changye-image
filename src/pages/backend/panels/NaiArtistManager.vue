@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { matchArtist, planArtistRemoval } from '@/backends/naiArtistLib';
 import { BUILTIN_NAI_ARTISTS } from '@/backends/nai';
-import BbiTextarea from '@/components/BbiTextarea.vue';
+import ChangYeTextarea from '@/components/ChangYeTextarea.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import Icon from '@/components/Icon.vue';
 import ModalMask from '@/components/ModalMask.vue';
@@ -20,7 +20,7 @@ import { newNaiArtist, settings, type NaiArtistPreset } from '@/state/settings';
  * - 点卡片主体 = 启用该条(再点当前条 = 停用,回「不使用」);
  * - 左上角勾选框 = 管理态多选,只服务于批量删除,与启用状态无关;
  * - 内置条(bi_*)随插件版本更新,只读:无勾选框、不可删改,「复制」是唯一自定义入口;
- * - 预览图上传后压成最长边 512 的 jpeg,落 user/images/柏宝绘_画师串/<条目id>.jpg,
+ * - 预览图上传后压成最长边 512 的 jpeg,落 user/images/长夜绘图器_画师串/<条目id>.jpg,
  *   路径记在条目 previewPath 上,不维护额外索引;换图同名覆盖,删条目时连带删文件。
  */
 
@@ -266,17 +266,17 @@ function duplicateFromEdit() {
 
 <template>
   <ModalMask :open="open" @close="close">
-    <div class="bbi-modal am-modal" role="dialog" aria-modal="true" aria-label="画师串库">
-      <header class="bbi-modal-head">
-        <span class="bbi-modal-title">画师串库</span>
-        <button class="bbi-icon-mini" type="button" title="关闭" aria-label="关闭" @click="close">
+    <div class="changye-modal am-modal" role="dialog" aria-modal="true" aria-label="画师串库">
+      <header class="changye-modal-head">
+        <span class="changye-modal-title">画师串库</span>
+        <button class="changye-icon-mini" type="button" title="关闭" aria-label="关闭" @click="close">
           <Icon name="close" />
         </button>
       </header>
 
       <div class="am-toolbar">
         <input
-          class="bbi-input am-search"
+          class="changye-input am-search"
           type="search"
           v-model="search"
           placeholder="搜索名称或画师串内容…"
@@ -284,20 +284,20 @@ function duplicateFromEdit() {
           aria-label="搜索画师串"
         />
         <span class="am-count">共 {{ items.length }} 条</span>
-        <button class="bbi-btn bbi-btn-primary" type="button" @click="addArtist">
+        <button class="changye-btn changye-btn-primary" type="button" @click="addArtist">
           <Icon name="plus" /> 新建
         </button>
       </div>
 
       <div v-if="selected.size" class="am-batch">
         <span class="am-batch-count">已选 {{ selected.size }} 条</span>
-        <button class="bbi-btn bbi-btn-sm" type="button" @click="toggleSelectAllFiltered">
+        <button class="changye-btn changye-btn-sm" type="button" @click="toggleSelectAllFiltered">
           {{ allFilteredSelected ? '取消全选' : `全选当前结果(${selectableFiltered.length})` }}
         </button>
-        <button class="bbi-btn bbi-btn-sm" type="button" @click="selected = new Set()">清空</button>
+        <button class="changye-btn changye-btn-sm" type="button" @click="selected = new Set()">清空</button>
         <span class="am-batch-spacer"></span>
         <button
-          class="bbi-btn bbi-btn-sm am-btn-danger"
+          class="changye-btn changye-btn-sm am-btn-danger"
           type="button"
           @click="askDeleteSelected"
         >
@@ -355,7 +355,7 @@ function duplicateFromEdit() {
               >
                 <input
                   type="checkbox"
-                  class="bbi-checkbox"
+                  class="changye-checkbox"
                   :checked="selected.has(item.preset.id)"
                   aria-label="选择此画师串"
                   @change="toggleSelect(item.preset.id)"
@@ -428,10 +428,10 @@ function duplicateFromEdit() {
         </div>
       </div>
 
-      <footer class="bbi-modal-foot am-foot">
+      <footer class="changye-modal-foot am-foot">
         <span class="am-foot-hint">点卡片或单选圈启用/停用；勾选左上角方框可批量删除。</span>
-        <span class="bbi-modal-foot-spacer"></span>
-        <button class="bbi-btn" type="button" @click="close">关闭</button>
+        <span class="changye-modal-foot-spacer"></span>
+        <button class="changye-btn" type="button" @click="close">关闭</button>
       </footer>
     </div>
   </ModalMask>
@@ -459,14 +459,14 @@ function duplicateFromEdit() {
   <ModalMask :open="!!editItem" top-layer @close="closeEdit">
     <div
       v-if="editItem"
-      class="bbi-modal am-edit"
+      class="changye-modal am-edit"
       role="dialog"
       aria-modal="true"
       :aria-label="editItem.builtin ? '查看画师串' : '编辑画师串'"
     >
-      <header class="bbi-modal-head">
-        <span class="bbi-modal-title">{{ editItem.builtin ? '查看画师串(内置)' : '编辑画师串' }}</span>
-        <button class="bbi-icon-mini" type="button" title="关闭" aria-label="关闭" @click="closeEdit">
+      <header class="changye-modal-head">
+        <span class="changye-modal-title">{{ editItem.builtin ? '查看画师串(内置)' : '编辑画师串' }}</span>
+        <button class="changye-icon-mini" type="button" title="关闭" aria-label="关闭" @click="closeEdit">
           <Icon name="close" />
         </button>
       </header>
@@ -481,7 +481,7 @@ function duplicateFromEdit() {
         <div v-else class="am-edit-thumb am-edit-thumb--empty"><Icon name="generate" /></div>
         <div v-if="!editItem.builtin" class="am-edit-preview-ops">
           <button
-            class="bbi-btn bbi-btn-sm"
+            class="changye-btn changye-btn-sm"
             type="button"
             :disabled="uploadingId === editItem.preset.id"
             @click="pickPreview(editItem.preset)"
@@ -491,7 +491,7 @@ function duplicateFromEdit() {
           </button>
           <button
             v-if="editItem.preset.previewPath"
-            class="bbi-btn bbi-btn-sm am-btn-danger"
+            class="changye-btn changye-btn-sm am-btn-danger"
             type="button"
             @click="removePreview(editItem.preset)"
           >
@@ -500,10 +500,10 @@ function duplicateFromEdit() {
         </div>
       </div>
 
-      <div class="bbi-modal-field">
-        <span class="bbi-modal-label">名称</span>
+      <div class="changye-modal-field">
+        <span class="changye-modal-label">名称</span>
         <input
-          class="bbi-input"
+          class="changye-input"
           type="text"
           v-model="editName"
           :readonly="editItem.builtin"
@@ -512,9 +512,9 @@ function duplicateFromEdit() {
         />
       </div>
 
-      <div class="bbi-modal-field">
-        <span class="bbi-modal-label">画师串（拼在正向提示词最前面）</span>
-        <BbiTextarea
+      <div class="changye-modal-field">
+        <span class="changye-modal-label">画师串（拼在正向提示词最前面）</span>
+        <ChangYeTextarea
           v-model="editPrompt"
           :rows="4"
           :max-rows="12"
@@ -524,27 +524,27 @@ function duplicateFromEdit() {
         />
       </div>
 
-      <p class="bbi-modal-label">
+      <p class="changye-modal-label">
         绑定的正面质量词「{{ editItem.preset.quality.trim() ? '已设置' : '未设置' }}」、负面提示词「{{
           editItem.preset.negative.trim() ? '已设置' : '未设置'
         }}」；要改它们，先在面板里把这条设为当前画师串，再点提示词区的对应行。
       </p>
 
-      <footer class="bbi-modal-foot">
-        <button class="bbi-btn" type="button" @click="toggleActive(editItem)">
+      <footer class="changye-modal-foot">
+        <button class="changye-btn" type="button" @click="toggleActive(editItem)">
           {{ editItem.preset.id === activeId ? '停用这条' : '设为当前画师串' }}
         </button>
         <template v-if="editItem.builtin">
-          <button class="bbi-btn" type="button" @click="duplicateFromEdit">
+          <button class="changye-btn" type="button" @click="duplicateFromEdit">
             <Icon name="copy" /> 复制为我的画师串
           </button>
-          <span class="bbi-modal-foot-spacer"></span>
-          <button class="bbi-btn bbi-btn-primary" type="button" @click="closeEdit">关闭</button>
+          <span class="changye-modal-foot-spacer"></span>
+          <button class="changye-btn changye-btn-primary" type="button" @click="closeEdit">关闭</button>
         </template>
         <template v-else>
-          <span class="bbi-modal-foot-spacer"></span>
-          <button class="bbi-btn" type="button" @click="closeEdit">取消</button>
-          <button class="bbi-btn bbi-btn-primary" type="button" @click="saveEdit">完成</button>
+          <span class="changye-modal-foot-spacer"></span>
+          <button class="changye-btn" type="button" @click="closeEdit">取消</button>
+          <button class="changye-btn changye-btn-primary" type="button" @click="saveEdit">完成</button>
         </template>
       </footer>
     </div>
@@ -561,7 +561,7 @@ function duplicateFromEdit() {
 
 <style scoped>
 /* 管理器弹窗:比通用弹窗宽一档装卡片网格;固定高度,网格区内滚,头/工具条/底栏钉住。
-   .bbi-modal 默认 overflow-y:auto,这里改为 hidden,滚动交给 .am-scroll。 */
+   .changye-modal 默认 overflow-y:auto,这里改为 hidden,滚动交给 .am-scroll。 */
 .am-modal {
   max-width: 760px;
   height: 86vh;
@@ -581,7 +581,7 @@ function duplicateFromEdit() {
 }
 .am-count {
   font-size: 12px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   white-space: nowrap;
 }
 
@@ -592,13 +592,13 @@ function duplicateFromEdit() {
   gap: 8px;
   flex-wrap: wrap;
   padding: 6px 10px;
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-accent-soft);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-accent-soft);
   font-size: 12px;
 }
 .am-batch-count {
   font-weight: 600;
-  color: var(--bbi-accent);
+  color: var(--changye-accent);
   white-space: nowrap;
 }
 .am-batch-spacer {
@@ -623,39 +623,39 @@ function duplicateFromEdit() {
   padding: 56px 16px;
   text-align: center;
   font-size: 13px;
-  color: var(--bbi-ink-soft);
+  color: var(--changye-ink-soft);
 }
 
 /* —— 卡片:点主体 = 启用/停用;选中态用浅底区分(与启用态的描边是两回事) —— */
 .am-card {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--bbi-line);
-  border-radius: var(--bbi-radius);
-  background: var(--bbi-surface);
+  border: 1px solid var(--changye-line);
+  border-radius: var(--changye-radius);
+  background: var(--changye-surface);
   overflow: hidden;
   cursor: pointer;
   transition:
-    border-color var(--bbi-dur) var(--bbi-ease),
-    box-shadow var(--bbi-dur) var(--bbi-ease),
-    background var(--bbi-dur) var(--bbi-ease);
+    border-color var(--changye-dur) var(--changye-ease),
+    box-shadow var(--changye-dur) var(--changye-ease),
+    background var(--changye-dur) var(--changye-ease);
 }
 .am-card:hover {
-  border-color: var(--bbi-accent);
+  border-color: var(--changye-accent);
 }
 .am-card.is-active {
-  border-color: var(--bbi-accent);
-  box-shadow: 0 0 0 1px var(--bbi-accent);
+  border-color: var(--changye-accent);
+  box-shadow: 0 0 0 1px var(--changye-accent);
 }
 .am-card.is-selected {
-  background: var(--bbi-accent-soft);
+  background: var(--changye-accent-soft);
 }
 
 /* 预览图区:固定 4:3,占位与实图同几何,卡片高度才齐 */
 .am-art {
   position: relative;
   aspect-ratio: 4 / 3;
-  background: var(--bbi-surface-2);
+  background: var(--changye-surface-2);
 }
 .am-art-img {
   width: 100%;
@@ -673,13 +673,13 @@ function duplicateFromEdit() {
   gap: 5px;
   border: 0;
   background: transparent;
-  color: var(--bbi-ink-muted);
-  font-family: var(--bbi-font-sans);
+  color: var(--changye-ink-muted);
+  font-family: var(--changye-font-sans);
   font-size: 11px;
   cursor: pointer;
 }
 .am-art-empty:hover {
-  color: var(--bbi-accent);
+  color: var(--changye-accent);
 }
 .am-art-empty:disabled {
   cursor: default;
@@ -688,7 +688,7 @@ function duplicateFromEdit() {
 .am-art-empty--static,
 .am-art-empty--static:hover {
   cursor: default;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
 }
 
 /* 勾选框垫一片 surface 底,压在图上也可辨认 */
@@ -699,11 +699,11 @@ function duplicateFromEdit() {
   display: flex;
   padding: 2px;
   border-radius: 6px;
-  background: var(--bbi-surface);
-  border: 1px solid var(--bbi-line-strong);
+  background: var(--changye-surface);
+  border: 1px solid var(--changye-line-strong);
   cursor: pointer;
 }
-.am-check .bbi-checkbox {
+.am-check .changye-checkbox {
   width: 15px;
   height: 15px;
 }
@@ -715,14 +715,14 @@ function duplicateFromEdit() {
   font-size: 11px;
   font-weight: 600;
   padding: 1px 8px;
-  border-radius: var(--bbi-radius-pill);
-  background: var(--bbi-surface);
-  color: var(--bbi-ink-muted);
-  border: 1px solid var(--bbi-line);
+  border-radius: var(--changye-radius-pill);
+  background: var(--changye-surface);
+  color: var(--changye-ink-muted);
+  border: 1px solid var(--changye-line);
 }
 .am-badge.is-on {
-  background: var(--bbi-accent);
-  color: var(--bbi-accent-ink);
+  background: var(--changye-accent);
+  color: var(--changye-accent-ink);
   border-color: transparent;
 }
 
@@ -734,16 +734,16 @@ function duplicateFromEdit() {
   bottom: 8px;
   transform: translateX(-50%);
   padding: 4px 10px;
-  border: 1px solid var(--bbi-line-strong);
-  border-radius: var(--bbi-radius-pill);
-  background: var(--bbi-surface);
-  color: var(--bbi-ink);
-  font-family: var(--bbi-font-sans);
+  border: 1px solid var(--changye-line-strong);
+  border-radius: var(--changye-radius-pill);
+  background: var(--changye-surface);
+  color: var(--changye-ink);
+  font-family: var(--changye-font-sans);
   font-size: 11px;
   white-space: nowrap;
   cursor: pointer;
   opacity: 0;
-  transition: opacity var(--bbi-dur) var(--bbi-ease);
+  transition: opacity var(--changye-dur) var(--changye-ease);
 }
 .am-card:hover .am-art-change,
 .am-art-change:focus-visible,
@@ -751,8 +751,8 @@ function duplicateFromEdit() {
   opacity: 1;
 }
 .am-art-change:hover {
-  color: var(--bbi-accent);
-  border-color: var(--bbi-accent);
+  color: var(--changye-accent);
+  border-color: var(--changye-accent);
 }
 
 .am-body {
@@ -775,13 +775,13 @@ function duplicateFromEdit() {
   justify-content: center;
   width: 14px;
   height: 14px;
-  border: 1.5px solid var(--bbi-line-strong);
-  border-radius: var(--bbi-radius-pill);
-  color: var(--bbi-accent-ink);
+  border: 1.5px solid var(--changye-line-strong);
+  border-radius: var(--changye-radius-pill);
+  color: var(--changye-accent-ink);
 }
 .am-radio.is-on {
-  background: var(--bbi-accent);
-  border-color: var(--bbi-accent);
+  background: var(--changye-accent);
+  border-color: var(--changye-accent);
 }
 .am-name {
   flex: 1 1 auto;
@@ -794,10 +794,10 @@ function duplicateFromEdit() {
 }
 /* 内容摘要:等宽两行截断,min-height 撑齐没填内容的卡 */
 .am-prompt {
-  font-family: var(--bbi-font-mono);
+  font-family: var(--changye-font-mono);
   font-size: 11px;
   line-height: 1.5;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -817,24 +817,24 @@ function duplicateFromEdit() {
   justify-content: center;
   width: 26px;
   height: 26px;
-  border: 1px solid var(--bbi-line-strong);
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface);
-  color: var(--bbi-ink-soft);
+  border: 1px solid var(--changye-line-strong);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface);
+  color: var(--changye-ink-soft);
   cursor: pointer;
 }
 .am-op:hover {
-  color: var(--bbi-accent);
-  border-color: var(--bbi-accent);
+  color: var(--changye-accent);
+  border-color: var(--changye-accent);
 }
 /* 删除推到行尾,与编辑/复制两个「建设性」操作拉开距离 */
 .am-op-danger {
   margin-left: auto;
 }
 .am-op-danger:hover {
-  color: var(--bbi-danger);
-  border-color: var(--bbi-danger);
-  background: var(--bbi-danger-soft);
+  color: var(--changye-danger);
+  border-color: var(--changye-danger);
+  background: var(--changye-danger-soft);
 }
 
 .am-foot {
@@ -842,9 +842,9 @@ function duplicateFromEdit() {
 }
 .am-foot-hint {
   font-size: 12px;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
 }
-.bbi-modal-foot-spacer {
+.changye-modal-foot-spacer {
   flex: 1 1 auto;
 }
 
@@ -861,15 +861,15 @@ function duplicateFromEdit() {
   width: 112px;
   height: 84px;
   object-fit: cover;
-  border-radius: var(--bbi-radius-sm);
-  border: 1px solid var(--bbi-line);
-  background: var(--bbi-surface-2);
+  border-radius: var(--changye-radius-sm);
+  border: 1px solid var(--changye-line);
+  background: var(--changye-surface-2);
 }
 .am-edit-thumb--empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--bbi-ink-muted);
+  color: var(--changye-ink-muted);
   font-size: 20px;
 }
 .am-edit-preview-ops {
@@ -880,33 +880,33 @@ function duplicateFromEdit() {
 
 /* 危险按钮:与设置页/ConfirmDialog 同一口径,scoped 不跨组件故补一份 */
 .am-btn-danger {
-  color: var(--bbi-danger);
-  border-color: var(--bbi-line-strong);
+  color: var(--changye-danger);
+  border-color: var(--changye-line-strong);
 }
 .am-btn-danger:hover {
-  color: var(--bbi-danger);
-  border-color: var(--bbi-danger);
-  background: var(--bbi-danger-soft);
+  color: var(--changye-danger);
+  border-color: var(--changye-danger);
+  background: var(--changye-danger-soft);
 }
 
 /* 组头/弹窗里的小图标钮:与 NaiPanel 同款,scoped 不跨组件故补一份 */
-.bbi-icon-mini {
+.changye-icon-mini {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 26px;
   height: 26px;
-  border: 1px solid var(--bbi-line-strong);
-  border-radius: var(--bbi-radius-sm);
-  background: var(--bbi-surface);
-  color: var(--bbi-ink-soft);
+  border: 1px solid var(--changye-line-strong);
+  border-radius: var(--changye-radius-sm);
+  background: var(--changye-surface);
+  color: var(--changye-ink-soft);
   cursor: pointer;
   font-size: 12px;
 }
-.bbi-icon-mini:hover {
-  color: var(--bbi-accent);
-  border-color: var(--bbi-accent);
+.changye-icon-mini:hover {
+  color: var(--changye-accent);
+  border-color: var(--changye-accent);
 }
 
 @media (max-width: 640px) {

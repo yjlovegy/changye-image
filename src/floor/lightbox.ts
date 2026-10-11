@@ -6,14 +6,14 @@ import Lightbox from '@/floor/Lightbox.vue';
  * 命令式打开图片灯箱(供楼层卡片调用)。
  *
  * 挂载位置与 components/confirm.ts 同款:插件 host 的 shadow root——那里有 dist/index.css
- * 与 --bbi-* 主题变量,挂 document.body 会裸奔无样式。
+ * 与 --changye-* 主题变量,挂 document.body 会裸奔无样式。
  *
  * 特意**不**挂进卡片自己的 shadow root:灯箱是 fixed 全屏层,而卡片活在 .mes_text 内部,
  * 那里的层叠上下文与 overflow 会把它裁掉。
  */
 
 // 与 index.ts 的 HOST_ID 一致
-const HOST_ID = 'bbi-app-host';
+const HOST_ID = 'changye-app-host';
 
 export interface LightboxOptions {
   src: string;

@@ -1,3 +1,4 @@
+import { LEGACY_BOOK_API } from '@/legacyCompatibility';
 /**
  * 角色记忆插件角色状态读取与格式化。
  *
@@ -50,7 +51,7 @@ export interface BookMemoryContext {
 }
 
 function getBookApi(): BookApi | null {
-  const api = (globalThis as { STBaiBaiBook?: BookApi }).STBaiBaiBook;
+  const api = (globalThis as Record<string, unknown>)[LEGACY_BOOK_API] as BookApi | undefined;
   return api?.apiVersion === 1 ? api : null;
 }
 

@@ -21,7 +21,7 @@ vi.mock('@/st/context', () => ({
 
 async function hydrateWithNai(nai: Record<string, unknown> | undefined) {
   mocks.context = {
-    extensionSettings: { baibai_image: nai === undefined ? {} : { nai } },
+    extensionSettings: { changye_image: nai === undefined ? {} : { nai } },
     saveSettingsDebounced: vi.fn(),
   };
   const { hydrateSettings, settings } = await import('@/state/settings');
@@ -93,7 +93,7 @@ describe('NAI 画师串库', () => {
   it('previewPath:合法字符串保留,缺失/脏数据视为无预览', async () => {
     const settings = await hydrateWithNai({
       artistPresets: [
-        { id: 'art_a', name: 'A', prompt: '', previewPath: '/user/images/柏宝绘_画师串/art_a.jpg' },
+        { id: 'art_a', name: 'A', prompt: '', previewPath: '/user/images/长夜绘图器_画师串/art_a.jpg' },
         { id: 'art_b', name: 'B', prompt: '' },
         { id: 'art_c', name: 'C', prompt: '', previewPath: 42 },
         { id: 'art_d', name: 'D', prompt: '', previewPath: '' },
@@ -101,7 +101,7 @@ describe('NAI 画师串库', () => {
       activeArtistId: '',
     });
     const [a, b, c, d] = settings.nai.artistPresets;
-    expect(a.previewPath).toBe('/user/images/柏宝绘_画师串/art_a.jpg');
+    expect(a.previewPath).toBe('/user/images/长夜绘图器_画师串/art_a.jpg');
     expect(b.previewPath).toBeUndefined();
     expect(c.previewPath).toBeUndefined();
     expect(d.previewPath).toBeUndefined();
@@ -165,7 +165,7 @@ describe('NAI 画师串库', () => {
   it('activeNaiArtist 取当前项;未选 / 悬空时返回 null', async () => {
     mocks.context = {
       extensionSettings: {
-        baibai_image: {
+        changye_image: {
           nai: {
             artistPresets: [
               { id: 'art_a', name: 'A', prompt: 'artist:a' },

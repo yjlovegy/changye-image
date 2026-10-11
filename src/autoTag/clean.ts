@@ -67,7 +67,7 @@ function clampToStoryBody(
   noiseReplacement = '',
 ): string {
   const customTags = preserveImageTags
-    ? tags.filter(tag => tag.toLowerCase() !== 'bbi_image')
+    ? tags.filter(tag => !['changye_image', 'bbi_image'].includes(tag.toLowerCase()))
     : tags;
   let s = String(mes ?? '')
     .replace(RE_THINK_BLOCK, noiseReplacement)
@@ -89,7 +89,7 @@ function clampToStoryBody(
     .trim();
 }
 
-/** 历史楼层与角色记忆插件 cleanBody 同口径；本插件的 bbi_image 必须保留供角色外貌续接。 */
+/** 历史楼层与角色记忆插件 cleanBody 同口径；本插件的 changye_image 必须保留供角色外貌续接。 */
 export function cleanHistoryText(mes: string, tags: string[], storyTags: string[] = []): string {
   if (storyTags.length) return prepareTargetText(mes, tags, storyTags).segments.map(segment => segment.text).join("\n\n");
   return clampToStoryBody(mes, tags, true)
@@ -212,7 +212,7 @@ function targetRemovalRanges(source: string, tags: string[], storyTags: string[]
     : bodyStart + endMatch.index + endMatch[0].length;
   if (bodyEnd < source.length) crop.push({ start: bodyEnd, end: source.length });
 
-  // Match BaiBai Book's order: crop to the story time range before removing time tags.
+  // Match legacy memory extension's order: crop to the story time range before removing time tags.
   // A format example before the story must not pair with the real closing tag and swallow the prose.
   const timeTags: RemovalRange[] = [];
   const body = masked.slice(bodyStart, bodyEnd);

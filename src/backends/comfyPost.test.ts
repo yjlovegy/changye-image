@@ -32,7 +32,7 @@ describe('post processing to chat storage',()=>{
   if(sharpen)vi.mocked(runComfyWorkflow).mockResolvedValueOnce(finish);
   const final=await postProcessImage({postProcessing:p} as any,{},base);
   const message={name:'test',mes:'neutral scene',is_user:false,is_system:false};
-  const saveChat=vi.fn(async()=>{}),tag='<bbi_image>still life</bbi_image>';
+  const saveChat=vi.fn(async()=>{}),tag='<changye_image>still life</changye_image>';
   const ctx={chat:[message],saveChat,getCurrentChatId:()=>'test',getRequestHeaders:()=>({})};
   vi.stubGlobal('window',{SillyTavern:{getContext:()=>ctx}});
   const fetchMock=vi.fn(async()=>new Response(JSON.stringify({path:'/user/images/final.png'})));

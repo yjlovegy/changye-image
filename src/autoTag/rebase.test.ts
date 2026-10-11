@@ -24,7 +24,7 @@ function plan(text: string, stripTags: string[] = []) {
 /** 落点断言看的是「tag 贴在哪一句之后」,比行号更接近用户能观察到的结果。 */
 function lineAfterTag(text: string, tag: string): string {
   const lines = text.split('\n');
-  const index = lines.findIndex(line => line.includes(`<bbi_image>${tag}`));
+  const index = lines.findIndex(line => line.includes(`<changye_image>${tag}`));
   return index > 0 ? lines[index - 1] : '';
 }
 

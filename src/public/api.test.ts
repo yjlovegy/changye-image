@@ -247,10 +247,10 @@ describe('generate', () => {
 
     const saved = await generate({ prompt: '1girl' });
     expect(saved.path).toBe('/user/images/x.png');
-    // 侧写存的是 tag 原文(含 <bbi_image> 壳),图库要拿它反解析出各字段
+    // 侧写存的是 tag 原文(含 <changye_image> 壳),图库要拿它反解析出各字段
     const [name, tag, seed] = vi.mocked(saveExternalImage).mock.calls[0];
     expect(name).toBe('小雪');
-    expect(tag).toBe('<bbi_image>1girl<size>portrait</size></bbi_image>');
+    expect(tag).toBe('<changye_image>1girl<size>portrait</size></changye_image>');
     expect(seed).toBe(4242);
 
     vi.mocked(saveExternalImage).mockClear();

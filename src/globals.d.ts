@@ -3,7 +3,7 @@ declare global {
   const $: any;
   const _: any;
   const toastr: any;
-  const __BBI_VERSION__: string;
+  const __CHANGYE_VERSION__: string;
 }
 
 export {};

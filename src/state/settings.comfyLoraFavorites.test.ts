@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({ context: null as Record<string, any> | null })
 vi.mock('@/st/context', () => ({ getContext: () => mocks.context }));
 
 async function hydrate(loraFavorites?: unknown) {
-  mocks.context = { extensionSettings: { baibai_image: { comfyui: {
+  mocks.context = { extensionSettings: { changye_image: { comfyui: {
     workflows: [{ id: 'a', workflow: 'graph-a' }, { id: 'b', workflow: 'graph-b' }], activeWorkflowId: 'a', loraFavorites,
   } } }, saveSettingsDebounced: vi.fn() };
   const state = await import('./settings');
@@ -28,7 +28,7 @@ describe('跨工作流 LoRA 收藏持久化', () => {
     settings.comfyui.activeWorkflowId = 'b';
     settings.comfyui.loraFavorites = [...rows, { tag: '<lora:light:0.5>', note: '柔光' }];
     await nextTick();
-    const saved = JSON.parse(JSON.stringify(mocks.context!.extensionSettings.baibai_image.comfyui));
+    const saved = JSON.parse(JSON.stringify(mocks.context!.extensionSettings.changye_image.comfyui));
     expect(saved.loraFavorites).toEqual(settings.comfyui.loraFavorites);
     expect(mocks.context!.saveSettingsDebounced).toHaveBeenCalled();
     expect(effectiveComfyConn()).not.toHaveProperty('loraFavorites');
@@ -38,6 +38,6 @@ describe('跨工作流 LoRA 收藏持久化', () => {
     expect(restored.settings.comfyui.loraFavorites).toEqual(saved.loraFavorites);
     restored.settings.comfyui.loraFavorites = [];
     await nextTick();
-    expect(mocks.context!.extensionSettings.baibai_image.comfyui.loraFavorites).toEqual([]);
+    expect(mocks.context!.extensionSettings.changye_image.comfyui.loraFavorites).toEqual([]);
   });
 });

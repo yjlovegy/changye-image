@@ -18,7 +18,7 @@ export function poseServer(url: string): string {
 export function validatePose(value: unknown): ComfyPose {
   const p = value as ComfyPose;
   if (!p || typeof p.enabled !== 'boolean' || !['photo', 'skeleton'].includes(p.kind)
-    || typeof p.image !== 'string' || !/^baibai_pose\/[a-zA-Z0-9_-]+\.(png|jpg|webp)$/.test(p.image)
+    || typeof p.image !== 'string' || !/^(?:changye|baibai)_pose\/[a-zA-Z0-9_-]+\.(png|jpg|webp)$/.test(p.image)
     || !Number.isFinite(p.strength) || p.strength < 0 || p.strength > 2 || typeof p.server !== 'string') {
     throw new Error('姿态参考设置无效，请重新选择参考图');
   }
@@ -26,7 +26,7 @@ export function validatePose(value: unknown): ComfyPose {
 }
 export function poseImageUrl(pose: ComfyPose): string {
   const p = validatePose(pose);
-  const query = new URLSearchParams({ filename: p.image.split('/')[1], subfolder: 'baibai_pose', type: 'input' });
+  const query = new URLSearchParams({ filename: p.image.split('/')[1], subfolder: p.image.split('/')[0], type: 'input' });
   return `${p.server}/view?${query}`;
 }
 
@@ -108,11 +108,11 @@ export async function uploadPose(url: string, file: File, signal?: AbortSignal):
   const id = crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), x => x.toString(16).padStart(2, '0')).join('');
   form.append('image', file, `${id}.${ext}`);
   form.append('type', 'input');
-  form.append('subfolder', 'baibai_pose');
+  form.append('subfolder', 'changye_pose');
   form.append('overwrite', 'false');
   const response = await poseFetch(`${server}/upload/image`, { method: 'POST', body: form, signal });
   const data = await response.json();
-  if (data.type !== 'input' || data.subfolder !== 'baibai_pose') throw new Error('ComfyUI 返回的参考图目录不正确');
+  if (data.type !== 'input' || data.subfolder !== 'changye_pose') throw new Error('ComfyUI 返回的参考图目录不正确');
   return validatePose({ enabled: true, image: `${data.subfolder}/${data.name}`, server, strength: 1, kind: 'photo' });
 }
 export async function preparePose(workflow: ComfyWorkflow, pose: ComfyPose, url: string, signal?: AbortSignal): Promise<ComfyWorkflow> {

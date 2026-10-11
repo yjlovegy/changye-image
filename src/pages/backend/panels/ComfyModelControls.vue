@@ -3,8 +3,8 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { inspectWorkflowFields, updateWorkflowFields } from '@/backends/comfyWorkflowControls';
 import { fetchComfyModelLists, type ComfyModelLists } from '@/backends/comfyObjectInfo';
 import { PROMPT_MODE_OPTIONS, normalizePromptMode, type PromptMode } from '@/promptMode';
-import BbiSelect from '@/components/BbiSelect.vue';
-import BbiCombo from '@/components/BbiCombo.vue';
+import ChangYeSelect from '@/components/ChangYeSelect.vue';
+import ChangYeCombo from '@/components/ChangYeCombo.vue';
 const props = defineProps<{ workflow: string; url: string; promptMode?: PromptMode }>();
 const emit = defineEmits<{ (event: 'update:workflow', value: string): void; (event: 'update:promptMode', value: PromptMode): void }>();
 const draft = ref<Record<string, string | number>>({});
@@ -58,34 +58,34 @@ defineExpose({ dirty, prepare, draftSignature });
 </script>
 <template>
   <section class="model-controls" aria-label="模型与采样">
-    <div class="control-head"><h3 class="bbi-field-label">模型与采样</h3><button type="button" class="bbi-btn bbi-btn-sm" :disabled="loading || !url.trim()" @click="refresh()">{{ loading ? '读取中…' : '刷新列表' }}</button></div>
+    <div class="control-head"><h3 class="changye-field-label">模型与采样</h3><button type="button" class="changye-btn changye-btn-sm" :disabled="loading || !url.trim()" @click="refresh()">{{ loading ? '读取中…' : '刷新列表' }}</button></div>
     <div class="control-fields">
       <div v-for="field in orderedFields" :key="field.id" :style="{ order: fieldOrder(field.options) }" class="control-field" :class="[field.options, { 'main-model': ['unets','ggufs','checkpoints'].includes(field.options || ''), 'numeric-field': !field.options }]">
-        <span class="bbi-field-label">{{ field.label }}</span>
-        <BbiCombo v-if="field.options" :model-value="String(draft[field.id] ?? '')" @update:model-value="draft[field.id] = $event" :options="lists?.[field.options] ?? []" :aria-label="field.label" placeholder="选择或填写文件名 / 参数" />
-        <input v-else v-model="draft[field.id]" type="number" class="bbi-input" :aria-label="field.label" :min="field.min" :max="field.max" :step="field.step" />
+        <span class="changye-field-label">{{ field.label }}</span>
+        <ChangYeCombo v-if="field.options" :model-value="String(draft[field.id] ?? '')" @update:model-value="draft[field.id] = $event" :options="lists?.[field.options] ?? []" :aria-label="field.label" placeholder="选择或填写文件名 / 参数" />
+        <input v-else v-model="draft[field.id]" type="number" class="changye-input" :aria-label="field.label" :min="field.min" :max="field.max" :step="field.step" />
       </div>
       <div class="control-field prompt-mode" style="order:4">
-        <span class="bbi-field-label">提示词模式</span>
-        <BbiSelect v-model="draftMode" :options="PROMPT_MODE_OPTIONS" aria-label="提示词模式" />
-        <p class="bbi-field-hint">{{ draftMode === 'krea2' ? '使用连贯英文描述，随当前工作流保存。' : '使用核心标签与英文描述，随当前工作流保存。' }}</p>
+        <span class="changye-field-label">提示词模式</span>
+        <ChangYeSelect v-model="draftMode" :options="PROMPT_MODE_OPTIONS" aria-label="提示词模式" />
+        <p class="changye-field-hint">{{ draftMode === 'krea2' ? '使用连贯英文描述，随当前工作流保存。' : '使用核心标签与英文描述，随当前工作流保存。' }}</p>
       </div>
     </div>
-    <p v-if="!state.fields.length && !state.error" class="bbi-field-hint">导入工作流后显示可编辑的模型和采样参数。</p>
-    <p v-for="warning in state.warnings" :key="warning" class="bbi-field-hint">{{ warning }}</p>
-    <p v-if="listError" class="bbi-field-hint" role="status">{{ listError }}</p>
+    <p v-if="!state.fields.length && !state.error" class="changye-field-hint">导入工作流后显示可编辑的模型和采样参数。</p>
+    <p v-for="warning in state.warnings" :key="warning" class="changye-field-hint">{{ warning }}</p>
+    <p v-if="listError" class="changye-field-hint" role="status">{{ listError }}</p>
     <p v-if="state.error || error" class="control-error" role="alert">{{ state.error || error }}</p>
   </section>
 </template>
 <style scoped>
-.model-controls { margin: 18px 0; padding: 16px; border: 1px solid var(--bbi-line); border-radius: var(--bbi-radius-sm); }
+.model-controls { margin: 18px 0; padding: 16px; border: 1px solid var(--changye-line); border-radius: var(--changye-radius-sm); }
 .control-head, .control-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .control-head h3 { margin: 0; }.control-actions { justify-content: flex-end; margin-top: 14px; }
 .control-fields { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 14px; margin-top: 14px; }
 .control-field { grid-column: span 3; display: grid; align-content: start; gap: 7px; min-width: 0; }.numeric-field { grid-column: span 2; }.main-model { grid-column: 1 / -1; }
-.prompt-mode :deep(.bbi-select-box) { width: 100%; min-width: 0; }
+.prompt-mode :deep(.changye-select-box) { width: 100%; min-width: 0; }
 .control-field.clips,.control-field.vaes { grid-column: span 3; }.control-field.encoderTypes,.control-field.dualEncoderTypes { grid-column: 1 / span 3; }.control-field.prompt-mode { grid-column: 4 / -1; }
 .control-field.samplers { grid-column: 1 / span 2; }.control-field.schedulers { grid-column: 3 / -1; }
-.control-error { color: var(--bbi-danger,#b3261e); font-size: 13px; overflow-wrap: anywhere; }.control-success { color: #27833d; font-size: 13px; }
+.control-error { color: var(--changye-danger,#b3261e); font-size: 13px; overflow-wrap: anywhere; }.control-success { color: #27833d; font-size: 13px; }
 @media(max-width:620px) { .control-fields { grid-template-columns: minmax(0,1fr); }.control-fields > .control-field { grid-column: 1 / -1; }.model-controls { padding: 10px; } }
 </style>

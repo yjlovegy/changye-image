@@ -1,7 +1,7 @@
 /**
  * 卡片「还活着吗」的判据(纯函数,便于单测)。
  *
- * 背景:锚点 `<div data-bbi-slot>` 活在楼层的 `.mes_text` **里面**,而 ST 自己有好几条
+ * 背景:锚点 `<div data-changye-slot>` 活在楼层的 `.mes_text` **里面**,而 ST 自己有好几条
  * 路径会整体重写 `.mes_text`,其中相当一部分**不发任何事件**:
  * - `updateMessageBlock`(script.js) `.mes_text.html(...)`,无事件;
  * - `messageEditCancel` / `messageEditDone` 的 `.mes_text.empty()`;

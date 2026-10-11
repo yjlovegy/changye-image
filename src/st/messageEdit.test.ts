@@ -13,21 +13,21 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('safe message editing', () => {
   it.each([false, true])('saves or rolls back picture history and facial profiles together (failure=%s)', async failure => {
-    const originalExtra = { keep: true, obsolete: 'old', bbiImage: { old: true }, bbiCharChanges: { old: true } };
+    const originalExtra = { keep: true, obsolete: 'old', changyeImage: { old: true }, changyeCharChanges: { old: true } };
     const message = { name: 'Artist', is_user: false, is_system: false, mes: 'Original.', swipes: ['Original.'], swipe_id: 0, extra: originalExtra };
     const nextImage = { migrated: true };
     const nextProfiles = { eyeShape: 'almond-shaped eyes' };
     const beforeRefresh = vi.fn();
     const saveChat = vi.fn(async () => {
       expect(message.mes).toBe('Original. Image.');
-      expect(message.extra).toEqual({ keep: true, bbiImage: nextImage, bbiCharChanges: nextProfiles });
+      expect(message.extra).toEqual({ keep: true, changyeImage: nextImage, changyeCharChanges: nextProfiles });
       if (failure) throw new Error('disk failed');
     });
     installContext({ chat: [message], getCurrentChatId: () => 'chat-a', saveChat,
       eventSource: { emit: vi.fn() }, eventTypes: { MESSAGE_EDITED: 'edited', MESSAGE_UPDATED: 'updated' } });
     const result = applyMessageText(0, text => `${text} Image.`, 'chat-a', 0, message, [
-      { key: 'bbiImage', value: nextImage },
-      { key: 'bbiCharChanges', value: nextProfiles },
+      { key: 'changyeImage', value: nextImage },
+      { key: 'changyeCharChanges', value: nextProfiles },
       { key: 'obsolete', value: undefined },
     ], beforeRefresh);
     if (failure) {
@@ -38,8 +38,8 @@ describe('safe message editing', () => {
       expect(beforeRefresh).not.toHaveBeenCalled();
     } else {
       await expect(result).resolves.toBe('saved');
-      expect(message.extra.bbiImage).toBe(nextImage);
-      expect(message.extra.bbiCharChanges).toBe(nextProfiles);
+      expect(message.extra.changyeImage).toBe(nextImage);
+      expect(message.extra.changyeCharChanges).toBe(nextProfiles);
       expect(beforeRefresh).toHaveBeenCalledExactlyOnceWith(true);
     }
     expect(saveChat).toHaveBeenCalledTimes(1);
@@ -159,7 +159,7 @@ describe('safe message editing', () => {
     const delta = { v: 1, swipe: 0, ops: [] };
     const message = {
       name: 'Char', is_user: false, is_system: false, mes: '原文', swipes: ['原文'], swipe_id: 0,
-      extra: { bbiImage: originalStore, bbiCharChanges: delta },
+      extra: { changyeImage: originalStore, changyeCharChanges: delta },
     };
     const order: string[] = [];
     installContext({
@@ -169,10 +169,10 @@ describe('safe message editing', () => {
       eventTypes: { MESSAGE_EDITED: 'edited', MESSAGE_UPDATED: 'updated' },
     });
     await applyMessageText(0, () => '插入图后的正文', 'chat-a', 0, message,
-      { key: 'bbiImage', value: migratedStore }, () => {
+      { key: 'changyeImage', value: migratedStore }, () => {
         expect(message.mes).toBe('插入图后的正文');
-        expect(message.extra.bbiImage).toBe(migratedStore);
-        expect(message.extra.bbiCharChanges).toBe(delta);
+        expect(message.extra.changyeImage).toBe(migratedStore);
+        expect(message.extra.changyeCharChanges).toBe(delta);
         order.push('release');
       });
     expect(order).toEqual(['saved', 'release', 'hydration', 'hydration']);
@@ -183,7 +183,7 @@ describe('safe message editing', () => {
     const delta = { v: 1, swipe: 0, ops: [] };
     const message = {
       name: 'Char', is_user: false, is_system: false, mes: '原文', swipes: ['原文'], swipe_id: 0,
-      extra: { bbiImage: store, bbiCharChanges: delta },
+      extra: { changyeImage: store, changyeCharChanges: delta },
     };
     const beforeRefresh = vi.fn();
     installContext({
@@ -191,11 +191,11 @@ describe('safe message editing', () => {
       saveChat: vi.fn(async () => { throw new Error('disk'); }), eventSource: {}, eventTypes: {},
     });
     await expect(applyMessageText(0, () => '插图后的正文', 'chat-a', 0, message,
-      { key: 'bbiImage', value: { '0': { same: [{ slotSeq: 1 }] } } }, beforeRefresh)).rejects.toThrow('disk');
+      { key: 'changyeImage', value: { '0': { same: [{ slotSeq: 1 }] } } }, beforeRefresh)).rejects.toThrow('disk');
     expect(message.mes).toBe('原文');
     expect(message.swipes[0]).toBe('原文');
-    expect(message.extra.bbiImage).toBe(store);
-    expect(message.extra.bbiCharChanges).toBe(delta);
+    expect(message.extra.changyeImage).toBe(store);
+    expect(message.extra.changyeCharChanges).toBe(delta);
     expect(beforeRefresh).not.toHaveBeenCalled();
   });
 
@@ -219,9 +219,9 @@ describe('safe message editing', () => {
     });
 
     await expect(
-      applyMessageText(0, text => `${text}\n<bbi_image>scene</bbi_image>`, 'chat-a', 1),
+      applyMessageText(0, text => `${text}\n<changye_image>scene</changye_image>`, 'chat-a', 1),
     ).resolves.toBe('saved');
-    expect(message.mes).toContain('<bbi_image>scene</bbi_image>');
+    expect(message.mes).toContain('<changye_image>scene</changye_image>');
     expect(message.swipes[1]).toBe(message.mes);
     expect(saveChat).toHaveBeenCalledOnce();
     expect(emit).toHaveBeenNthCalledWith(1, 'edited', 0);
@@ -246,11 +246,11 @@ describe('safe message editing', () => {
       eventTypes: {},
     });
 
-    const buildNext = vi.fn((text: string) => `${text}\n<bbi_image>scene</bbi_image>`);
+    const buildNext = vi.fn((text: string) => `${text}\n<changye_image>scene</changye_image>`);
     await expect(applyMessageText(0, buildNext, 'chat-a', 0)).resolves.toBe('saved');
     // 基底是落盘那一刻的正文,不是请求开始时的快照
     expect(buildNext).toHaveBeenCalledWith('别的插件刚改过的正文');
-    expect(message.mes).toBe('别的插件刚改过的正文\n<bbi_image>scene</bbi_image>');
+    expect(message.mes).toBe('别的插件刚改过的正文\n<changye_image>scene</changye_image>');
     expect(saveChat).toHaveBeenCalledOnce();
   });
 
@@ -358,7 +358,7 @@ describe('safe message editing', () => {
         'chat-a',
         0,
         original,
-        { key: 'bbiCharChanges', value: { v: 1, swipe: 0, ops: [] } },
+        { key: 'changyeCharChanges', value: { v: 1, swipe: 0, ops: [] } },
       ),
     ).resolves.toBe('floor-changed');
     expect(other.mes).toBe('原文');
@@ -393,7 +393,7 @@ describe('safe message editing', () => {
         'chat-a',
         0,
         message,
-        { key: 'bbiCharChanges', value: { v: 1, swipe: 0, ops: [] } },
+        { key: 'changyeCharChanges', value: { v: 1, swipe: 0, ops: [] } },
       ),
     ).rejects.toThrow('save failed');
     expect(message.mes).toBe('原文');

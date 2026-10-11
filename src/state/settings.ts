@@ -1,3 +1,4 @@
+import { readCompatibleField, readSharedCompatibleField, LEGACY_KEYS, LEGACY_CHANNELS_EVENT, LEGACY_EXCLUDES_EVENT } from '@/legacyCompatibility';
 import { normalizeComfyPost, type ComfyPostSettings } from '@/backends/comfyPostSettings';
 import { ANIMA_CONTENT_RULE, ANIMA_EXAMPLES } from '@/autoTag/animaPrompt';
 import { normalizeAutoRepair, type AutoRepairSettings } from '@/backends/comfyInpaintGraph';
@@ -237,7 +238,7 @@ export interface NaiArtistPreset {
   /** 绑定的负面提示词;空串 = 跟随渠道级 undesiredContent。 */
   negative: string;
   /**
-   * 预览图路径(/api/images/upload 落在 user/images/柏宝绘_画师串/ 的相对路径)。
+   * 预览图路径(/api/images/upload 落在 user/images/长夜绘图器_画师串/ 的相对路径)。
    * 可选:老数据没有此键;空 = 管理器卡片显示占位。文件归属随条目:
    * 删条目时按此路径删文件;复制条目不带走(否则两条目共指一个文件,删一边另一边破图)。
    */
@@ -326,7 +327,7 @@ export interface UiPrefs {
 
 /**
  * 副 API 渠道(OpenAI 兼容)。结构与角色记忆插件完全一致:渠道列表通过共享存储
- * (extensionSettings['baibai_api_channels'])在各「柏宝」插件间同步——
+ * (extensionSettings['changye_api_channels'])通过兼容协议在已接入插件间同步——
  * 在角色记忆插件里配好的渠道,这里直接可用;任一端增删改,另一端实时跟随。
  */
 export interface ApiChannel {
@@ -406,7 +407,7 @@ export interface AutoTagSettings {
 }
 
 /**
- * 排除设置(镜像共享存储;真身在 extensionSettings['baibai_exclude_settings'])。
+ * 排除设置(镜像共享存储;真身在 extensionSettings['changye_exclude_settings'])。
  * 与角色记忆插件共用同一份名单、同一套匹配口径:任一端改动自动同步,双端行为一致。
  */
 /** 落盘存储行为(影响新生成图片的保存格式)。 */
@@ -645,7 +646,7 @@ export const DEFAULT_NAI_THINKING = `【输出前思考清单】
 第一层｜全局判断（整楼各做一次）
 
 A. 事实与状态账本
-   - 只给目标正文选图；此前上下文只用于理解人物、场景和连续性。目标正文的明确事实优先，其次是紧邻上下文；历史 <bbi_image> 只作连续性线索，不能覆盖正文。
+   - 只给目标正文选图；此前上下文只用于理解人物、场景和连续性。目标正文的明确事实优先，其次是紧邻上下文；历史 <changye_image> 只作连续性线索，不能覆盖正文。
    - 区分三类状态：角色库中的永久事实；连续场景中应继承的临时状态（衣物穿脱程度、湿身/污渍、伤势、饰品、手持物等）；只属于单帧的表情、视线和具体姿势。
    - 没有明确穿回、整理、换装、解除状态、时间跳跃或场景切换时，不得把临时状态恢复成角色默认值。
 
@@ -722,7 +723,7 @@ export const DEFAULT_NAI_V5_THINKING = `【输出前思考清单】
 第一层｜全局判断（整楼各做一次）
 
 A. 事实与状态账本
-   - 只给目标正文选图；此前上下文只用于理解人物、场景和连续性。目标正文的明确事实优先，其次是紧邻上下文；历史 <bbi_image> 只作连续性线索，不能覆盖正文。
+   - 只给目标正文选图；此前上下文只用于理解人物、场景和连续性。目标正文的明确事实优先，其次是紧邻上下文；历史 <changye_image> 只作连续性线索，不能覆盖正文。
    - 区分三类状态：角色库中的永久事实；连续场景中应继承的临时状态（衣物穿脱程度、湿身/污渍、伤势、饰品、手持物等）；只属于单帧的表情、视线和具体姿势。
    - 没有明确穿回、整理、换装、解除状态、时间跳跃或场景切换时，不得把临时状态恢复成角色默认值。
 
@@ -921,20 +922,20 @@ export interface ImageSettings {
   webui: BackendConn;
   comfyui: ComfyUISettings;
   nai: NaiSettings;
-  /** 副 API 渠道列表(镜像共享存储;真身在 extensionSettings['baibai_api_channels']) */
+  /** 副 API 渠道列表(镜像共享存储;真身在 extensionSettings['changye_api_channels']) */
   channels: ApiChannel[];
   /** 任务指派的渠道 id。tagGen=生成画图 tag;空串=跟随主 API。 */
   assignments: { tagGen: string };
   /** 自动判断并向正文插入生图 tag。 */
   autoTag: AutoTagSettings;
-  /** 排除设置(镜像共享存储;真身在 extensionSettings['baibai_exclude_settings'])。 */
+  /** 排除设置(镜像共享存储;真身在 extensionSettings['changye_exclude_settings'])。 */
   excludes: ExcludesSettings;
   /** 落盘存储行为(新图格式)。 */
   storage: StoragePrefs;
 }
 
 // extension_settings 里的命名空间键。
-const SETTINGS_KEY = 'baibai_image';
+const SETTINGS_KEY = 'changye_image';
 
 /** 内置默认条目名规则:共享存储创建时播种(与角色记忆插件 DEFAULT_WI_PATTERNS 同值)。 */
 const DEFAULT_WI_PATTERNS = ['\\[mvu[\\s\\S]*?\\]'];
@@ -1691,11 +1692,11 @@ function applyInto(target: ImageSettings, src: ImageSettings): void {
   target.storage = src.storage;
 }
 
-/* —— 渠道共享存储:与角色记忆插件等「柏宝」插件共用同一份渠道列表 ——
+/* —— 渠道共享存储:保留兼容协议，与已接入的外部插件同步渠道列表 ——
    真身存在 extensionSettings[SHARED_CHANNELS_KEY](带 revision),各插件的设置里只留镜像。
    任一端写入后广播事件,其他端收到后从 extensionSettings 重读并应用,实现跨插件实时同步。 */
-const SHARED_CHANNELS_KEY = 'baibai_api_channels';
-const SHARED_CHANNELS_EVENT = 'st-baibai-api-channels:changed';
+const SHARED_CHANNELS_KEY = 'changye_api_channels';
+const SHARED_CHANNELS_EVENT = 'st-changye-api-channels:changed';
 const SHARED_CHANNELS_SCHEMA_VERSION = 1;
 
 interface SharedChannelsStore {
@@ -1736,12 +1737,13 @@ function writeSharedChannels(dispatch = true): void {
     channels: JSON.parse(JSON.stringify(settings.channels)) as ApiChannel[],
   };
   ctx.extensionSettings[SHARED_CHANNELS_KEY] = store;
+  ctx.extensionSettings[LEGACY_KEYS[SHARED_CHANNELS_KEY]] = store;
   sharedChannelsFingerprint = channelFingerprint(store.channels);
   ctx.saveSettingsDebounced?.();
   if (dispatch) {
-    window.dispatchEvent(
-      new CustomEvent(SHARED_CHANNELS_EVENT, {
-        detail: { revision: store.revision, source: 'ST-BaiBai-Image' },
+    for (const event of [SHARED_CHANNELS_EVENT, LEGACY_CHANNELS_EVENT]) window.dispatchEvent(
+      new CustomEvent(event, {
+        detail: { revision: store.revision, source: 'ST-ChangYe-Image' },
       }),
     );
   }
@@ -1764,15 +1766,15 @@ function applySharedChannels(store: SharedChannelsStore): void {
 function bindSharedChannelsListener(): void {
   if (sharedChannelsListenerBound) return;
   sharedChannelsListenerBound = true;
-  window.addEventListener(SHARED_CHANNELS_EVENT, () => {
+  for (const event of [SHARED_CHANNELS_EVENT, LEGACY_CHANNELS_EVENT]) window.addEventListener(event, () => {
     const ctx = getContext();
-    const store = readSharedChannels(ctx?.extensionSettings?.[SHARED_CHANNELS_KEY]);
+    const store = readSharedChannels(readSharedCompatibleField(ctx?.extensionSettings, SHARED_CHANNELS_KEY));
     if (store) applySharedChannels(store);
   });
 }
 
 /**
- * 渠道共享存储接管(消费者模式,参照柏宝砚/ST-BaiBai-Pen 的共享渠道协议):
+ * 渠道共享存储接管(消费者模式,保留旧版外部插件的共享渠道协议):
  * - 共享存储存在 → 领养;
  * - 不存在且本插件已有渠道(绘单装用户配过)→ 以自身为种子建仓;
  * - 不存在且本插件也没有渠道 → **不建仓**,只同步内存指纹。
@@ -1781,7 +1783,7 @@ function bindSharedChannelsListener(): void {
 function hydrateSharedChannels(legacyChannels: ApiChannel[]): void {
   const ctx = getContext();
   if (!ctx?.extensionSettings) return;
-  const stored = readSharedChannels(ctx.extensionSettings[SHARED_CHANNELS_KEY]);
+  const stored = readSharedChannels(readSharedCompatibleField(ctx.extensionSettings, SHARED_CHANNELS_KEY));
   if (stored) {
     applySharedChannels(stored);
   } else {
@@ -1795,8 +1797,8 @@ function hydrateSharedChannels(legacyChannels: ApiChannel[]): void {
 
 /* ============ 排除设置共享存储(与角色记忆插件共用,协议与渠道完全同构) ============ */
 
-const SHARED_EXCLUDES_KEY = 'baibai_exclude_settings';
-const SHARED_EXCLUDES_EVENT = 'st-baibai-exclude-settings:changed';
+const SHARED_EXCLUDES_KEY = 'changye_exclude_settings';
+const SHARED_EXCLUDES_EVENT = 'st-changye-exclude-settings:changed';
 const SHARED_EXCLUDES_SCHEMA_VERSION = 1;
 
 interface SharedExcludesStore {
@@ -1863,12 +1865,13 @@ function writeSharedExcludes(dispatch = true): void {
     ...JSON.parse(JSON.stringify(settings.excludes)) as ExcludesSettings,
   };
   ctx.extensionSettings[SHARED_EXCLUDES_KEY] = store;
+  ctx.extensionSettings[LEGACY_KEYS[SHARED_EXCLUDES_KEY]] = store;
   sharedExcludesFingerprint = excludesFingerprint(store);
   ctx.saveSettingsDebounced?.();
   if (dispatch) {
-    window.dispatchEvent(
-      new CustomEvent(SHARED_EXCLUDES_EVENT, {
-        detail: { revision: store.revision, source: 'ST-BaiBai-Image' },
+    for (const event of [SHARED_EXCLUDES_EVENT, LEGACY_EXCLUDES_EVENT]) window.dispatchEvent(
+      new CustomEvent(event, {
+        detail: { revision: store.revision, source: 'ST-ChangYe-Image' },
       }),
     );
   }
@@ -1890,15 +1893,15 @@ function applySharedExcludes(store: SharedExcludesStore): void {
 function bindSharedExcludesListener(): void {
   if (sharedExcludesListenerBound) return;
   sharedExcludesListenerBound = true;
-  window.addEventListener(SHARED_EXCLUDES_EVENT, () => {
+  for (const event of [SHARED_EXCLUDES_EVENT, LEGACY_EXCLUDES_EVENT]) window.addEventListener(event, () => {
     const ctx = getContext();
-    const store = readSharedExcludes(ctx?.extensionSettings?.[SHARED_EXCLUDES_KEY]);
+    const store = readSharedExcludes(readSharedCompatibleField(ctx?.extensionSettings, SHARED_EXCLUDES_KEY));
     if (store) applySharedExcludes(store);
   });
 }
 
 /**
- * 排除设置共享存储接管(消费者模式,参照柏宝砚/ST-BaiBai-Pen 的共享渠道协议):
+ * 排除设置共享存储接管(消费者模式,保留旧版外部插件的共享渠道协议):
  * - 共享存储存在 → 领养共享数据;
  * - 共享存储不存在但本插件名单已有用户数据 → 以本插件名单为种子建仓(绘单装用户);
  * - 共享存储不存在且本插件也没有用户数据 → **不建仓**,只在本地播种内置默认规则。
@@ -1908,7 +1911,7 @@ function bindSharedExcludesListener(): void {
 function hydrateSharedExcludes(): void {
   const ctx = getContext();
   if (!ctx?.extensionSettings) return;
-  const stored = readSharedExcludes(ctx.extensionSettings[SHARED_EXCLUDES_KEY]);
+  const stored = readSharedExcludes(readSharedCompatibleField(ctx.extensionSettings, SHARED_EXCLUDES_KEY));
   if (stored) {
     // 领同居中:共享存储存在但无用户数据(疑似早期版本空种子),本插件却有数据 → 以本插件为准回写,
     // 修复历史遗留的空 store(回写广播后书会领养真实数据)。
@@ -1954,7 +1957,7 @@ export async function hydrateSettings(): Promise<void> {
   const ctx = getContext();
   if (!ctx?.extensionSettings) return; // ST 未就绪,稍后重试
 
-  const stored = ctx.extensionSettings[SETTINGS_KEY];
+  const stored = readCompatibleField(ctx.extensionSettings, SETTINGS_KEY);
   if (stored && typeof stored === 'object') {
     const migration = await migrateLegacyVibesInPlace(stored);
     if (migration.error) {

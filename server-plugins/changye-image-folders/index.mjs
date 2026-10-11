@@ -2,7 +2,7 @@ import path from 'node:path';
 import { lstat, realpath, stat } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 
-export const info = { id: 'baibai-image-folders', name: '长夜的绘图器文件夹助手', description: '在本机打开当前用户的长夜的绘图器图片目录（v1.1.0）' };
+export const info = { id: 'changye-image-folders', name: '长夜的绘图器文件夹助手', description: '在本机打开当前用户的长夜的绘图器图片目录（v1.1.0）' };
 const loopback = host => ['127.0.0.1', '::1', '::ffff:127.0.0.1', 'localhost', '[::1]'].includes(host);
 const fail = (status, message) => Object.assign(new Error(message), { status });
 
@@ -17,7 +17,7 @@ export function validateRequest(req) {
   }
   if (!req.user?.directories?.userImages) throw fail(401, '当前用户不可用。');
   const folder = req.body?.folder;
-  if (typeof folder !== 'string' || !folder.startsWith('柏宝绘_') || folder.length <= 4 || folder.length > 240 || /[<>:"/\\|?*\x00-\x1f]/u.test(folder) || /[. ]$/u.test(folder)) {
+  if (typeof folder !== 'string' || !['长夜绘图器_', '柏宝绘_'].some(prefix => folder.startsWith(prefix) && folder.length > prefix.length) || folder.length > 240 || /[<>:"/\\|?*\x00-\x1f]/u.test(folder) || /[. ]$/u.test(folder)) {
     throw fail(400, '图片目录名无效。');
   }
   return folder;

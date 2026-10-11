@@ -6,7 +6,7 @@ vi.mock('@/st/context', () => ({ getContext: () => mocks.context }));
 
 async function hydrate(workflows: unknown[]) {
   mocks.context = {
-    extensionSettings: { baibai_image: { comfyui: { workflows, activeWorkflowId: 'a' } } },
+    extensionSettings: { changye_image: { comfyui: { workflows, activeWorkflowId: 'a' } } },
     saveSettingsDebounced: vi.fn(),
   };
   const state = await import('@/state/settings');

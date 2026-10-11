@@ -18,11 +18,11 @@ defineExpose({ dirty, prepare, draftSignature });
 </script>
 <template>
   <section class="workflow-resolution" aria-label="默认生成尺寸">
-    <div class="resolution-head"><h3 class="bbi-field-label">默认生成尺寸</h3><span>当前默认：{{stored.width}} × {{stored.height}}</span></div>
+    <div class="resolution-head"><h3 class="changye-field-label">默认生成尺寸</h3><span>当前默认：{{stored.width}} × {{stored.height}}</span></div>
     <ResolutionControls scope="工作流" :width="draft.width" :height="draft.height" :sizes="settings.comfyui.resolutionFavorites" @change="change" @save="saveResolutionFavorite" @remove="removeResolutionFavorite" />
   </section>
 </template>
 <style scoped>
-.workflow-resolution{margin:18px 0;padding:16px;border:1px solid var(--bbi-line);border-radius:var(--bbi-radius-sm)}.resolution-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}.resolution-head h3{margin:0}.resolution-head>span{font-size:12px;color:var(--bbi-ink-muted)}.resolution-actions{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}.resolution-actions>span{color:var(--bbi-accent);font-size:12px}
+.workflow-resolution{margin:18px 0;padding:16px;border:1px solid var(--changye-line);border-radius:var(--changye-radius-sm)}.resolution-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}.resolution-head h3{margin:0}.resolution-head>span{font-size:12px;color:var(--changye-ink-muted)}.resolution-actions{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}.resolution-actions>span{color:var(--changye-accent);font-size:12px}
 @media(max-width:620px){.workflow-resolution{padding:10px}}
 </style>

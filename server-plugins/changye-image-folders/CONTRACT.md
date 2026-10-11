@@ -2,9 +2,9 @@
 
 独立的 SillyTavern Node 服务插件；不修改酒馆核心、聊天、设置或图片。
 
-- 挂载 `/api/plugins/baibai-image-folders/open-folder`，仅 POST。
+- 挂载 `/api/plugins/changye-image-folders/open-folder`，仅 POST。
 - 沿用酒馆登录和 CSRF 中间件；另要求请求来自本机回环地址、同源本机 Origin，拒绝代理转发请求。
-- 客户端仅传一个以 `柏宝绘_` 开头的目录名；目录必须已存在于当前用户的 `directories.userImages` 内。
+- 客户端仅传一个以 `长夜绘图器_` 开头的目录名，并兼容历史 `柏宝绘_` 目录；目录必须已存在于当前用户的 `directories.userImages` 内。
 - 解析实际路径并拒绝符号链接、目录穿越和目录外跳转；不支持任意路径、命令、创建或删除。
 - 仅 Windows：固定调用系统 Explorer，参数独立传递、禁用 shell；明确可见启动（windowsHide: false），每用户一秒最多一次。
 - 成功仅代表 Explorer 启动请求已提交；不宣称已验证桌面窗口。

@@ -39,12 +39,12 @@ export function locateSelectionSourceEnd(
     for (const match of source.matchAll(pattern)) visit(match, match.index!);
   };
   matches(/<!--[\s\S]*?(?:-->|$)/g, (m, i) => hide(i, i + m[0].length));
-  const hiddenTags = new Set(['bbi_image', 'script', 'style', 'think', 'thinking', 'horae', 'bbs_items', 'bbs_vars', ...stripTags]);
+  const hiddenTags = new Set(['changye_image', 'bbi_image', 'script', 'style', 'think', 'thinking', 'horae', 'bbs_items', 'bbs_vars', ...stripTags]);
   for (const name of hiddenTags) {
     if (!/^[\p{L}\p{N}_-]+$/u.test(name)) continue;
     matches(new RegExp(`<${name}(?=[\\s/>])[^>]*>[\\s\\S]*?<\\/${name}\\s*>`, 'gi'), (m, i) => hide(i, i + m[0].length));
   }
-  // Match BaiBai Book's display-only time regex: complete same-line metadata, not arbitrary blocks.
+  // Match legacy memory extension's display-only time regex: complete same-line metadata, not arbitrary blocks.
   matches(/<bbs_start\b[^>\r\n]*>[^<\r\n]*<\/bbs_start>|<bbs_end\b[^>\r\n]*>[^<\r\n]*<\/bbs_end>/gi, (m, i) => hide(i, i + m[0].length));
   // Code and Markdown images are not narrative selection targets.
   matches(/^([ \t]*)(`{3,}|~{3,})[^\r\n]*[\s\S]*?^\1\2[ \t]*$/gm, (m, i) => hide(i, i + m[0].length));
